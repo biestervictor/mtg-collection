@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Show Collection - MTG</title>
+    <link th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+    <style>
+        :root { --primary-color: #1a1a2e; --secondary-color: #16213e; --accent-color: #e94560; --text-light: #f1f1f1; }
+        body { background-color: #0f0f23; color: var(--text-light); min-height: 100vh; }
+        .navbar { background-color: var(--primary-color) !important; }
+        .navbar-brand { font-weight: bold; color: var(--accent-color) !important; }
+        .nav-link { color: var(--text-light) !important; }
+        .nav-link.active { color: var(--accent-color) !important; border-bottom: 2px solid var(--accent-color); }
+        .card { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
+        .btn-primary { background-color: var(--accent-color); border-color: var(--accent-color); }
+        .form-control, .form-select { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
+        .form-control-sm { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
+        footer { background-color: var(--primary-color); color: #888; }
+        .card-list { display: flex; flex-wrap: wrap; gap: 1rem; }
+        .card-item { width: 150px; cursor: pointer; transition: transform 0.2s; }
+        .card-item:hover { transform: scale(1.1); z-index: 10; }
+        .badge-quantity { background-color: #333 !important; }
+        .badge-foil { background-color: gold !important; color: black; }
+        .card-image { width: 100%; border-radius: 5px; }
+        .select2-container--default .select2-selection--single { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); height: 38px; }
+        .select2-container--default .select2-selection--single .select2-selection__rendered { color: var(--text-light); line-height: 38px; }
+        .select2-container--default .select2-selection--single .select2-selection__arrow { height: 36px; }
+        .select2-dropdown { background-color: var(--secondary-color); border: 1px solid #2a2a4a; }
+        .select2-container--default .select2-results__option { color: var(--text-light); }
+        .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: var(--accent-color); }
+        .select2-container--default .select2-search--dropdown .select2-search__field { background-color: var(--secondary-color); color: var(--text-light); border: 1px solid #2a2a4a; }
+        .stats-value { font-size: 2rem; font-weight: bold; color: var(--accent-color); }
+        .badge { background-color: #333 !important; }
+        
+        /* Modal Styles */
+        .card-modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); }
+        .card-modal-content { position: relative; margin: auto; padding: 20px; max-width: 500px; max-height: 90vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .card-modal-image { max-width: 100%; max-height: 70vh; border-radius: 10px; box-shadow: 0 0 30px rgba(233,69,96,0.3); }
+        .card-modal-info { text-align: center; margin-top: 15px; color: var(--text-light); }
+        .card-modal-info h4 { margin: 0 0 10px 0; color: var(--accent-color); }
+        .card-modal-info .price { font-size: 1.2rem; margin: 5px 0; }
+        .card-modal-info .qty { color: #888; }
+        .card-modal-close { position: absolute; top: 10px; right: 25px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
+        .card-modal-close:hover { color: var(--accent-color); }
+        .card-modal-nav { position: absolute; top: 50%; transform: translateY(-50%); font-size: 50px; color: white; cursor: pointer; padding: 20px; }
+        .card-modal-nav:hover { color: var(--accent-color); }
+        .card-modal-prev { left: 10px; }
+        .card-modal-next { right: 10px; }
+        .dropdown-menu { background-color: var(--secondary-color); border: 1px solid #2a2a4a; }
+        .dropdown-item { color: var(--text-light); }
+        .dropdown-item:hover { background-color: var(--accent-color); color: white; }
+        .dropdown-toggle::after { display: none; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" th:href="@{/}"><i class="bi bi-collection"></i> MTG Collection Manager</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" th:href="@{/}">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/import}">Import</a></li>
+                    <li class="nav-item"><a class="nav-link active" th:href="@{/show}">Show</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/compare}">Compare</a></li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <form class="d-flex" th:action="@{/show}" method="get">
+                            <input type="hidden" name="user" th:value="${selectedUser}">
+                            <input type="hidden" name="set" th:value="${selectedSet}">
+                            <input class="form-control form-control-sm me-2" style="background-color: #ffffff; border-color: #ccc; color: #333;" type="search" name="search" placeholder="Filter cards..." aria-label="Search">
+                            <button class="btn btn-sm btn-outline-light" type="submit"><i class="bi bi-search"></i></button>
+                        </form>
+                    </li>
+                    <li class="nav-item dropdown ms-2">
+                        <a class="nav-link dropdown-toggle" href="#" id="configDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-gear"></i> Config
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="configDropdown">
+                            <li>
+                                <form th:if="${selectedSet != null}" method="post" th:action="@{/api/cache/clear}" class="px-3 py-1">
+                                    <input type="hidden" name="setCode" th:value="${selectedSet}">
+                                    <button type="submit" class="btn btn-sm btn-outline-light w-100 text-start">
+                                        <i class="bi bi-trash"></i> Clear Cache (current set)
+                                    </button>
+                                </form>
+                            </li>
+                            <li>
+                                <form method="post" th:action="@{/api/cache/clear}" class="px-3 py-1">
+                                    <button type="submit" class="btn btn-sm btn-outline-light w-100 text-start">
+                                        <i class="bi bi-trash"></i> Clear All Cache
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4">
+        <h1 class="mb-4"><i class="bi bi-view-list"></i> Show Collection</h1>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" th:action="@{/show}" id="mainForm">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">User</label>
+                            <select class="form-select" name="user" id="userSelect" required>
+                                <option value="user2" selected>Victor</option>
+                                <option value="user1">Andre</option>
+                                <option value="user3">User 3</option>
+                                <option value="user4">Marcel</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Set</label>
+                            <select class="form-select select2-set" name="set" id="setSelect" required>
+                                <option value="">-- Select Set --</option>
+                                <option th:each="s : ${sets}" th:value="${s.setCode}" th:text="${s.setCode} + ' - ' + ${s.name}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Show</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div th:if="${cards != null}">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" th:action="@{/show}" id="filterForm">
+                        <input type="hidden" name="set" th:value="${selectedSet}">
+                        <input type="hidden" name="user" th:value="${selectedUser}">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Filter</label>
+                                <select class="form-select" name="state">
+                                    <option value="all" th:selected="${state == 'all' or state == null}">All</option>
+                                    <option value="owned" th:selected="${state == 'owned'}">Owned</option>
+                                    <option value="missing" th:selected="${state == 'missing'}">Missing</option>
+                                    <option value="tradable" th:selected="${state == 'tradable'}">Tradable</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Printing</label>
+                                <select class="form-select" name="printing">
+                                    <option value="" th:selected="${printing == null or printing == ''}">All</option>
+                                    <option value="foil" th:selected="${printing == 'foil'}">Foil</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Rarity</label>
+                                <select class="form-select" name="rarity">
+                                    <option value="" th:selected="${rarity == null or rarity == ''}">All</option>
+                                    <option value="mythic" th:selected="${rarity == 'mythic'}">Mythic</option>
+                                    <option value="rare" th:selected="${rarity == 'rare'}">Rare</option>
+                                    <option value="uncommon" th:selected="${rarity == 'uncommon'}">Uncommon</option>
+                                    <option value="common" th:selected="${rarity == 'common'}">Common</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Search</label>
+                                <input type="text" class="form-control" name="search" th:value="${search}" placeholder="Card Name or #">
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" name="showBasics" value="true" id="showBasics" th:checked="${showBasics == 'true'}">
+                                    <label class="form-check-label" for="showBasics">Basic Lands</label>
+                                </div>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" name="showExtendedArt" value="true" id="showExtendedArt" th:checked="${showExtendedArt == 'true'}">
+                                    <label class="form-check-label" for="showExtendedArt">Extended Art</label>
+                                </div>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" name="showShowcase" value="true" id="showShowcase" th:checked="${showShowcase == 'true'}">
+                                    <label class="form-check-label" for="showShowcase">Showcase</label>
+                                </div>
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-filter"></i></button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mb-3">
+                <div class="card-body">
+                    <span class="stats-value" th:text="${filteredCount}">0</span>
+                    <span th:text="'/ ' + ${totalCount} + ' cards'">/ 0 cards</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <div class="card-list" id="cardList" th:if="${filteredCards != null and not #lists.isEmpty(filteredCards)}">
+                        <div th:each="cardData, iter : ${filteredCards}" class="card-item" 
+                             th:data-index="${iter.index}"
+                             th:data-name="${cardData.card.name}"
+                             th:data-qty="${cardData.quantity}"
+                             th:data-foil-qty="${cardData.foilQuantity}"
+                             th:data-price="${cardData.card.priceRegular}"
+                             th:data-foil-price="${cardData.card.priceFoil}"
+                             th:data-image="${cardData.card.imageFront}"
+                             th:data-rarity="${cardData.card.rarity}"
+                             onclick="openCardModal(this)">
+                            <div style="position: relative;">
+                                <span class="badge badge-quantity" th:if="${cardData.quantity > 0}" th:text="${cardData.quantity}">1</span>
+                                <span class="badge badge-foil" th:if="${cardData.foilQuantity > 0}" th:text="${cardData.foilQuantity}">F</span>
+                                <img th:src="${cardData.card.thumbnailFront}" class="card-image" alt="Card" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3Ctext x=\'75\' y=\'105\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'10\'%3ENo Image%3C/text%3E%3C/svg%3E'">
+                            </div>
+                            <small th:text="${cardData.card.name}">Card Name</small>
+                        </div>
+                    </div>
+                    <div th:if="${filteredCards == null or #lists.isEmpty(filteredCards)}" class="text-center py-4">
+                        <p>No cards match the filter criteria</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Card Modal -->
+    <div id="cardModal" class="card-modal">
+        <span class="card-modal-close" onclick="closeCardModal()">&times;</span>
+        <span class="card-modal-nav card-modal-prev" onclick="navigateCard(-1)">&#10094;</span>
+        <span class="card-modal-nav card-modal-next" onclick="navigateCard(1)">&#10095;</span>
+        <div class="card-modal-content">
+            <img id="modalImage" class="card-modal-image" src="" alt="Card">
+            <div class="card-modal-info">
+                <h4 id="modalName"></h4>
+                <div id="modalRarity" style="text-transform: capitalize;"></div>
+                <div class="qty" id="modalQty"></div>
+                <div class="price" id="modalPrice"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center py-3 mt-4"><p>MTG Collection Manager</p></footer>
+    <script th:src="@{/webjars/jquery/jquery.min.js}"></script>
+    <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            var selectedSet = /*[[${selectedSet}]]*/ '';
+            var selectedUser = /*[[${selectedUser}]]*/ '';
+            
+            $('.select2-set').select2({
+                placeholder: '-- Select Set --',
+                allowClear: true,
+                minimumInputLength: 0
+            });
+            
+            if (selectedSet) {
+                $('#setSelect').val(selectedSet).trigger('change');
+            }
+            if (selectedUser) {
+                $('#userSelect').val(selectedUser).trigger('change');
+            }
+        });
+        
+        var currentCardIndex = 0;
+        var cardElements = [];
+        
+        function openCardModal(element) {
+            currentCardIndex = parseInt(element.dataset.index);
+            cardElements = document.querySelectorAll('.card-item');
+            
+            var modal = document.getElementById('cardModal');
+            var img = document.getElementById('modalImage');
+            var name = document.getElementById('modalName');
+            var rarity = document.getElementById('modalRarity');
+            var qty = document.getElementById('modalQty');
+            var price = document.getElementById('modalPrice');
+            
+            img.src = element.dataset.image || element.querySelector('img').src;
+            name.textContent = element.dataset.name;
+            rarity.textContent = element.dataset.rarity;
+            
+            var qtyText = [];
+            if (parseInt(element.dataset.qty) > 0) qtyText.push('Regular: ' + element.dataset.qty);
+            if (parseInt(element.dataset.foilQty) > 0) qtyText.push('Foil: ' + element.dataset.foilQty);
+            qty.textContent = qtyText.join(' | ') || 'Not owned';
+            
+            var priceText = [];
+            if (element.dataset.price && element.dataset.price !== 'null') {
+                priceText.push('Regular: €' + parseFloat(element.dataset.price).toFixed(2));
+            }
+            if (element.dataset.foilPrice && element.dataset.foilPrice !== 'null') {
+                priceText.push('Foil: €' + parseFloat(element.dataset.foilPrice).toFixed(2));
+            }
+            price.textContent = priceText.join(' | ') || 'No price available';
+            
+            modal.style.display = 'block';
+        }
+        
+        function closeCardModal() {
+            document.getElementById('cardModal').style.display = 'none';
+        }
+        
+        function navigateCard(direction) {
+            currentCardIndex += direction;
+            if (currentCardIndex < 0) currentCardIndex = cardElements.length - 1;
+            if (currentCardIndex >= cardElements.length) currentCardIndex = 0;
+            
+            openCardModal(cardElements[currentCardIndex]);
+        }
+        
+        document.addEventListener('keydown', function(e) {
+            if (document.getElementById('cardModal').style.display === 'block') {
+                if (e.key === 'ArrowLeft') navigateCard(-1);
+                if (e.key === 'ArrowRight') navigateCard(1);
+                if (e.key === 'Escape') closeCardModal();
+            }
+        });
+        
+        document.getElementById('cardModal').addEventListener('click', function(e) {
+            if (e.target === this) closeCardModal();
+        });
+    </script>
+</body>
+</html>

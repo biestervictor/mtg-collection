@@ -1,0 +1,10 @@
+Sets ohne Karten bei Scryfall API (404):
+
+- vthb
+- veld
+- pg07
+- pg08
+- pw10
+- pw09
+- pwpn
+- plgs

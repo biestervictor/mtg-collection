@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>MTG Collection Database Diagram</title>
+    <style>
+        body {
+            background-color: #0f0f23;
+            color: #f1f1f1;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+        h1 { color: #e94560; }
+        .diagram { display: flex; flex-direction: column; gap: 30px; }
+        .collection {
+            background-color: #16213e;
+            border: 2px solid #2a2a4a;
+            border-radius: 8px;
+            padding: 15px;
+            max-width: 600px;
+        }
+        .collection-name {
+            background-color: #1a1a2e;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: #e94560;
+            text-align: center;
+        }
+        .field {
+            display: flex;
+            padding: 8px 0;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        .field:last-child { border-bottom: none; }
+        .field-name { flex: 1; }
+        .field-type { color: #888; margin-left: 10px; }
+        .pk { color: #ffc107; }
+        .fk { color: #28a745; }
+        .relation {
+            background-color: #1a1a2e;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #e94560;
+            border-radius: 4px;
+        }
+        .note {
+            background-color: #1a1a2e;
+            padding: 15px;
+            margin-top: 30px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .pk-color { color: #ffc107; }
+        .fk-color { color: #28a745; }
+    </style>
+</head>
+<body>
+    <h1>MTG Collection Database Schema</h1>
+    
+    <div class="legend">
+        <div class="legend-item"><span class="pk-color">★</span> Primary Key</div>
+        <div class="legend-item"><span class="fk-color">→</span> Foreign Key</div>
+    </div>
+
+    <div class="diagram">
+        <!-- card-collection -->
+        <div class="collection">
+            <div class="collection-name">card-collection</div>
+            <div class="field">
+                <span class="field-name pk">★ _id</span>
+                <span class="field-type">ObjectId</span>
+            </div>
+            <div class="field">
+                <span class="field-name fk">→ user</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">name</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name fk">→ setCode</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">collectorNumber</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">quantity</span>
+                <span class="field-type">int</span>
+            </div>
+            <div class="field">
+                <span class="field-name">foil</span>
+                <span class="field-type">boolean</span>
+            </div>
+        </div>
+
+        <!-- scryfall-cards -->
+        <div class="collection">
+            <div class="collection-name">scryfall-cards</div>
+            <div class="field">
+                <span class="field-name pk">★ _id</span>
+                <span class="field-type">ObjectId</span>
+            </div>
+            <div class="field">
+                <span class="field-name">name</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name fk">→ setCode</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">collectorNumber</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">rarity</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">typeLine</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">frameStatus</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">thumbnailFront</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">thumbnailBack</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">imageFront</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">imageBack</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">priceRegular</span>
+                <span class="field-type">Double</span>
+            </div>
+            <div class="field">
+                <span class="field-name">priceFoil</span>
+                <span class="field-type">Double</span>
+            </div>
+            <div class="field">
+                <span class="field-name">purchaseLink</span>
+                <span class="field-type">String</span>
+            </div>
+        </div>
+
+        <!-- scryfall-sets -->
+        <div class="collection">
+            <div class="collection-name">scryfall-sets</div>
+            <div class="field">
+                <span class="field-name pk">★ _id</span>
+                <span class="field-type">ObjectId</span>
+            </div>
+            <div class="field">
+                <span class="field-name">name</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name pk">★ setCode</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">cardCount</span>
+                <span class="field-type">int</span>
+            </div>
+            <div class="field">
+                <span class="field-name">releasedAt</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">icon</span>
+                <span class="field-type">String</span>
+            </div>
+        </div>
+
+        <!-- import-history -->
+        <div class="collection">
+            <div class="collection-name">import-history</div>
+            <div class="field">
+                <span class="field-name pk">★ _id</span>
+                <span class="field-type">ObjectId</span>
+            </div>
+            <div class="field">
+                <span class="field-name fk">→ user</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">format</span>
+                <span class="field-type">String</span>
+            </div>
+            <div class="field">
+                <span class="field-name">importedAt</span>
+                <span class="field-type">DateTime</span>
+            </div>
+            <div class="field">
+                <span class="field-name">totalCardsCount</span>
+                <span class="field-type">int</span>
+            </div>
+            <div class="field">
+                <span class="field-name">uniqueCardsCount</span>
+                <span class="field-type">int</span>
+            </div>
+            <div class="field">
+                <span class="field-name">addedCardsCount</span>
+                <span class="field-type">int</span>
+            </div>
+            <div class="field">
+                <span class="field-name">removedCardsCount</span>
+                <span class="field-type">int</span>
+            </div>
+            <div class="field">
+                <span class="field-name">addedCards</span>
+                <span class="field-type">List&lt;ImportedCardInfo&gt;</span>
+            </div>
+            <div class="field">
+                <span class="field-name">removedCards</span>
+                <span class="field-type">List&lt;ImportedCardInfo&gt;</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="relation">
+        <strong>Relations:</strong>
+        <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+            <li>card-collection.user → import-history.user (tracks imports per user)</li>
+            <li>card-collection.setCode → scryfall-cards.setCode (card lookup)</li>
+            <li>card-collection.setCode → scryfall-sets.setCode (set info)</li>
+        </ul>
+    </div>
+
+    <div class="note">
+        <strong>ImportedCardInfo Structure:</strong>
+        <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+            <li>name: String</li>
+            <li>setCode: String</li>
+            <li>collectorNumber: String</li>
+            <li>quantity: int</li>
+            <li>foil: boolean</li>
+        </ul>
+    </div>
+
+    <div class="note">
+        <strong>Notes:</strong>
+        <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+            <li><strong>card-collection:</strong> User-spezifische Sammlung. Key = setCode + collectorNumber + foil</li>
+            <li><strong>scryfall-cards:</strong> Gecachte Scryfall-Daten. Preise werden nachts aktualisiert, Bilder bleiben unverändert</li>
+            <li><strong>import-history:</strong> Import-Versionierung mit Tracken von New/Removed Cards</li>
+        </ul>
+    </div>
+</body>
+</html>

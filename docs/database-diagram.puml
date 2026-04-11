@@ -1,0 +1,91 @@
+@startuml MTG_Collection_Database
+
+skinparam backgroundColor #0f0f23
+skinparam defaultFontColor #f1f1f1
+skinparam rectangleBackgroundColor #16213e
+skinparam entityBackgroundColor #1a1a2e
+skinparam arrowColor #e94560
+
+package "MongoDB: mtg_collection" {
+    
+    entity "card-collection" as card_collection <<Collection>>
+    {
+        * _id : ObjectId
+        --
+        * user : String
+        * name : String
+        * setCode : String
+        * collectorNumber : String
+        * quantity : int
+        * foil : boolean
+    }
+    
+    entity "scryfall-cards" as scryfall_cards <<Collection>>
+    {
+        * _id : ObjectId
+        --
+        * name : String
+        * setCode : String
+        * collectorNumber : String
+        * rarity : String
+        * typeLine : String
+        * frameStatus : String
+        * thumbnailFront : String
+        * thumbnailBack : String
+        * imageFront : String
+        * imageBack : String
+        * priceRegular : Double
+        * priceFoil : Double
+        * purchaseLink : String
+    }
+    
+    entity "scryfall-sets" as scryfall_sets <<Collection>>
+    {
+        * _id : ObjectId
+        --
+        * name : String
+        * setCode : String
+        * cardCount : int
+        * releasedAt : String
+        * icon : String
+    }
+    
+    entity "import-history" as import_history <<Collection>>
+    {
+        * _id : ObjectId
+        --
+        * user : String
+        * format : String
+        * importedAt : DateTime
+        * totalCardsCount : int
+        * uniqueCardsCount : int
+        * addedCardsCount : int
+        * removedCardsCount : int
+        * addedCards : List<ImportedCardInfo>
+        * removedCards : List<ImportedCardInfo>
+    }
+}
+
+card_collection::setCode -->> scryfall_cards::setCode : lookup
+card_collection::setCode -->> scryfall_sets::setCode : lookup
+import_history::user -->> card_collection::user : tracks imports
+
+note right of card_collection
+    User-spezifische Sammlung
+    - 1 User kann mehrere Karten haben
+    - Key: setCode + collectorNumber + foil
+end note
+
+note right of scryfall_cards
+    Gecachte Scryfall-Daten
+    - Preise werden nachts aktualisiert
+    - Bilder werden NICHT geupdated
+end note
+
+note right of import_history
+    Import-Versionierung
+    - Speichert jeden Import
+    - Trackt: New Cards, Removed Cards
+end note
+
+@enduml

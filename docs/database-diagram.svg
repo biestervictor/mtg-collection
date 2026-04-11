@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 700" style="background-color: #0f0f23; font-family: 'Segoe UI', sans-serif;">
+  <defs>
+    <style>
+      .title { fill: #e94560; font-size: 24px; font-weight: bold; }
+      .collection-bg { fill: #16213e; stroke: #2a2a4a; stroke-width: 2; rx: 8; }
+      .collection-title { fill: #e94560; font-size: 14px; font-weight: bold; text-anchor: middle; }
+      .field { fill: #f1f1f1; font-size: 12px; }
+      .pk { fill: #ffc107; font-size: 12px; }
+      .fk { fill: #28a745; font-size: 12px; }
+      .type { fill: #888; font-size: 11px; }
+      .relation-line { stroke: #e94560; stroke-width: 2; fill: none; }
+      .relation-text { fill: #888; font-size: 10px; }
+      .note-bg { fill: #1a1a2e; stroke: #ffc107; stroke-width: 1; rx: 4; }
+      .note-text { fill: #f1f1f1; font-size: 11px; }
+      .legend-text { fill: #f1f1f1; font-size: 12px; }
+    </style>
+  </defs>
+  
+  <text x="400" y="30" class="title" text-anchor="middle">MTG Collection Database Schema</text>
+  
+  <!-- Legend -->
+  <text x="50" y="60" class="legend-text">★ = Primary Key</text>
+  <text x="200" y="60" class="legend-text">→ = Foreign Key</text>
+  
+  <!-- card-collection -->
+  <rect x="30" y="80" width="220" height="200" class="collection-bg"/>
+  <rect x="30" y="80" width="220" height="30" fill="#1a1a2e" rx="8"/>
+  <text x="140" y="100" class="collection-title">card-collection</text>
+  <line x1="30" y1="110" x2="250" y2="110" stroke="#2a2a4a"/>
+  <text x="40" y="135" class="pk">★ _id: ObjectId</text>
+  <text x="40" y="160" class="fk">→ user: String</text>
+  <text x="40" y="185" class="field">name: String</text>
+  <text x="40" y="210" class="fk">→ setCode: String</text>
+  <text x="40" y="235" class="field">collectorNumber: String</text>
+  <text x="40" y="260" class="field">quantity: int</text>
+  <text x="40" y="270" class="field"></text>
+
+  <!-- scryfall-cards -->
+  <rect x="290" y="80" width="220" height="320" class="collection-bg"/>
+  <rect x="290" y="80" width="220" height="30" fill="#1a1a2e" rx="8"/>
+  <text x="400" y="100" class="collection-title">scryfall-cards</text>
+  <line x1="290" y1="110" x2="510" y2="110" stroke="#2a2a4a"/>
+  <text x="300" y="135" class="pk">★ _id: ObjectId</text>
+  <text x="300" y="160" class="field">name: String</text>
+  <text x="300" y="185" class="fk">→ setCode: String</text>
+  <text x="300" y="210" class="field">collectorNumber: String</text>
+  <text x="300" y="235" class="field">rarity: String</text>
+  <text x="300" y="260" class="field">typeLine: String</text>
+  <text x="300" y="285" class="field">frameStatus: String</text>
+  <text x="300" y="310" class="field">thumbnailFront: String</text>
+  <text x="300" y="335" class="field">thumbnailBack: String</text>
+  <text x="300" y="360" class="field">priceRegular: Double</text>
+  <text x="300" y="385" class="field">priceFoil: Double</text>
+
+  <!-- scryfall-sets -->
+  <rect x="550" y="80" width="220" height="160" class="collection-bg"/>
+  <rect x="550" y="80" width="220" height="30" fill="#1a1a2e" rx="8"/>
+  <text x="660" y="100" class="collection-title">scryfall-sets</text>
+  <line x1="550" y1="110" x2="770" y2="110" stroke="#2a2a4a"/>
+  <text x="560" y="135" class="pk">★ _id: ObjectId</text>
+  <text x="560" y="160" class="field">name: String</text>
+  <text x="560" y="185" class="pk">★ setCode: String</text>
+  <text x="560" y="210" class="field">cardCount: int</text>
+  <text x="560" y="235" class="field">releasedAt: String</text>
+
+  <!-- import-history -->
+  <rect x="290" y="430" width="480" height="240" class="collection-bg"/>
+  <rect x="290" y="430" width="480" height="30" fill="#1a1a2e" rx="8"/>
+  <text x="530" y="450" class="collection-title">import-history</text>
+  <line x1="290" y1="460" x2="770" y2="460" stroke="#2a2a4a"/>
+  <text x="300" y="485" class="pk">★ _id: ObjectId</text>
+  <text x="300" y="510" class="fk">→ user: String</text>
+  <text x="300" y="535" class="field">format: String</text>
+  <text x="300" y="560" class="field">importedAt: DateTime</text>
+  <text x="400" y="485" class="field">totalCardsCount: int</text>
+  <text x="400" y="510" class="field">uniqueCardsCount: int</text>
+  <text x="400" y="535" class="field">addedCardsCount: int</text>
+  <text x="400" y="560" class="field">removedCardsCount: int</text>
+  <text x="300" y="600" class="field">addedCards: List&lt;ImportedCardInfo&gt;</text>
+  <text x="300" y="625" class="field">removedCards: List&lt;ImportedCardInfo&gt;</text>
+
+  <!-- Relations -->
+  <line x1="140" y1="280" x2="140" y2="460" class="relation-line" stroke-dasharray="5,5"/>
+  <text x="150" y="370" class="relation-text" transform="rotate(-90, 150, 370)">tracks imports</text>
+  
+  <line x1="180" y1="210" x2="290" y2="185" class="relation-line"/>
+  <line x1="180" y1="235" x2="550" y2="185" class="relation-line"/>
+  
+  <!-- ImportedCardInfo Note -->
+  <rect x="30" y="430" width="220" height="130" class="note-bg"/>
+  <text x="40" y="455" class="note-text" font-weight="bold">ImportedCardInfo:</text>
+  <text x="40" y="475" class="note-text">- name: String</text>
+  <text x="40" y="495" class="note-text">- setCode: String</text>
+  <text x="40" y="515" class="note-text">- collectorNumber: String</text>
+  <text x="40" y="535" class="note-text">- quantity: int</text>
+  <text x="40" y="555" class="note-text">- foil: boolean</text>
+</svg>

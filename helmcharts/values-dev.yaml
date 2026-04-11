@@ -1,0 +1,17 @@
+## Dev-specific overrides
+
+ingress:
+  className: traefik
+
+volume:
+  storageClassName: local-path
+  storageClassNameEnabled: true
+
+mtgcollection:
+  ingress:
+    host: mtg-collection-dev.biester.vip
+    tlsEnabled: true
+
+mongodb:
+  host: mongodb-service.dev.svc.cluster.local
+  auth: false

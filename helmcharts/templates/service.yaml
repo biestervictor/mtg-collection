@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.mtgcollection.name }}-service
+  namespace: {{ .Values.mtgcollection.nameSpace }}
+spec:
+  selector:
+    app: {{ .Values.mtgcollection.name }}
+  ports:
+    - protocol: TCP
+      port: {{ .Values.mtgcollection.service.port }}
+      targetPort: {{ .Values.mtgcollection.deployment.port }}
+  type: {{ .Values.mtgcollection.service.type }}

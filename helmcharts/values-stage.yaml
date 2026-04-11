@@ -1,0 +1,14 @@
+## Stage/Prod-specific overrides
+
+ingress:
+  className: nginx
+
+mtgcollection:
+  nameSpace: mtg-collection-prod
+  ingress:
+    host: mtg.biester.vip
+    tlsEnabled: true
+
+mongodb:
+  host: mongodb-prod-service.prod.svc.cluster.local
+  auth: true

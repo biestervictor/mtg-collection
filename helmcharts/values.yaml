@@ -1,0 +1,37 @@
+ingress:
+  className: nginx
+  pathType: ImplementationSpecific
+
+imagePullSecret: ChangeIt
+
+image:
+  repository: ghcr.io/biestervictor/mtg-springboot
+  tag: "latest"
+
+mtgcollection:
+  name: mtg-collection
+  nameSpace: mtg-collection
+  imagePullSecretDecodingStrategy: Base64
+  secrets: my-tls-secret
+  tls:
+    certKey: tls-crt
+    keyKey: tls-key
+  deployment:
+    port: 8080
+  service:
+    type: ClusterIP
+    port: 8080
+  ingress:
+    host: mtg-collection.biester.vip
+    tlsEnabled: true
+
+secretstore:
+  name: azure-kv
+  tenantId: "71b67176-40e1-4d4e-80fe-9251918425b2"
+  vaultUrl: "https://treasurykeyvault.vault.azure.net/"
+
+mongodb:
+  host: 192.168.178.141
+  port: 27017
+  database: mtg_collection
+  auth: false

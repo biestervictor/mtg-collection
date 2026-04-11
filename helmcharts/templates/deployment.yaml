@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.mtgcollection.name }}
+  namespace: {{ .Values.mtgcollection.nameSpace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.mtgcollection.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.mtgcollection.name }}
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: {{ .Values.mtgcollection.name }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          env:
+            - name: TZ
+              value: "Europe/Berlin"
+            {{- if .Values.mongodb.auth }}
+            - name: SPRING_DATA_MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: MONGODB_URI
+            {{- else }}
+            - name: SPRING_DATA_MONGODB_URI
+              value: "mongodb://{{ .Values.mongodb.host }}:{{ .Values.mongodb.port }}/{{ .Values.mongodb.database }}"
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.mtgcollection.deployment.port }}
+          startupProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.mtgcollection.deployment.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 30
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.mtgcollection.deployment.port }}
+            periodSeconds: 15
+            failureThreshold: 3
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.mtgcollection.deployment.port }}
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 5

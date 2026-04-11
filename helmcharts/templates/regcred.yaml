@@ -1,0 +1,22 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: regcred-external-secret
+  namespace: {{ .Values.mtgcollection.nameSpace }}
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    name: {{ .Values.secretstore.name }}
+    kind: ClusterSecretStore
+  target:
+    name: regcred
+    creationPolicy: Owner
+    template:
+      type: kubernetes.io/dockerconfigjson
+  data:
+    - secretKey: .dockerconfigjson
+      remoteRef:
+        key: imagePullSecret
+        {{- if .Values.mtgcollection.imagePullSecretDecodingStrategy }}
+        decodingStrategy: {{ .Values.mtgcollection.imagePullSecretDecodingStrategy }}
+        {{- end }}

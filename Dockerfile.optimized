@@ -1,0 +1,55 @@
+# Build arguments
+ARG MAVEN_VERSION=3.9.6
+ARG MAVEN_SHA=a5e8e9a2b0b7a2b8e9a7c6b5a4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e
+ARG JAVA_VERSION=17.0.10_11
+
+# ============================================
+# BUILDER STAGE
+# ============================================
+FROM eclipse-temurin:17-jdk AS builder
+
+WORKDIR /build
+
+# Install Maven
+RUN apt-get update && apt-get install -y wget && \
+    wget https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
+    tar -xzf apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
+    ln -s /build/apache-maven-${MAVEN_VERSION}/bin/mvn /usr/local/bin/mvn && \
+    rm apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Copy and build
+COPY pom.xml /build/
+RUN mvn dependency:go-offline -B
+
+COPY src /build/src
+RUN mvn package -DskipTests -B
+
+# ============================================
+# RUNTIME STAGE  
+# ============================================
+FROM eclipse-temurin:17-jre
+
+WORKDIR /app
+
+# Install curl for healthcheck
+RUN apt-get update && apt-get install -y curl && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -r mtg && useradd -r -g mtg mtg
+
+# Copy jar
+COPY --from=builder /build/target/*.jar app.jar
+
+# Set ownership
+RUN chown -R mtg:mtg /app
+
+USER mtg
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8080/ || exit 1
+
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

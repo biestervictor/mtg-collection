@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.mtgcollection.name }}-ingress
+  namespace: {{ .Values.mtgcollection.nameSpace }}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  {{- if .Values.mtgcollection.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.mtgcollection.ingress.host }}
+      secretName: {{ .Values.mtgcollection.secrets }}
+  {{- end }}
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.mtgcollection.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: {{ .Values.ingress.pathType }}
+            backend:
+              service:
+                name: {{ .Values.mtgcollection.name }}-service
+                port:
+                  number: {{ .Values.mtgcollection.service.port }}

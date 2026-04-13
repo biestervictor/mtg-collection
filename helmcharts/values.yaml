@@ -33,5 +33,7 @@ secretstore:
 mongodb:
   host: 192.168.178.141
   port: 27017
-  database: mtg_collection
-  auth: false
+  database: mtg-manager
+  auth: true
+  username: mongokubitos
+  password: kubitosTiger_2026

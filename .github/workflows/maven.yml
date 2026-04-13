@@ -122,9 +122,15 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
     steps:
       - name: Checkout kubeconfig
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
         run: |
+          if [ -z "$KUBECONFIG" ]; then
+            echo "::warning::KUBECONFIG secret not set - skipping deployment"
+            exit 0
+          fi
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config || true
+          echo "$KUBECONFIG" > ~/.kube/config
 
       - name: Install kubectl
         run: |

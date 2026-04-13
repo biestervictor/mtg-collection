@@ -23,7 +23,10 @@ spec:
               value: "Europe/Berlin"
             {{- if .Values.mongodb.auth }}
             - name: SPRING_DATA_MONGODB_URI
-              value: "mongodb://{{ .Values.mongodb.username }}:{{ .Values.mongodb.password }}@{{ .Values.mongodb.host }}:{{ .Values.mongodb.port }}/{{ .Values.mongodb.database }}?authSource=admin"
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: MONGODB_URI
             {{- else }}
             - name: SPRING_DATA_MONGODB_URI
               value: "mongodb://{{ .Values.mongodb.host }}:{{ .Values.mongodb.port }}/{{ .Values.mongodb.database }}"

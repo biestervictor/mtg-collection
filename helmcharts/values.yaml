@@ -34,6 +34,4 @@ mongodb:
   host: 192.168.178.141
   port: 27017
   database: mtg-manager
-  auth: true
-  username: mongokubitos
-  password: kubitosTiger_2026
+  auth: false

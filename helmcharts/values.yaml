@@ -5,7 +5,7 @@ ingress:
 imagePullSecret: ChangeIt
 
 image:
-  repository: ghcr.io/biestervictor/mtg-springboot
+  repository: ghcr.io/biestervictor/mtg-collection
   tag: "dev-0.1.9"
 
 mtgcollection:

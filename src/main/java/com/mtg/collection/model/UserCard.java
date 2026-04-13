@@ -15,6 +15,8 @@ public class UserCard {
     private String collectorNumber;
     private int quantity;
     private boolean foil;
+    private double price;
+    private LocalDate priceUpdatedAt;
     
     public UserCard() {}
     
@@ -26,7 +28,7 @@ public class UserCard {
         this.quantity = quantity;
         this.foil = foil;
     }
-
+    
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getUser() { return user; }
@@ -41,4 +43,8 @@ public class UserCard {
     public void setQuantity(int quantity) { this.quantity = quantity; }
     public boolean isFoil() { return foil; }
     public void setFoil(boolean foil) { this.foil = foil; }
+    public double getPrice() { return price; }
+    public void setPrice(double price) { this.price = price; }
+    public LocalDate getPriceUpdatedAt() { return priceUpdatedAt; }
+    public void setPriceUpdatedAt(LocalDate priceUpdatedAt) { this.priceUpdatedAt = priceUpdatedAt; }
 }

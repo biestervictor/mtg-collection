@@ -83,9 +83,20 @@ public class ScryfallService {
         }
 
         log.info("Fetched {} sets from Scryfall API", sets.size());
-        return sets;
+return sets;
     }
 
+    public List<ScryfallCard> getAllCards(boolean forceRefresh) {
+        List<ScryfallSet> sets = getAllSets(forceRefresh);
+        List<ScryfallCard> allCards = new ArrayList<>();
+        
+        for (ScryfallSet set : sets) {
+            allCards.addAll(getCardsBySet(set.getSetCode(), null));
+        }
+        
+        return allCards;
+    }
+    
     public List<ScryfallCard> getCardsBySet(String setCode, List<String> filters) {
         List<ScryfallCard> cachedCards = cardRepository.findBySetCode(setCode);
         

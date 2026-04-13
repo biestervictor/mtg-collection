@@ -3,9 +3,8 @@ kind: Ingress
 metadata:
   name: magic-collection-ingress
   namespace: magiccollection
-  annotations:
-    kubernetes.io/ingress.class: nginx
 spec:
+  ingressClassName: nginx
   rules:
     - host: mtg-kubitos.biester.vip
       http:

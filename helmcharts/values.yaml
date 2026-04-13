@@ -6,7 +6,7 @@ imagePullSecret: ChangeIt
 
 image:
   repository: ghcr.io/biestervictor/mtg-springboot
-  tag: "latest"
+  tag: "dev-0.1.9"
 
 mtgcollection:
   name: mtg-collection

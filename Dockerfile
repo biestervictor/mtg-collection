@@ -1,34 +1,37 @@
-# Multi-stage build for smaller image
-FROM maven:3.9-eclipse-temurin-17 AS builder
+# ============================================
+# BUILDER STAGE
+# ============================================
+FROM eclipse-temurin:17-jdk AS builder
 
-WORKDIR /app
+WORKDIR /build
 
-# Copy pom.xml first for dependency caching
-COPY pom.xml .
+COPY pom.xml /build/
 RUN mvn dependency:go-offline -B
 
-# Copy source and build
-COPY src ./src
+COPY src /build/src
 RUN mvn package -DskipTests -B
 
-# Runtime stage
-FROM eclipse-temurin:17-jre-alpine
+# ============================================
+# RUNTIME STAGE (ARM64 & AMD64)
+# ============================================
+FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-# Add non-root user for security
-RUN addgroup -S mtg && adduser -S mtg -G mtg
+RUN apt-get update && apt-get install -y curl && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -r mtg && useradd -r -g mtg mtg
+
+COPY --from=builder /build/target/*.jar app.jar
+
+RUN chown -R mtg:mtg /app
+
 USER mtg
 
-# Copy jar from builder
-COPY --from=builder /app/target/*.jar app.jar
-
-# Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8080/ || exit 1
 
-# Run application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

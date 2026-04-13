@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: magic-collection
+  namespace: magiccollection
+  labels:
+    app: magic-collection
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: magic-collection
+  template:
+    metadata:
+      labels:
+        app: magic-collection
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: magic-collection
+          image: ghcr.io/biestervictor/mtg-springboot:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: TZ
+              value: "Europe/Berlin"
+            - name: SPRING_DATA_MONGODB_URI
+              value: "mongodb://192.168.178.141:27017/mtg-manager"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 3
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 5
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

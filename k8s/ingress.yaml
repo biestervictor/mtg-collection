@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: magic-collection-ingress
+  namespace: magiccollection
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: mtg-kubitos.biester.vip
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: magic-collection-service
+                port:
+                  number: 80

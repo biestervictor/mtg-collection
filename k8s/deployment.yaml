@@ -19,7 +19,7 @@ spec:
         - name: regcred
       containers:
         - name: magic-collection
-          image: ghcr.io/biestervictor/mtg-springboot:latest
+          image: ghcr.io/biestervictor/mtg-collection:latest
           ports:
             - containerPort: 8080
           env:
@@ -43,10 +43,3 @@ spec:
             periodSeconds: 10
             failureThreshold: 3
             timeoutSeconds: 5
-          resources:
-            requests:
-              memory: "256Mi"
-              cpu: "100m"
-            limits:
-              memory: "512Mi"
-              cpu: "500m"

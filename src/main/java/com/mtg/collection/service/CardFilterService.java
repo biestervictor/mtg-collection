@@ -15,9 +15,11 @@ public class CardFilterService {
                                               String showExtendedArt, String showShowcase) {
         List<CardWithUserData> filtered = cards;
 
-        if ("true".equals(showBasics)) {
-            filtered = filterToOnlyBasicLands(filtered);
-        } else if ("true".equals(showExtendedArt)) {
+        if (!"true".equals(showBasics)) {
+            filtered = filterOutBasicLands(filtered);
+        }
+
+        if ("true".equals(showExtendedArt)) {
             filtered = filterToOnlyExtendedArt(filtered);
         } else if ("true".equals(showShowcase)) {
             filtered = filterToOnlyShowcase(filtered);
@@ -118,13 +120,15 @@ public class CardFilterService {
 
     private List<CardWithUserData> filterOutBasicLands(List<CardWithUserData> cards) {
         return cards.stream()
-                .filter(c -> c.getCard() == null || !"basic land".equalsIgnoreCase(c.getCard().getTypeLine()))
+                .filter(c -> c.getCard() == null || c.getCard().getTypeLine() == null || 
+                            !c.getCard().getTypeLine().toLowerCase().contains("basic land"))
                 .collect(Collectors.toList());
     }
 
     private List<CardWithUserData> filterToOnlyBasicLands(List<CardWithUserData> cards) {
         return cards.stream()
-                .filter(c -> c.getCard() != null && "basic land".equalsIgnoreCase(c.getCard().getTypeLine()))
+                .filter(c -> c.getCard() != null && c.getCard().getTypeLine() != null &&
+                            c.getCard().getTypeLine().toLowerCase().contains("basic land"))
                 .collect(Collectors.toList());
     }
 

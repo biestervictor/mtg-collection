@@ -98,13 +98,13 @@ jobs:
             VERSION=${{ steps.version.outputs.version }}
             BUILD_TIMESTAMP=${{ steps.version.outputs.BUILD_TIMESTAMP }}
 
-      - name: Update K8s deployment image tag
+      - name: Update Helm chart image tag
         if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           echo "Updating image tag to dev-$VERSION"
-          sed -i "s|image: ghcr.io/${{ env.IMAGE_NAME }}:.*|image: ghcr.io/${{ env.IMAGE_NAME }}:dev-$VERSION|" k8s/deployment.yaml
-          cat k8s/deployment.yaml | grep "image:"
+          sed -i "s|tag:.*|tag: \"dev-$VERSION\"|" helmcharts/values.yaml
+          cat helmcharts/values.yaml | grep "tag:"
 
       - name: Commit and push updated version
         if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
@@ -112,7 +112,7 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pom.xml k8s/deployment.yaml
+          git add pom.xml helmcharts/values.yaml
           git diff --cached --quiet || git commit -m "ci: bump to v${VERSION}, update image tag [skip ci]"
           git pull --rebase origin dev
           git push origin dev

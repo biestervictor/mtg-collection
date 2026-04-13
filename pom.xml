@@ -90,6 +90,32 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>version-info</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>bash</executable>
+                            <arguments>
+                                <argument>-c</argument>
+                                <argument>\
+echo "Version: ${project.version}"; \
+echo "Build-imestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
+mkdir -p target/classes/META-INF; \
+echo "app.version=${project.version}" > target/classes/META-INF/app.properties; \
+echo "app.build.timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> target/classes/META-INF/app.properties</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>

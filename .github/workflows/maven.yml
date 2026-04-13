@@ -2,18 +2,24 @@ name: Java CI with Maven
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "dev" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "dev" ]
 
 permissions:
   contents: write
   security-events: write
   packages: write
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     services:
       mongo:
         image: mongo:6
@@ -58,6 +64,7 @@ jobs:
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Extracted version: $VERSION"
+          echo "BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
@@ -83,9 +90,13 @@ jobs:
           push: true
           platforms: linux/arm64,linux/amd64
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
-            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-${{ steps.version.outputs.version }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            BUILD_TIMESTAMP=${{ steps.version.outputs.BUILD_TIMESTAMP }}
 
       - name: Commit and push updated version
         if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
@@ -95,8 +106,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add pom.xml
           git diff --cached --quiet || git commit -m "ci: bump to v${VERSION} [skip ci]"
-          git pull --rebase origin main
-          git push origin main
+          git pull --rebase origin dev
+          git push origin dev
 
       - name: Create Git version tag
         if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
@@ -104,3 +115,30 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           git tag -f "v${VERSION}" -m "Release v${VERSION}"
           git push -f origin "v${VERSION}"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
+    steps:
+      - name: Checkout kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config || true
+
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          mv kubectl /usr/local/bin/
+
+      - name: Update Kubernetes deployment
+        run: |
+          VERSION="${{ needs.build.outputs.version }}"
+          kubectl set image deployment/magic-collection magic-collection=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-$VERSION -n magiccollection
+          kubectl rollout status deployment/magic-collection -n magiccollection --timeout=300s
+
+      - name: Notify ArgoCD (optional - for future ArgoCD integration)
+        run: |
+          echo "Deployment updated to version $VERSION"
+          echo "For ArgoCD integration, add application to ArgoCD with the image tag: dev-$VERSION"

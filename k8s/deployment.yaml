@@ -26,7 +26,7 @@ spec:
             - name: TZ
               value: "Europe/Berlin"
             - name: SPRING_DATA_MONGODB_URI
-              value: "mongodb://192.168.178.141:27017/mtg-manager"
+              value: "mongodb://mongokubitos:kubitosTiger_2026@192.168.178.141:27017/mtg-manager?authSource=admin"
           livenessProbe:
             httpGet:
               path: /

@@ -1,0 +1,22 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: mtg-collection-cert-external-secret
+  namespace: {{ .Values.mtgcollection.nameSpace }}
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    name: {{ .Values.secretstore.name }}
+    kind: ClusterSecretStore
+  target:
+    name: {{ .Values.mtgcollection.secrets }}
+    creationPolicy: Owner
+    template:
+      type: kubernetes.io/tls
+  data:
+    - secretKey: tls.crt
+      remoteRef:
+        key: {{ .Values.mtgcollection.tls.certKey | default "tls-crt" | quote }}
+    - secretKey: tls.key
+      remoteRef:
+        key: {{ .Values.mtgcollection.tls.keyKey | default "tls-key" | quote }}

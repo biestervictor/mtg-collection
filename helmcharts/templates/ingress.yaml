@@ -11,12 +11,10 @@ metadata:
     traefik.ingress.kubernetes.io/router.middlewares: "{{ .Values.mtgcollection.nameSpace }}-upload-limit@kubernetescrd"
     {{- end }}
 spec:
-  {{- if .Values.mtgcollection.tls.enabled }}
   tls:
     - hosts:
         - {{ .Values.mtgcollection.ingress.host }}
       secretName: {{ .Values.mtgcollection.secrets }}
-  {{- end }}
   ingressClassName: {{ .Values.ingress.className }}
   rules:
     - host: {{ .Values.mtgcollection.ingress.host }}

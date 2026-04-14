@@ -3,7 +3,7 @@
 ingress:
   className: traefik
   annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 
 volume:
   storageClassName: local-path

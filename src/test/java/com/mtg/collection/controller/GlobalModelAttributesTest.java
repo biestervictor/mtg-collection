@@ -45,7 +45,7 @@ class GlobalModelAttributesTest {
     void isProd_falseForDevHost() {
         GlobalModelAttributes advice = new GlobalModelAttributes();
         ReflectionTestUtils.setField(advice, "mongoUri",
-                "mongodb://mongodb-service.dev.svc.cluster.local:27017/mtg_collection");
+                "mongodb://mongodb-service.treasury.svc.cluster.local:27017/mtg_collection");
 
         assertFalse(advice.isProd());
     }

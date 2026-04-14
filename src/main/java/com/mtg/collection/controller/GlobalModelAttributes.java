@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 @ControllerAdvice
 public class GlobalModelAttributes {
 
-    private static final String DEV_HOST = "mongodb-service.dev.svc.cluster.local";
+    private static final String DEV_HOST = "mongodb-service.treasury.svc.cluster.local";
 
     @Value("${app.version:-}")
     private String appVersion;

@@ -1,5 +1,6 @@
 package com.mtg.collection.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -7,8 +8,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 @ControllerAdvice
 public class GlobalModelAttributes {
 
-    private static final String DEV_HOST = "192.168.178.141";
-    private static final String PROD_HOST = "192.168.178.90";
+    private static final String DEV_HOST = "mongodb-service.treasury.svc.cluster.local";
 
     @Value("${app.version:-}")
     private String appVersion;
@@ -37,7 +37,12 @@ public class GlobalModelAttributes {
     @ModelAttribute("isProd")
     public boolean isProd() {
         String host = extractHost(mongoUri);
-        return host.contains(PROD_HOST);
+        return !host.isEmpty() && !host.contains(DEV_HOST);
+    }
+
+    @ModelAttribute("currentUri")
+    public String currentUri(HttpServletRequest request) {
+        return request != null ? request.getRequestURI() : "";
     }
 
     String extractHost(String uri) {

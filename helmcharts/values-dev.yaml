@@ -9,9 +9,9 @@ volume:
 
 mtgcollection:
   ingress:
-    host: mtg-collection-dev.biester.vip
+    host: mtg-dev.biester.vip
     tlsEnabled: true
 
 mongodb:
-  host: mongodb-service.dev.svc.cluster.local
+  host: mongodb-service.treasury.svc.cluster.local
   auth: false

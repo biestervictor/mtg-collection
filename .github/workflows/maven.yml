@@ -3,8 +3,16 @@ name: Java CI with Maven
 on:
   push:
     branches: [ "dev" ]
+    paths-ignore:
+      - 'helmcharts/**'
+      - 'k8s/**'
+      - '**.md'
   pull_request:
     branches: [ "dev" ]
+    paths-ignore:
+      - 'helmcharts/**'
+      - 'k8s/**'
+      - '**.md'
 
 permissions:
   contents: write
@@ -98,14 +106,22 @@ jobs:
             VERSION=${{ steps.version.outputs.version }}
             BUILD_TIMESTAMP=${{ steps.version.outputs.BUILD_TIMESTAMP }}
 
+      - name: Update Helm chart image tag
+        if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Updating image tag to dev-$VERSION"
+          sed -i "s|tag:.*|tag: \"dev-$VERSION\"|" helmcharts/values.yaml
+          cat helmcharts/values.yaml | grep "tag:"
+
       - name: Commit and push updated version
         if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pom.xml
-          git diff --cached --quiet || git commit -m "ci: bump to v${VERSION} [skip ci]"
+          git add pom.xml helmcharts/values.yaml
+          git diff --cached --quiet || git commit -m "ci: bump to v${VERSION}, update image tag [skip ci]"
           git pull --rebase origin dev
           git push origin dev
 
@@ -115,30 +131,3 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           git tag -f "v${VERSION}" -m "Release v${VERSION}"
           git push -f origin "v${VERSION}"
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
-    steps:
-      - name: Checkout kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config || true
-
-      - name: Install kubectl
-        run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          mv kubectl /usr/local/bin/
-
-      - name: Update Kubernetes deployment
-        run: |
-          VERSION="${{ needs.build.outputs.version }}"
-          kubectl set image deployment/magic-collection magic-collection=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-$VERSION -n magiccollection
-          kubectl rollout status deployment/magic-collection -n magiccollection --timeout=300s
-
-      - name: Notify ArgoCD (optional - for future ArgoCD integration)
-        run: |
-          echo "Deployment updated to version $VERSION"
-          echo "For ArgoCD integration, add application to ArgoCD with the image tag: dev-$VERSION"

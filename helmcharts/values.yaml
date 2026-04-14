@@ -5,8 +5,8 @@ ingress:
 imagePullSecret: ChangeIt
 
 image:
-  repository: ghcr.io/biestervictor/mtg-springboot
-  tag: "latest"
+  repository: ghcr.io/biestervictor/mtg-collection
+  tag: "dev-0.1.15"
 
 mtgcollection:
   name: mtg-collection
@@ -22,7 +22,7 @@ mtgcollection:
     type: ClusterIP
     port: 8080
   ingress:
-    host: mtg-collection.biester.vip
+    host: mtg-kubitos.biester.vip
     tlsEnabled: true
 
 secretstore:
@@ -33,5 +33,5 @@ secretstore:
 mongodb:
   host: 192.168.178.141
   port: 27017
-  database: mtg_collection
+  database: mtg-manager
   auth: false

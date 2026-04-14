@@ -9,7 +9,7 @@ volume:
 
 mtgcollection:
   ingress:
-    host: mtg-collection-dev.biester.vip
+    host: mtg-dev.biester.vip
     tlsEnabled: true
 
 mongodb:

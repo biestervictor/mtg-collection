@@ -22,7 +22,7 @@ mtgcollection:
     type: ClusterIP
     port: 8080
   ingress:
-    host: mtg-collection.biester.vip
+    host: mtg-kubitos.biester.vip
     tlsEnabled: true
 
 secretstore:

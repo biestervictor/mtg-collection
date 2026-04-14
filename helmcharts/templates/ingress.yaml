@@ -4,9 +4,12 @@ metadata:
   name: {{ .Values.mtgcollection.name }}-ingress
   namespace: {{ .Values.mtgcollection.nameSpace }}
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    {{- range $key, $val := .Values.ingress.annotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+    {{- if eq .Values.ingress.className "traefik" }}
+    traefik.ingress.kubernetes.io/router.middlewares: "{{ .Values.mtgcollection.nameSpace }}-upload-limit@kubernetescrd"
+    {{- end }}
 spec:
   {{- if .Values.mtgcollection.tls.enabled }}
   tls:

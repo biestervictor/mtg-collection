@@ -2,6 +2,8 @@
 
 ingress:
   className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
 
 volume:
   storageClassName: local-path

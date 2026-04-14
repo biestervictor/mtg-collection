@@ -1,6 +1,10 @@
 ingress:
   className: nginx
   pathType: ImplementationSpecific
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 
 imagePullSecret: ChangeIt
 
@@ -24,6 +28,9 @@ mtgcollection:
   ingress:
     host: mtg-kubitos.biester.vip
     tlsEnabled: true
+  upload:
+    maxFileSize: "50MB"
+    maxRequestSize: "50MB"
 
 secretstore:
   name: azure-kv

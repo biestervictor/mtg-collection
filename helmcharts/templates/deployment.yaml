@@ -31,6 +31,10 @@ spec:
             - name: SPRING_DATA_MONGODB_URI
               value: "mongodb://{{ .Values.mongodb.host }}:{{ .Values.mongodb.port }}/{{ .Values.mongodb.database }}"
             {{- end }}
+            - name: SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE
+              value: "{{ .Values.mtgcollection.upload.maxFileSize }}"
+            - name: SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE
+              value: "{{ .Values.mtgcollection.upload.maxRequestSize }}"
           ports:
             - containerPort: {{ .Values.mtgcollection.deployment.port }}
           startupProbe:

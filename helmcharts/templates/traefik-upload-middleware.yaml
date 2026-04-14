@@ -1,0 +1,11 @@
+{{- if eq .Values.ingress.className "traefik" }}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: upload-limit
+  namespace: {{ .Values.mtgcollection.nameSpace }}
+spec:
+  buffering:
+    maxRequestBodyBytes: 52428800
+    memRequestBodyBytes: 10485760
+{{- end }}

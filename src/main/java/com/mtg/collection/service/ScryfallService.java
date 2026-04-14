@@ -133,6 +133,10 @@ return sets;
                     existing.setRarity(newCard.getRarity());
                     existing.setTypeLine(newCard.getTypeLine());
                     existing.setFrameStatus(newCard.getFrameStatus());
+                    existing.setThumbnailFront(newCard.getThumbnailFront());
+                    existing.setImageFront(newCard.getImageFront());
+                    existing.setThumbnailBack(newCard.getThumbnailBack());
+                    existing.setImageBack(newCard.getImageBack());
                     existing.setPriceRegular(newCard.getPriceRegular());
                     existing.setPriceFoil(newCard.getPriceFoil());
                     existing.setPurchaseLink(newCard.getPurchaseLink());
@@ -184,6 +188,14 @@ return sets;
             } else {
                 break;
             }
+
+            // Rate limiting: Scryfall allows max 10 req/sec
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Rate limit sleep interrupted", ie);
+            }
         }
 
         log.info("Fetched {} cards for set {} from Scryfall API", cards.size(), setCode);
@@ -217,6 +229,25 @@ return sets;
 
         if (cardNode.has("frame_status")) {
             card.setFrameStatus(cardNode.get("frame_status").asText());
+        }
+
+        // Extract image URLs: regular card vs. double-faced card (DFC)
+        if (cardNode.has("image_uris")) {
+            JsonNode imageUris = cardNode.get("image_uris");
+            if (imageUris.has("small"))  card.setThumbnailFront(imageUris.get("small").asText());
+            if (imageUris.has("normal")) card.setImageFront(imageUris.get("normal").asText());
+        } else if (cardNode.has("card_faces")) {
+            JsonNode faces = cardNode.get("card_faces");
+            if (faces.size() > 0 && faces.get(0).has("image_uris")) {
+                JsonNode front = faces.get(0).get("image_uris");
+                if (front.has("small"))  card.setThumbnailFront(front.get("small").asText());
+                if (front.has("normal")) card.setImageFront(front.get("normal").asText());
+            }
+            if (faces.size() > 1 && faces.get(1).has("image_uris")) {
+                JsonNode back = faces.get(1).get("image_uris");
+                if (back.has("small"))  card.setThumbnailBack(back.get("small").asText());
+                if (back.has("normal")) card.setImageBack(back.get("normal").asText());
+            }
         }
 
         if (cardNode.has("prices")) {

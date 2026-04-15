@@ -52,6 +52,22 @@
                     <li class="nav-item"><a class="nav-link" th:href="@{/statistics}">Statistics</a></li>
                     <li class="nav-item"><a class="nav-link active" th:href="@{/deck-suggest}">Deck Suggest</a></li>
                 </ul>
+                <ul class="navbar-nav align-items-center gap-2">
+                    <li class="nav-item">
+                        <button type="button" class="btn btn-sm btn-outline-warning"
+                                id="updatePricesBtn" onclick="triggerPriceUpdate()">
+                            <i class="bi bi-arrow-repeat"></i> Update Prices
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <form class="d-flex" th:action="@{/search}" method="get">
+                            <input class="form-control form-control-sm me-2"
+                                   style="background-color:#fff;border-color:#ccc;color:#333;"
+                                   type="search" name="q" placeholder="Card search..." aria-label="Search">
+                            <button class="btn btn-sm btn-outline-light" type="submit"><i class="bi bi-search"></i></button>
+                        </form>
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>
@@ -222,10 +238,10 @@
             fetch('/api/meta-decks/refresh?format=' + encodeURIComponent(format), { method: 'POST' })
                 .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
                 .then(data => {
-                    showToast('success', 'Meta refreshed', data.count + ' decks loaded for ' + data.format);
+                    showNavToast('success', 'Meta refreshed', data.count + ' decks loaded for ' + data.format);
                     setTimeout(() => location.reload(), 1500);
                 })
-                .catch(err => showToast('danger', 'Refresh failed', String(err)))
+                .catch(err => showNavToast('danger', 'Refresh failed', String(err)))
                 .finally(() => {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Refresh Meta';
@@ -233,22 +249,10 @@
         }
 
         function showToast(type, title, message) {
-            const container = document.getElementById('toastContainer');
-            const id = 'toast-' + Date.now();
-            container.insertAdjacentHTML('beforeend', `
-                <div id="${id}" class="toast align-items-center text-bg-${type} border-0" role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body"><strong>${title}</strong><br>${message}</div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>`);
-            const el = document.getElementById(id);
-            new bootstrap.Toast(el, { delay: 5000 }).show();
-            el.addEventListener('hidden.bs.toast', () => el.remove());
+            showNavToast(type, title, message);
         }
     </script>
 
-    <!-- Toast container -->
-    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:11000"></div>
+    <div th:replace="~{fragments/nav :: price-update-utils}"></div>
 </body>
 </html>

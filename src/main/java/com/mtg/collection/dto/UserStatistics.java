@@ -16,7 +16,10 @@ public class UserStatistics {
     private List<SetCount> topSetsByCount;
     private List<SetValue> topSetsByValue;
     private List<SetCompletion> completeSets;
-    private List<SetCompletion> nearCompleteSets;
+    private List<SetCompletion> nearCompleteSets;   // 90%+
+    private List<SetCompletion> nearComplete80;      // 80–89%
+    private List<SetCompletion> nearComplete70;      // 70–79%
+    private List<SetCompletion> nearComplete65;      // 65–69%
     private double dailyChange;
     private List<CardPriceChange> topWinners;
     private List<CardPriceChange> topLosers;
@@ -41,6 +44,12 @@ public class UserStatistics {
     public void setCompleteSets(List<SetCompletion> completeSets) { this.completeSets = completeSets; }
     public List<SetCompletion> getNearCompleteSets() { return nearCompleteSets; }
     public void setNearCompleteSets(List<SetCompletion> nearCompleteSets) { this.nearCompleteSets = nearCompleteSets; }
+    public List<SetCompletion> getNearComplete80() { return nearComplete80; }
+    public void setNearComplete80(List<SetCompletion> nearComplete80) { this.nearComplete80 = nearComplete80; }
+    public List<SetCompletion> getNearComplete70() { return nearComplete70; }
+    public void setNearComplete70(List<SetCompletion> nearComplete70) { this.nearComplete70 = nearComplete70; }
+    public List<SetCompletion> getNearComplete65() { return nearComplete65; }
+    public void setNearComplete65(List<SetCompletion> nearComplete65) { this.nearComplete65 = nearComplete65; }
     public double getDailyChange() { return dailyChange; }
     public void setDailyChange(double dailyChange) { this.dailyChange = dailyChange; }
     public List<CardPriceChange> getTopWinners() { return topWinners; }

@@ -230,7 +230,28 @@ class StatisticsServiceTest {
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
 
         assertTrue(stats.getCompleteSets().isEmpty(),     "40% set must not be in completeSets");
-        assertTrue(stats.getNearCompleteSets().isEmpty(), "40% set must not be in nearCompleteSets");
+        assertTrue(stats.getNearCompleteSets().isEmpty(), "40% set must not be in nearCompleteSets (90%+)");
+        assertTrue(stats.getNearComplete80().isEmpty(),   "40% set must not be in nearComplete80");
+        assertTrue(stats.getNearComplete70().isEmpty(),   "40% set must not be in nearComplete70");
+        assertTrue(stats.getNearComplete65().isEmpty(),   "40% set must not be in nearComplete65");
+    }
+
+    @Test
+    void setCompletion_nearCompleteSet_detectedAt80Percent() {
+        // Own 8 of 10 cards → exactly 80% → nearComplete80
+        List<UserCard> cards = new ArrayList<>();
+        for (int i = 1; i <= 8; i++) {
+            cards.add(card("TST", String.valueOf(i), false, 1, 1.0));
+        }
+        when(userCardRepository.findByUser("testuser")).thenReturn(cards);
+        noImports();
+        when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 10)));
+
+        UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
+
+        assertTrue(stats.getNearCompleteSets().isEmpty(), "80% set must NOT be in 90%+ list");
+        assertFalse(stats.getNearComplete80().isEmpty(),  "80% set must appear in nearComplete80");
+        assertEquals(80.0, stats.getNearComplete80().get(0).getPercentage(), 0.01);
     }
 
     @Test

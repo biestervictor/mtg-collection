@@ -172,7 +172,11 @@ return sets;
         query.append(" -is:digital order:set direction:asc");
         
         String encodedQuery = java.net.URLEncoder.encode(query.toString(), "UTF-8");
-        String nextPageUri = SCRYFALL_API + "/cards/search?q=" + encodedQuery;
+        // unique=prints: return every print (collector number) of each card, not just one per name.
+        // Without this the API defaults to unique=cards (1 result per oracle id),
+        // which only returns draft cards and misses all alternate treatments
+        // (borderless, showcase, extended art, full-art, etc.).
+        String nextPageUri = SCRYFALL_API + "/cards/search?q=" + encodedQuery + "&unique=prints";
         
         while (nextPageUri != null) {
             String responseBody = restTemplate.getForObject(URI.create(nextPageUri), String.class);

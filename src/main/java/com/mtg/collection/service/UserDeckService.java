@@ -103,73 +103,52 @@ public class UserDeckService {
     // ── private helpers ───────────────────────────────────────────────────────
 
     /**
-     * Looks up ScryfallCard for every DeckCard (batch by set), sets thumbnailUrl/imageUrl/price,
-     * then aggregates each board by card name: sum quantities, keep most expensive thumbnail.
+     * Looks up ScryfallCard for every DeckCard (batch by set) and sets thumbnailUrl/imageUrl/price.
+     * Quantities are preserved exactly as imported — no aggregation by card name.
      */
     private void enrichAndAggregate(Collection<UserDeck> decks) {
-        // Collect all set codes across all decks
+        // Collect set codes (normalised to lower-case to match Scryfall storage)
         Set<String> setCodes = decks.stream()
                 .flatMap(d -> allCards(d).stream())
                 .map(DeckCard::getSetCode)
                 .filter(Objects::nonNull)
+                .map(String::toLowerCase)
                 .collect(Collectors.toSet());
 
-        // Batch load: one query per set code
+        // Batch load: one query per set code; key = "setCode_collectorNumber" (lower-case)
         Map<String, ScryfallCard> sfMap = new HashMap<>();
         for (String sc : setCodes) {
             for (ScryfallCard sf : scryfallCardRepository.findBySetCode(sc)) {
-                sfMap.put(sf.getSetCode() + "_" + sf.getCollectorNumber(), sf);
+                sfMap.put(sf.getSetCode().toLowerCase() + "_" + sf.getCollectorNumber(), sf);
             }
         }
 
         for (UserDeck deck : decks) {
-            deck.setMainboard(enrichAndAggregate(deck.getMainboard(), sfMap));
-            deck.setSideboard(enrichAndAggregate(deck.getSideboard(), sfMap));
-            deck.setExtraboard(enrichAndAggregate(deck.getExtraboard(), sfMap));
+            deck.setMainboard(enrich(deck.getMainboard(), sfMap));
+            deck.setSideboard(enrich(deck.getSideboard(), sfMap));
+            deck.setExtraboard(enrich(deck.getExtraboard(), sfMap));
         }
     }
 
     /**
-     * For a single board:
-     * 1. Enrich each DeckCard with Scryfall thumbnail/price.
-     * 2. Aggregate by card name: sum quantities, keep the most expensive printing's images.
+     * Enriches each DeckCard with Scryfall thumbnail/price.
+     * Quantities are kept as-is from the import CSV — no summing across printings.
+     * Cards are sorted by name for display.
      */
-    private List<DeckCard> enrichAndAggregate(List<DeckCard> board,
-                                               Map<String, ScryfallCard> sfMap) {
-        // Enrich
+    private List<DeckCard> enrich(List<DeckCard> board, Map<String, ScryfallCard> sfMap) {
         for (DeckCard dc : board) {
-            ScryfallCard sf = sfMap.get(dc.getSetCode() + "_" + dc.getCollectorNumber());
+            String key = dc.getSetCode().toLowerCase() + "_" + dc.getCollectorNumber();
+            ScryfallCard sf = sfMap.get(key);
             if (sf != null) {
                 dc.setThumbnailUrl(sf.getThumbnailFront());
                 dc.setImageUrl(sf.getImageFront());
                 double p = dc.isFoil()
-                        ? (sf.getPriceFoil() != null ? sf.getPriceFoil() : 0.0)
+                        ? (sf.getPriceFoil()    != null ? sf.getPriceFoil()    : 0.0)
                         : (sf.getPriceRegular() != null ? sf.getPriceRegular() : 0.0);
                 dc.setPrice(p);
             }
         }
-
-        // Aggregate by card name: keep most expensive thumbnail, sum quantities
-        Map<String, DeckCard> byName = new LinkedHashMap<>();
-        for (DeckCard dc : board) {
-            DeckCard existing = byName.get(dc.getName());
-            if (existing == null) {
-                byName.put(dc.getName(), dc);
-            } else {
-                // merge quantities
-                existing.setQuantity(existing.getQuantity() + dc.getQuantity());
-                // keep more expensive thumbnail
-                if (dc.getPrice() > existing.getPrice()) {
-                    existing.setThumbnailUrl(dc.getThumbnailUrl());
-                    existing.setImageUrl(dc.getImageUrl());
-                    existing.setSetCode(dc.getSetCode());
-                    existing.setPrice(dc.getPrice());
-                }
-            }
-        }
-
-        // Sort by name
-        return byName.values().stream()
+        return board.stream()
                 .sorted(Comparator.comparing(DeckCard::getName))
                 .collect(Collectors.toList());
     }

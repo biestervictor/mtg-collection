@@ -128,6 +128,39 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <i class="bi bi-graph-up" style="font-size: 3rem; color: var(--accent-color);"></i>
+                            <h5 class="card-title mt-3">Statistics</h5>
+                            <p class="card-text">View collection value, set completion, and price changes.</p>
+                            <a th:href="@{/statistics}" class="btn btn-primary">Statistics</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <i class="bi bi-lightbulb" style="font-size: 3rem; color: var(--accent-color);"></i>
+                            <h5 class="card-title mt-3">Deck Suggest</h5>
+                            <p class="card-text">Find popular decks you can already build from your collection.</p>
+                            <a th:href="@{/deck-suggest}" class="btn btn-primary">Deck Suggest</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <i class="bi bi-stack" style="font-size: 3rem; color: var(--accent-color);"></i>
+                            <h5 class="card-title mt-3">My Decks</h5>
+                            <p class="card-text">Browse your own physical decks detected from DragonShield folders.</p>
+                            <a th:href="@{/my-decks}" class="btn btn-primary">My Decks</a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </main>

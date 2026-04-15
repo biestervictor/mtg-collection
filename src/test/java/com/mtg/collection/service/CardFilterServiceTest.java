@@ -119,4 +119,120 @@ class CardFilterServiceTest {
         
         assertEquals(2, result.size());
     }
+
+    @Test
+    void testFrameStyle_ExtendedArt_ReturnsOnlyExtendedArt() {
+        ScryfallCard extCard = createCard("10", "Extended Art Card", "rare");
+        extCard.setFrameStatus("extendedart");
+        ScryfallCard normalCard = createCard("11", "Normal Card", "rare");
+
+        List<CardWithUserData> cards = Arrays.asList(
+            createCardWithUserData(extCard, 1, 0),
+            createCardWithUserData(normalCard, 1, 0)
+        );
+
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "extendedart", null);
+
+        assertEquals(1, result.size());
+        assertEquals("Extended Art Card", result.get(0).getCard().getName());
+    }
+
+    @Test
+    void testFrameStyle_Showcase_ReturnsOnlyShowcase() {
+        ScryfallCard showcaseCard = createCard("12", "Showcase Card", "rare");
+        showcaseCard.setFrameStatus("showcase");
+        ScryfallCard normalCard = createCard("13", "Normal Card", "rare");
+
+        List<CardWithUserData> cards = Arrays.asList(
+            createCardWithUserData(showcaseCard, 1, 0),
+            createCardWithUserData(normalCard, 1, 0)
+        );
+
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "showcase", null);
+
+        assertEquals(1, result.size());
+        assertEquals("Showcase Card", result.get(0).getCard().getName());
+    }
+
+    @Test
+    void testFrameStyle_Borderless_ReturnsOnlyBorderless() {
+        ScryfallCard borderlessCard = createCard("14", "Borderless Card", "mythic");
+        borderlessCard.setBorderColor("borderless");
+        ScryfallCard normalCard = createCard("15", "Normal Card", "mythic");
+        normalCard.setBorderColor("black");
+
+        List<CardWithUserData> cards = Arrays.asList(
+            createCardWithUserData(borderlessCard, 1, 0),
+            createCardWithUserData(normalCard, 1, 0)
+        );
+
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "borderless", null);
+
+        assertEquals(1, result.size());
+        assertEquals("Borderless Card", result.get(0).getCard().getName());
+    }
+
+    @Test
+    void testFrameStyle_FullArt_ReturnsOnlyFullArt() {
+        ScryfallCard fullArtLand = createCard("16", "Full Art Forest", "common");
+        fullArtLand.setTypeLine("Basic Land — Forest");
+        fullArtLand.setFullArt(true);
+        ScryfallCard normalLand = createCard("17", "Forest", "common");
+        normalLand.setTypeLine("Basic Land — Forest");
+        normalLand.setFullArt(false);
+
+        List<CardWithUserData> cards = Arrays.asList(
+            createCardWithUserData(fullArtLand, 1, 0),
+            createCardWithUserData(normalLand, 1, 0)
+        );
+
+        // showBasics=true so basic lands are not filtered out; frameStyle=fullart
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, "true", "fullart", null);
+
+        assertEquals(1, result.size());
+        assertEquals("Full Art Forest", result.get(0).getCard().getName());
+    }
+
+    @Test
+    void testFrameStyle_ExtendedArt_NullFrameStatus_ReturnsEmpty() {
+        // Cards with null frameStatus must not show up under extendedart filter
+        ScryfallCard card = createCard("20", "Normal Card", "rare");
+        // frameStatus left null (as it would be for old cached cards)
+
+        List<CardWithUserData> cards = Arrays.asList(createCardWithUserData(card, 1, 0));
+
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "extendedart", null);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void testHideTokens_FiltersOutTokenCards() {
+        ScryfallCard tokenCard = createCard("30", "Soldier Token", "common");
+        tokenCard.setTypeLine("Token Creature — Soldier");
+        ScryfallCard normalCard = createCard("31", "Lightning Bolt", "uncommon");
+        normalCard.setTypeLine("Instant");
+
+        List<CardWithUserData> cards = Arrays.asList(
+            createCardWithUserData(tokenCard, 1, 0),
+            createCardWithUserData(normalCard, 1, 0)
+        );
+
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, null, "true");
+
+        assertEquals(1, result.size());
+        assertEquals("Lightning Bolt", result.get(0).getCard().getName());
+    }
+
+    @Test
+    void testHideTokens_Null_IncludesTokenCards() {
+        ScryfallCard tokenCard = createCard("32", "Goblin Token", "common");
+        tokenCard.setTypeLine("Token Creature — Goblin");
+
+        List<CardWithUserData> cards = Arrays.asList(createCardWithUserData(tokenCard, 1, 0));
+
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, null, null);
+
+        assertEquals(1, result.size());
+    }
 }

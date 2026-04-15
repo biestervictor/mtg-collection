@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${deck != null ? deck.name + ' – MTG' : 'Deck Detail – MTG'}">Deck Detail – MTG</title>
+    <link th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root { --primary-color: #1a1a2e; --secondary-color: #16213e; --accent-color: #e94560; --text-light: #f1f1f1; }
+        body { background-color: #0f0f23; color: var(--text-light); min-height: 100vh; }
+        .navbar { background-color: var(--primary-color) !important; }
+        .navbar-brand { font-weight: bold; color: var(--accent-color) !important; }
+        .nav-link { color: var(--text-light) !important; }
+        .nav-link.active { color: var(--accent-color) !important; border-bottom: 2px solid var(--accent-color); }
+        .card { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
+        .btn-primary { background-color: var(--accent-color); border-color: var(--accent-color); }
+        .form-control, .form-select { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
+        footer { background-color: var(--primary-color); color: #888; }
+
+        .deck-table { font-size: 0.88rem; }
+        .deck-table th { color: #aaa; font-weight: normal; border-color: #2a2a4a; padding: 0.35rem 0.6rem; }
+        .deck-table td { border-color: #2a2a4a; padding: 0.3rem 0.6rem; }
+        .deck-table tr.data-row:hover { background-color: rgba(255,255,255,0.04); }
+        .section-header td { background-color: rgba(255,255,255,0.06);
+                              font-size: 0.72rem; font-weight: bold; letter-spacing: 0.07em;
+                              text-transform: uppercase; color: #aaa; padding: 0.35rem 0.6rem; }
+        .badge-missing { background-color: var(--accent-color); }
+        .badge-owned   { background-color: #28a745; }
+        .progress { background-color: #2a2a4a; height: 10px; }
+        .progress-bar { background-color: var(--accent-color); }
+        .progress-bar.complete { background-color: #28a745; }
+        .summary-cost { font-size: 1.6rem; font-weight: bold; color: var(--accent-color); }
+
+        /* Hover card preview */
+        #card-preview { display: none; position: fixed; z-index: 9999; pointer-events: none; }
+        #card-preview img { width: 146px; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.8); }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" th:href="@{/}"><i class="bi bi-collection"></i> MTG Collection Manager</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" th:href="@{/}">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/import}">Import</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/show}">Show</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/compare}">Compare</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/statistics}">Statistics</a></li>
+                    <li class="nav-item"><a class="nav-link active" th:href="@{/deck-suggest}">Deck Suggest</a></li>
+                </ul>
+                <ul class="navbar-nav align-items-center gap-2">
+                    <li class="nav-item">
+                        <button type="button" class="btn btn-sm btn-outline-warning"
+                                id="updatePricesBtn" onclick="triggerPriceUpdate()">
+                            <i class="bi bi-arrow-repeat"></i> Update Prices
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <form class="d-flex" th:action="@{/search}" method="get">
+                            <input class="form-control form-control-sm me-2"
+                                   style="background-color:#fff;border-color:#ccc;color:#333;"
+                                   type="search" name="q" placeholder="Card search..." aria-label="Search">
+                            <button class="btn btn-sm btn-outline-light" type="submit"><i class="bi bi-search"></i></button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4">
+
+        <!-- Back link -->
+        <a th:href="@{/deck-suggest(format=${selectedFormat},user=${selectedUser})}"
+           class="btn btn-sm btn-outline-secondary mb-3">
+            <i class="bi bi-arrow-left"></i> Back to Deck Suggest
+        </a>
+
+        <!-- Error state -->
+        <div th:if="${error != null}" class="alert alert-danger" th:text="${error}"></div>
+
+        <!-- Deck detail -->
+        <div th:if="${deck != null}">
+
+            <!-- Header row: title + completion summary -->
+            <div class="d-flex align-items-start gap-3 mb-3 flex-wrap">
+                <div>
+                    <h2 class="mb-1" th:text="${deck.name}">Deck Name</h2>
+                    <span class="text-muted">
+                        <span th:text="${#strings.capitalize(deck.format)}">Commander</span>
+                        &nbsp;·&nbsp;
+                        <span th:text="${deck.playRate} + '% meta'">1.0% meta</span>
+                    </span>
+                    <span th:if="${deck.commanderName != null}"
+                          class="ms-2 badge bg-secondary"
+                          th:text="${deck.commanderName}">Commander</span>
+                </div>
+
+                <!-- Ownership summary (shown only if suggestion data available) -->
+                <div th:if="${suggestion != null}" class="ms-auto text-end">
+                    <div class="text-muted small mb-1"
+                         th:text="${suggestion.ownedUniqueCards} + ' / ' + ${suggestion.totalCards} + ' cards owned (' + ${suggestion.completionPercent} + '%)'">
+                        0 / 0 (0%)
+                    </div>
+                    <div class="progress mb-2" style="width:220px;margin-left:auto;">
+                        <div class="progress-bar"
+                             th:classappend="${suggestion.missingUniqueCards == 0} ? 'complete' : ''"
+                             th:style="'width:' + ${suggestion.completionPercent} + '%'"
+                             role="progressbar"></div>
+                    </div>
+                    <div th:if="${suggestion.totalMissingCost > 0}">
+                        <span class="summary-cost"
+                              th:text="'€ ' + ${#numbers.formatDecimal(suggestion.totalMissingCost, 1, 2)}">
+                            € 0.00
+                        </span>
+                        <span class="text-muted small"> still needed</span>
+                    </div>
+                    <div th:if="${suggestion.missingUniqueCards == 0}">
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Complete</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User selector -->
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <span class="text-muted small">View as:</span>
+                <div class="btn-group btn-group-sm">
+                    <a th:each="u : ${users}"
+                       th:href="@{/deck-suggest/detail(format=${selectedFormat},slug=${deck.slug},user=${u})}"
+                       th:text="${u}"
+                       th:class="${u == selectedUser} ? 'btn btn-primary' : 'btn btn-outline-secondary'">User</a>
+                </div>
+            </div>
+
+            <!-- Card table -->
+            <div class="card">
+                <div class="card-body p-0">
+                    <table class="table deck-table mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width:2.5rem">#</th>
+                                <th>Card</th>
+                                <th class="text-center" style="width:5rem">Owned</th>
+                                <th class="text-center" style="width:5.5rem">Missing</th>
+                                <th class="text-end" style="width:5.5rem">€/card</th>
+                                <th class="text-end" style="width:6rem">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Commander section -->
+                            <tr th:if="${!commanderCards.isEmpty()}" class="section-header">
+                                <td colspan="6">Commander</td>
+                            </tr>
+                            <tr th:each="card : ${commanderCards}" class="data-row"
+                                th:with="mc=${missingByName[card.name.trim()]},
+                                         minP=${suggestion != null and suggestion.cardMinPrices != null ? suggestion.cardMinPrices[card.name.trim()] : null},
+                                         thumb=${suggestion != null and suggestion.cardThumbnails != null ? suggestion.cardThumbnails[card.name.trim()] : null}"
+                                 th:data-thumb="${thumb}">
+                                 <td class="text-muted" th:text="${card.quantity}">1</td>
+                                 <td th:text="${card.name.trim()}">Card Name</td>
+                                 <td class="text-center">
+                                     <span th:if="${mc == null}" class="badge badge-owned">&#x2713;</span>
+                                     <span th:if="${mc != null}" class="text-muted small" th:text="${mc.ownedQuantity}">0</span>
+                                 </td>
+                                 <td class="text-center">
+                                     <span th:if="${mc != null}" class="badge badge-missing" th:text="${mc.stillNeeded}">1</span>
+                                 </td>
+                                 <td class="text-end text-muted small"
+                                     th:text="${mc != null and mc.pricePerCard > 0 ? '€ ' + #numbers.formatDecimal(mc.pricePerCard, 1, 2) : (mc == null and minP != null ? '€ ' + #numbers.formatDecimal(minP, 1, 2) : '—')}">—</td>
+                                 <td class="text-end small"
+                                     th:text="${mc != null and mc.totalMissingCost > 0 ? '€ ' + #numbers.formatDecimal(mc.totalMissingCost, 1, 2) : '—'}">—</td>
+                             </tr>
+
+                             <!-- Non-basic cards section -->
+                             <tr th:if="${!mainCards.isEmpty()}" class="section-header">
+                                 <td colspan="6">Mainboard</td>
+                             </tr>
+                             <tr th:each="card : ${mainCards}" class="data-row"
+                                 th:with="mc=${missingByName[card.name.trim()]},
+                                          minP=${suggestion != null and suggestion.cardMinPrices != null ? suggestion.cardMinPrices[card.name.trim()] : null},
+                                          thumb=${suggestion != null and suggestion.cardThumbnails != null ? suggestion.cardThumbnails[card.name.trim()] : null}"
+                                 th:data-thumb="${thumb}">
+                                 <td class="text-muted" th:text="${card.quantity}">1</td>
+                                 <td th:text="${card.name.trim()}">Card Name</td>
+                                 <td class="text-center">
+                                     <span th:if="${mc == null}" class="badge badge-owned">&#x2713;</span>
+                                     <span th:if="${mc != null}" class="text-muted small" th:text="${mc.ownedQuantity}">0</span>
+                                 </td>
+                                 <td class="text-center">
+                                     <span th:if="${mc != null}" class="badge badge-missing" th:text="${mc.stillNeeded}">1</span>
+                                 </td>
+                                 <td class="text-end text-muted small"
+                                     th:text="${mc != null and mc.pricePerCard > 0 ? '€ ' + #numbers.formatDecimal(mc.pricePerCard, 1, 2) : (mc == null and minP != null ? '€ ' + #numbers.formatDecimal(minP, 1, 2) : '—')}">—</td>
+                                 <td class="text-end small"
+                                     th:text="${mc != null and mc.totalMissingCost > 0 ? '€ ' + #numbers.formatDecimal(mc.totalMissingCost, 1, 2) : '—'}">—</td>
+                             </tr>
+
+                            <!-- Basic lands section -->
+                            <tr th:if="${!basicCards.isEmpty()}" class="section-header">
+                                <td colspan="6">Basic Lands</td>
+                            </tr>
+                            <tr th:each="card : ${basicCards}" class="data-row">
+                                <td class="text-muted" th:text="${card.quantity}">1</td>
+                                <td th:text="${card.name.trim()}">Card Name</td>
+                                <td class="text-center"><span class="badge badge-owned">&#x2713;</span></td>
+                                <td></td>
+                                <td class="text-end text-muted small">—</td>
+                                <td class="text-end small">—</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /deck != null -->
+    </main>
+
+    <footer class="text-center py-3 mt-4"><p>MTG Collection Manager</p></footer>
+
+    <!-- Hover card preview -->
+    <div id="card-preview"><img src="" alt=""></div>
+
+    <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <script>
+        const preview = document.getElementById('card-preview');
+        document.querySelectorAll('.data-row[data-thumb]').forEach(row => {
+            const thumb = row.dataset.thumb;
+            if (!thumb) return;
+            row.addEventListener('mouseover', () => {
+                preview.querySelector('img').src = thumb;
+                preview.style.display = 'block';
+            });
+            row.addEventListener('mousemove', e => {
+                preview.style.left = (e.clientX + 18) + 'px';
+                preview.style.top  = Math.max(10, e.clientY - 80) + 'px';
+            });
+            row.addEventListener('mouseleave', () => {
+                preview.style.display = 'none';
+            });
+        });
+    </script>
+    <div th:replace="~{fragments/nav :: price-update-utils}"></div>
+</body>
+</html>

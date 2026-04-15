@@ -21,6 +21,8 @@ public class ScryfallCard {
     private Double priceRegular;
     private Double priceFoil;
     private String purchaseLink;
+    private String borderColor;
+    private boolean fullArt;
     
     public ScryfallCard() {}
 
@@ -52,4 +54,8 @@ public class ScryfallCard {
     public void setPriceFoil(Double priceFoil) { this.priceFoil = priceFoil; }
     public String getPurchaseLink() { return purchaseLink; }
     public void setPurchaseLink(String purchaseLink) { this.purchaseLink = purchaseLink; }
+    public String getBorderColor() { return borderColor; }
+    public void setBorderColor(String borderColor) { this.borderColor = borderColor; }
+    public boolean isFullArt() { return fullArt; }
+    public void setFullArt(boolean fullArt) { this.fullArt = fullArt; }
 }

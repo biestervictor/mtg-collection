@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Statistics - MTG</title>
-    <link href="/webjars/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
         :root { --primary-color: #1a1a2e; --secondary-color: #16213e; --accent-color: #e94560; --text-light: #f1f1f1; }
@@ -19,40 +19,84 @@
         .stats-card { text-align: center; padding: 1rem; }
         .stats-value { font-size: 2rem; font-weight: bold; color: var(--accent-color); }
         .stats-label { color: #888; }
-        .table { color: var(--text-light); }
-        .table-striped > tbody > tr:nth-of-type(odd) { --bs-table-striped-bg: var(--secondary-color); }
+
+        /* ── Dark-theme table: override Bootstrap CSS variables ── */
+        .table {
+            --bs-table-color: var(--text-light);
+            --bs-table-bg: transparent;
+            --bs-table-striped-color: var(--text-light);
+            --bs-table-striped-bg: rgba(255, 255, 255, 0.06);
+            --bs-table-hover-color: var(--text-light);
+            --bs-table-border-color: #2a2a4a;
+            color: var(--text-light);
+        }
+        /* Ensure every cell stays light even inside collapse tbodies */
+        .table > :not(caption) > * > * { color: var(--text-light); }
+
         .positive-change { color: #28a745; }
         .negative-change { color: var(--accent-color); }
         .set-code { font-weight: bold; color: var(--accent-color); }
         footer { background-color: var(--primary-color); color: #888; }
         .btn-show-more { font-size: 0.75rem; }
+
+        /* Sortable column headers */
+        .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        .sortable:hover { color: var(--accent-color); }
+        .sortable .sort-icon { opacity: 0.4; font-size: 0.75em; margin-left: 3px; }
+        .sortable[data-dir] .sort-icon { opacity: 1; color: var(--accent-color); }
+        .sortable[data-dir="asc"]  .sort-icon::before { content: "▲"; }
+        .sortable[data-dir="desc"] .sort-icon::before { content: "▼"; }
+        .sortable:not([data-dir]) .sort-icon::before { content: "⇅"; }
+
+        /* Set completion tier badges */
+        .tier-badge { display: inline-block; width: 2.5rem; text-align: center; padding: 1px 4px;
+                      border-radius: 3px; font-size: 0.7rem; font-weight: bold; margin-right: 4px; }
+        .tier-90 { background: #166534; color: #bbf7d0; }
+        .tier-80 { background: #1e3a5f; color: #bae6fd; }
+        .tier-70 { background: #713f12; color: #fed7aa; }
+        .tier-60 { background: #4a1d5e; color: #e9d5ff; }
+        .tier-50 { background: #3b2a1a; color: #fde68a; }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/"><i class="bi bi-collection"></i> MTG Collection Manager</a>
+            <a class="navbar-brand" th:href="@{/}"><i class="bi bi-collection"></i> MTG Collection Manager</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/import">Import</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/show">Show</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/compare">Compare</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="/statistics">Statistics</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/}">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/import}">Import</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/show}">Show</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/compare}">Compare</a></li>
+                    <li class="nav-item"><a class="nav-link active" th:href="@{/statistics}">Statistics</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/deck-suggest}">Deck Suggest</a></li>
+                </ul>
+                <ul class="navbar-nav align-items-center gap-2">
+                    <li class="nav-item">
+                        <button type="button" class="btn btn-sm btn-outline-warning"
+                                id="updatePricesBtn" onclick="triggerPriceUpdate()">
+                            <i class="bi bi-arrow-repeat"></i> Update Prices
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <form class="d-flex" th:action="@{/search}" method="get">
+                            <input class="form-control form-control-sm me-2"
+                                   style="background-color:#fff;border-color:#ccc;color:#333;"
+                                   type="search" name="q" placeholder="Card search..." aria-label="Search">
+                            <button class="btn btn-sm btn-outline-light" type="submit"><i class="bi bi-search"></i></button>
+                        </form>
+                    </li>
                 </ul>
             </div>
         </div>
     </nav>
 
     <main class="container py-4">
-        <h1 class="mb-4 d-flex align-items-center gap-3">
-            <span><i class="bi bi-graph-up"></i> Statistics</span>
-            <button type="button" class="btn btn-sm btn-outline-warning ms-auto"
-                    id="updatePricesBtn" onclick="triggerPriceUpdate()">
-                <i class="bi bi-arrow-repeat"></i> Update Prices
-            </button>
-        </h1>
-        
+        <h1 class="mb-4"><i class="bi bi-graph-up"></i> Statistics</h1>
+
         <div class="row mb-4">
             <div class="col-md-12">
                 <div class="card">
@@ -61,8 +105,8 @@
                             <div class="col-md-4">
                                 <select class="form-select" name="user" onchange="this.form.submit()">
                                     <option value="">-- Select User --</option>
-                                     <option th:each="user : ${allStatistics.keySet()}" 
-                                            th:value="${user}" 
+                                     <option th:each="user : ${allStatistics.keySet()}"
+                                            th:value="${user}"
                                             th:text="${user}"
                                             th:selected="${selectedUser == user}">User</option>
                                 </select>
@@ -96,7 +140,7 @@
                 </div>
                 <div class="col-md-3">
                     <div class="card stats-card">
-                        <div class="stats-value" 
+                        <div class="stats-value"
                              th:class="${userStatistics.dailyChange >= 0} ? 'stats-value positive-change' : 'stats-value negative-change'"
                              th:text="${#numbers.formatCurrency(userStatistics.dailyChange)}">$0</div>
                         <div class="stats-label">Daily Change</div>
@@ -109,42 +153,35 @@
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header d-flex align-items-center">
-                            <h5 class="mb-0">Top 30 Most Expensive Cards</h5>
+                            <h5 class="mb-0">Top 100 Most Expensive Cards</h5>
                             <button class="btn btn-sm btn-outline-secondary ms-auto btn-show-more"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#more-expensive"
-                                    th:if="${userStatistics.mostExpensiveCards.size() > 10}"
-                                    aria-expanded="false">
+                                    type="button" onclick="toggleExpensive(this)"
+                                    th:if="${userStatistics.mostExpensiveCards.size() > 10}">
                                 Show more
                             </button>
                         </div>
                         <div class="card-body">
-                            <table class="table table-striped">
+                            <table class="table table-striped" id="expensive-table">
                                 <thead>
                                     <tr>
                                         <th>Card</th>
                                         <th>Set</th>
-                                        <th>Price</th>
-                                        <th>Total</th>
+                                        <th class="sortable text-end" onclick="sortExpensive(2)" title="Sort by single price">
+                                            Price <span class="sort-icon"></span>
+                                        </th>
+                                        <th class="sortable text-end" onclick="sortExpensive(3)" data-dir="desc" title="Sort by total value">
+                                            Total <span class="sort-icon"></span>
+                                        </th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <tr th:each="card, stat : ${userStatistics.mostExpensiveCards}"
-                                        th:if="${stat.index < 10}">
+                                <!-- All rows in one tbody; JS controls visibility -->
+                                <tbody id="expensive-tbody">
+                                    <tr th:each="card : ${userStatistics.mostExpensiveCards}"
+                                        th:attr="data-price=${card.pricePerCard},data-total=${card.totalPrice}">
                                         <td th:text="${card.name}">Card Name</td>
                                         <td><span class="set-code" th:text="${card.setCode}">SET</span></td>
-                                        <td th:text="${#numbers.formatCurrency(card.pricePerCard)}">$0</td>
-                                        <td th:text="${#numbers.formatCurrency(card.totalPrice)}">$0</td>
-                                    </tr>
-                                </tbody>
-                                <tbody class="collapse" id="more-expensive">
-                                    <tr th:each="card, stat : ${userStatistics.mostExpensiveCards}"
-                                        th:if="${stat.index >= 10}">
-                                        <td th:text="${card.name}">Card Name</td>
-                                        <td><span class="set-code" th:text="${card.setCode}">SET</span></td>
-                                        <td th:text="${#numbers.formatCurrency(card.pricePerCard)}">$0</td>
-                                        <td th:text="${#numbers.formatCurrency(card.totalPrice)}">$0</td>
+                                        <td class="text-end" th:text="${#numbers.formatCurrency(card.pricePerCard)}">€0</td>
+                                        <td class="text-end" th:text="${#numbers.formatCurrency(card.totalPrice)}">€0</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -175,14 +212,24 @@
                                 <tbody>
                                     <tr th:each="set, stat : ${userStatistics.topSetsByCount}"
                                         th:if="${stat.index < 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.count}">0</td>
                                     </tr>
                                 </tbody>
                                 <tbody class="collapse" id="more-sets-count">
                                     <tr th:each="set, stat : ${userStatistics.topSetsByCount}"
                                         th:if="${stat.index >= 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.count}">0</td>
                                     </tr>
                                 </tbody>
@@ -192,7 +239,7 @@
                 </div>
             </div>
 
-            <!-- Most Valuable Sets | Complete / Near-Complete Sets -->
+            <!-- Most Valuable Sets | Set Completion -->
             <div class="row mb-4">
                 <div class="col-md-6">
                     <div class="card">
@@ -220,7 +267,12 @@
                                 <tbody>
                                     <tr th:each="set, stat : ${userStatistics.topSetsByValue}"
                                         th:if="${stat.index < 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${#numbers.formatCurrency(set.value)}">$0</td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCardsInSet}">0/0</td>
                                         <td th:text="${set.totalCardsInSet > 0 ? #numbers.formatPercent(set.ownedCards / set.totalCardsInSet, 1, 0) : '0%'}">0%</td>
@@ -229,7 +281,12 @@
                                 <tbody class="collapse" id="more-sets-value">
                                     <tr th:each="set, stat : ${userStatistics.topSetsByValue}"
                                         th:if="${stat.index >= 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${#numbers.formatCurrency(set.value)}">$0</td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCardsInSet}">0/0</td>
                                         <td th:text="${set.totalCardsInSet > 0 ? #numbers.formatPercent(set.ownedCards / set.totalCardsInSet, 1, 0) : '0%'}">0%</td>
@@ -239,89 +296,161 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Set Completion (all tiers) -->
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header">
                             <h5 class="mb-0">Set Completion</h5>
                         </div>
+
                         <!-- Complete sets -->
                         <div class="card-body pb-1" th:if="${!userStatistics.completeSets.isEmpty()}">
-                            <h6>Complete Sets</h6>
+                            <h6><span class="tier-badge tier-90">100%</span> Complete Sets</h6>
                             <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Set</th>
-                                        <th>Cards</th>
-                                    </tr>
-                                </thead>
+                                <thead><tr><th>Set</th><th>Cards</th></tr></thead>
                                 <tbody>
-                                    <tr th:each="set, stat : ${userStatistics.completeSets}"
-                                        th:if="${stat.index < 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                    <tr th:each="set, stat : ${userStatistics.completeSets}" th:if="${stat.index < 10}">
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.ownedCards}">0</td>
                                     </tr>
                                 </tbody>
                                 <tbody class="collapse" id="more-complete-sets"
                                        th:if="${userStatistics.completeSets.size() > 10}">
-                                    <tr th:each="set, stat : ${userStatistics.completeSets}"
-                                        th:if="${stat.index >= 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                    <tr th:each="set, stat : ${userStatistics.completeSets}" th:if="${stat.index >= 10}">
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.ownedCards}">0</td>
                                     </tr>
                                 </tbody>
                             </table>
                             <button class="btn btn-sm btn-outline-secondary mb-2 btn-show-more"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#more-complete-sets"
-                                    th:if="${userStatistics.completeSets.size() > 10}"
-                                    aria-expanded="false">
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#more-complete-sets"
+                                    th:if="${userStatistics.completeSets.size() > 10}" aria-expanded="false">
                                 Show more
                             </button>
                         </div>
                         <div class="card-body pb-1" th:if="${userStatistics.completeSets.isEmpty()}">
                             <p class="text-muted mb-2">No complete sets yet.</p>
                         </div>
-                        <!-- Near complete sets (always shown) -->
-                        <div class="card-body pt-1" th:if="${!userStatistics.nearCompleteSets.isEmpty()}">
-                            <h6>Near Complete Sets (90%+)</h6>
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Set</th>
-                                        <th>Cards</th>
-                                        <th>Complete</th>
-                                    </tr>
-                                </thead>
+
+                        <!-- 90%+ tier -->
+                        <div class="card-body py-1" th:if="${!userStatistics.nearCompleteSets.isEmpty()}">
+                            <h6><span class="tier-badge tier-90">90%+</span> Near Complete</h6>
+                            <table class="table table-striped table-sm">
+                                <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
                                 <tbody>
-                                    <tr th:each="set, stat : ${userStatistics.nearCompleteSets}"
-                                        th:if="${stat.index < 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                    <tr th:each="set : ${userStatistics.nearCompleteSets}">
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
-                                        <td th:text="${#numbers.formatPercent(set.percentage / 100, 1, 0)}">0%</td>
-                                    </tr>
-                                </tbody>
-                                <tbody class="collapse" id="more-near-complete"
-                                       th:if="${userStatistics.nearCompleteSets.size() > 10}">
-                                    <tr th:each="set, stat : ${userStatistics.nearCompleteSets}"
-                                        th:if="${stat.index >= 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
-                                        <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
-                                        <td th:text="${#numbers.formatPercent(set.percentage / 100, 1, 0)}">0%</td>
+                                        <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
                                     </tr>
                                 </tbody>
                             </table>
-                            <button class="btn btn-sm btn-outline-secondary mb-2 btn-show-more"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#more-near-complete"
-                                    th:if="${userStatistics.nearCompleteSets.size() > 10}"
-                                    aria-expanded="false">
-                                Show more
-                            </button>
                         </div>
-                        <div class="card-body pt-1" th:if="${userStatistics.nearCompleteSets.isEmpty() and userStatistics.completeSets.isEmpty()}">
-                            <p class="text-muted">No near-complete sets yet.</p>
+
+                        <!-- 80%+ tier -->
+                        <div class="card-body py-1" th:if="${!userStatistics.nearComplete80.isEmpty()}">
+                            <h6><span class="tier-badge tier-80">80%+</span></h6>
+                            <table class="table table-striped table-sm">
+                                <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
+                                <tbody>
+                                    <tr th:each="set : ${userStatistics.nearComplete80}">
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
+                                        <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
+                                        <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 70%+ tier -->
+                        <div class="card-body py-1" th:if="${!userStatistics.nearComplete70.isEmpty()}">
+                            <h6><span class="tier-badge tier-70">70%+</span></h6>
+                            <table class="table table-striped table-sm">
+                                <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
+                                <tbody>
+                                    <tr th:each="set : ${userStatistics.nearComplete70}">
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
+                                        <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
+                                        <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 60%+ tier -->
+                        <div class="card-body py-1" th:if="${!userStatistics.nearComplete60.isEmpty()}">
+                            <h6><span class="tier-badge tier-60">60%+</span></h6>
+                            <table class="table table-striped table-sm">
+                                <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
+                                <tbody>
+                                    <tr th:each="set : ${userStatistics.nearComplete60}">
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
+                                        <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
+                                        <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 50%+ tier -->
+                        <div class="card-body py-1" th:if="${!userStatistics.nearComplete50.isEmpty()}">
+                            <h6><span class="tier-badge tier-50">50%+</span></h6>
+                            <table class="table table-striped table-sm">
+                                <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
+                                <tbody>
+                                    <tr th:each="set : ${userStatistics.nearComplete50}">
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
+                                        <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
+                                        <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="card-body py-1"
+                             th:if="${userStatistics.nearCompleteSets.isEmpty()
+                                  and userStatistics.nearComplete80.isEmpty()
+                                  and userStatistics.nearComplete70.isEmpty()
+                                  and userStatistics.nearComplete60.isEmpty()
+                                  and userStatistics.nearComplete50.isEmpty()
+                                  and userStatistics.completeSets.isEmpty()}">
+                            <p class="text-muted">No sets at 50%+ completion yet.</p>
                         </div>
                     </div>
                 </div>
@@ -344,24 +473,16 @@
                         </div>
                         <div class="card-body">
                             <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Card</th>
-                                        <th>Set</th>
-                                        <th>Change</th>
-                                    </tr>
-                                </thead>
+                                <thead><tr><th>Card</th><th>Set</th><th>Change</th></tr></thead>
                                 <tbody>
-                                    <tr th:each="card, stat : ${userStatistics.topWinners}"
-                                        th:if="${stat.index < 10}">
+                                    <tr th:each="card, stat : ${userStatistics.topWinners}" th:if="${stat.index < 10}">
                                         <td th:text="${card.name}">Card Name</td>
                                         <td><span class="set-code" th:text="${card.setCode}">SET</span></td>
                                         <td class="positive-change" th:text="${'+' + #numbers.formatCurrency(card.change)}">+$0</td>
                                     </tr>
                                 </tbody>
                                 <tbody class="collapse" id="more-winners">
-                                    <tr th:each="card, stat : ${userStatistics.topWinners}"
-                                        th:if="${stat.index >= 10}">
+                                    <tr th:each="card, stat : ${userStatistics.topWinners}" th:if="${stat.index >= 10}">
                                         <td th:text="${card.name}">Card Name</td>
                                         <td><span class="set-code" th:text="${card.setCode}">SET</span></td>
                                         <td class="positive-change" th:text="${'+' + #numbers.formatCurrency(card.change)}">+$0</td>
@@ -386,24 +507,16 @@
                         </div>
                         <div class="card-body">
                             <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Card</th>
-                                        <th>Set</th>
-                                        <th>Change</th>
-                                    </tr>
-                                </thead>
+                                <thead><tr><th>Card</th><th>Set</th><th>Change</th></tr></thead>
                                 <tbody>
-                                    <tr th:each="card, stat : ${userStatistics.topLosers}"
-                                        th:if="${stat.index < 10}">
+                                    <tr th:each="card, stat : ${userStatistics.topLosers}" th:if="${stat.index < 10}">
                                         <td th:text="${card.name}">Card Name</td>
                                         <td><span class="set-code" th:text="${card.setCode}">SET</span></td>
                                         <td class="negative-change" th:text="${#numbers.formatCurrency(card.change)}">-$0</td>
                                     </tr>
                                 </tbody>
                                 <tbody class="collapse" id="more-losers">
-                                    <tr th:each="card, stat : ${userStatistics.topLosers}"
-                                        th:if="${stat.index >= 10}">
+                                    <tr th:each="card, stat : ${userStatistics.topLosers}" th:if="${stat.index >= 10}">
                                         <td th:text="${card.name}">Card Name</td>
                                         <td><span class="set-code" th:text="${card.setCode}">SET</span></td>
                                         <td class="negative-change" th:text="${#numbers.formatCurrency(card.change)}">-$0</td>
@@ -435,8 +548,8 @@
                                 </thead>
                                 <tbody>
                                     <tr th:each="stat : ${allStatistics}">
-                                         <td>
-                                            <a th:href="@{/statistics(user=${stat.value.user})}" 
+                                        <td>
+                                            <a th:href="@{/statistics(user=${stat.value.user})}"
                                                th:text="${stat.value.user}">user</a>
                                         </td>
                                         <td th:text="${stat.value.totalCards}">0</td>
@@ -455,9 +568,9 @@
     <footer class="text-center py-3 mt-4">
         <p>MTG Collection Manager</p>
     </footer>
-    <script src="/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
     <script>
-        // Toggle "Show more" / "Show less" button text on Bootstrap collapse events
+        // ── Show-more button text toggle ──────────────────────────────────────
         document.querySelectorAll('.btn-show-more[data-bs-toggle="collapse"]').forEach(btn => {
             const targetId = btn.getAttribute('data-bs-target');
             const target = document.querySelector(targetId);
@@ -467,7 +580,50 @@
             }
         });
 
-        // ── Price Update ─────────────────────────────────────────────────────
+        // ── Most Expensive Cards: single-tbody visibility ─────────────────────
+        const VISIBLE_ROWS = 10;
+        let expensiveExpanded = false;
+
+        function applyExpensiveVisibility() {
+            const rows = document.querySelectorAll('#expensive-tbody tr');
+            rows.forEach((r, i) => { r.style.display = (expensiveExpanded || i < VISIBLE_ROWS) ? '' : 'none'; });
+        }
+
+        function toggleExpensive(btn) {
+            expensiveExpanded = !expensiveExpanded;
+            btn.textContent = expensiveExpanded ? 'Show less' : 'Show more';
+            applyExpensiveVisibility();
+        }
+
+        // ── Sort the Most Expensive Cards table ───────────────────────────────
+        // Column indices: 0=Card 1=Set 2=Price 3=Total
+        function sortExpensive(colIdx) {
+            const table  = document.getElementById('expensive-table');
+            const tbody  = document.getElementById('expensive-tbody');
+            const th     = table.querySelectorAll('thead th')[colIdx];
+            const asc    = th.dataset.dir !== 'asc';
+
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.sort((a, b) => {
+                // Use data-price / data-total attributes for locale-independent parse
+                const key = colIdx === 2 ? 'price' : 'total';
+                const aVal = parseFloat(a.dataset[key]) || 0;
+                const bVal = parseFloat(b.dataset[key]) || 0;
+                return asc ? aVal - bVal : bVal - aVal;
+            });
+            rows.forEach(r => tbody.appendChild(r));
+
+            // Reset all headers, then mark the sorted one
+            table.querySelectorAll('thead th').forEach(h => delete h.dataset.dir);
+            th.dataset.dir = asc ? 'asc' : 'desc';
+
+            applyExpensiveVisibility();
+        }
+
+        // Apply initial visibility (hide rows >10) after page load
+        document.addEventListener('DOMContentLoaded', applyExpensiveVisibility);
+
+        // ── Price Update ──────────────────────────────────────────────────────
         function triggerPriceUpdate() {
             const btn = document.getElementById('updatePricesBtn');
             btn.disabled = true;
@@ -477,7 +633,6 @@
                 .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
                 .then(data => {
                     showPriceToast('success', 'Prices updated', buildPerUserText(data));
-                    // Reload page so statistics reflect new prices
                     setTimeout(() => location.reload(), 2000);
                 })
                 .catch(err => showPriceToast('danger', 'Update failed', String(err)))
@@ -509,7 +664,6 @@
         }
     </script>
 
-    <!-- Toast container -->
     <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:11000"></div>
 </body>
 </html>

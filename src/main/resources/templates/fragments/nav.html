@@ -32,6 +32,9 @@
             <a class="navbar-brand" th:href="@{/}">
                 <i class="bi bi-collection"></i> MTG Collection Manager
             </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
@@ -49,11 +52,25 @@
                     <li class="nav-item">
                         <a class="nav-link" th:href="@{/statistics}">Statistics</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/deck-suggest}">Deck Suggest</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/my-decks}">My Decks</a>
+                    </li>
                 </ul>
-                <ul class="navbar-nav">
+                <ul class="navbar-nav align-items-center gap-2">
+                    <li class="nav-item">
+                        <button type="button" class="btn btn-sm btn-outline-warning"
+                                id="updatePricesBtn" onclick="triggerPriceUpdate()">
+                            <i class="bi bi-arrow-repeat"></i> Update Prices
+                        </button>
+                    </li>
                     <li class="nav-item">
                         <form class="d-flex" th:action="@{/search}" method="get">
-                            <input class="form-control form-control-sm me-2" type="search" name="q" placeholder="Card search..." aria-label="Search">
+                            <input class="form-control form-control-sm me-2"
+                                   style="background-color:#fff;border-color:#ccc;color:#333;"
+                                   type="search" name="q" placeholder="Card search..." aria-label="Search">
                             <button class="btn btn-sm btn-outline-light" type="submit"><i class="bi bi-search"></i></button>
                         </form>
                     </li>
@@ -67,4 +84,42 @@
             <span th:if="${not #strings.isEmpty(buildTimestamp)}">· v<span th:text="${appVersion}"></span> · <span th:text="${buildTimestamp}"></span></span>
         </div>
     </nav>
+
+    <!-- Reusable price-update JS + toast container; include in pages that use this fragment's button -->
+    <th:block th:fragment="price-update-utils">
+        <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:11000"></div>
+        <script>
+            function triggerPriceUpdate() {
+                const btn = document.getElementById('updatePricesBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Updating…';
+                fetch('/api/prices/update', { method: 'POST' })
+                    .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+                    .then(data => {
+                        const parts = Object.entries(data.perUser || {})
+                            .map(([u, n]) => u + ': ' + n + ' card' + (n !== 1 ? 's' : ''));
+                        showNavToast('success', 'Prices updated', 'Total: ' + data.totalUpdated + ' — ' + parts.join(', '));
+                    })
+                    .catch(err => showNavToast('danger', 'Update failed', String(err)))
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Update Prices';
+                    });
+            }
+            function showNavToast(type, title, message) {
+                const container = document.getElementById('toastContainer');
+                const id = 'toast-' + Date.now();
+                container.insertAdjacentHTML('beforeend', `
+                    <div id="${id}" class="toast align-items-center text-bg-${type} border-0" role="alert">
+                        <div class="d-flex">
+                            <div class="toast-body"><strong>${title}</strong><br>${message}</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    </div>`);
+                const el = document.getElementById(id);
+                new bootstrap.Toast(el, { delay: 6000 }).show();
+                el.addEventListener('hidden.bs.toast', () => el.remove());
+            }
+        </script>
+    </th:block>
 </th:block>

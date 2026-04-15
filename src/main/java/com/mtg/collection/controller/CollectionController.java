@@ -35,8 +35,8 @@ public class CollectionController {
                                 @RequestParam(required = false) String printing,
                                 @RequestParam(required = false) String search,
                                 @RequestParam(required = false) String showBasics,
-                                @RequestParam(required = false) String showExtendedArt,
-                                @RequestParam(required = false) String showShowcase) {
+                                @RequestParam(required = false) String frameStyle,
+                                @RequestParam(required = false) String hideTokens) {
         
         List<ScryfallSet> sets = scryfallService.getAllSets(false);
         model.addAttribute("sets", sets);
@@ -46,12 +46,12 @@ public class CollectionController {
         model.addAttribute("printing", printing);
         model.addAttribute("search", search);
         model.addAttribute("showBasics", showBasics);
-        model.addAttribute("showExtendedArt", showExtendedArt);
-        model.addAttribute("showShowcase", showShowcase);
+        model.addAttribute("frameStyle", frameStyle);
+        model.addAttribute("hideTokens", hideTokens);
 
         if (set != null && !set.isEmpty() && user != null && !user.isEmpty()) {
             List<CardWithUserData> cards = collectionService.getCardsWithUserData(user, set, null);
-            List<CardWithUserData> filteredCards = cardFilterService.filterCards(cards, state, printing, rarity, search, showBasics, showExtendedArt, showShowcase);
+            List<CardWithUserData> filteredCards = cardFilterService.filterCards(cards, state, printing, rarity, search, showBasics, frameStyle, hideTokens);
             
             model.addAttribute("selectedSet", set);
             model.addAttribute("selectedUser", user);

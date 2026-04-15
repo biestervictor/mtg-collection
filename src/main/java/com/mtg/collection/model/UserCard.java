@@ -1,6 +1,7 @@
 package com.mtg.collection.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDate;
 
@@ -17,6 +18,10 @@ public class UserCard {
     private boolean foil;
     private double price;
     private LocalDate priceUpdatedAt;
+
+    /** Populated during import from DragonShield folder name; not persisted. */
+    @Transient
+    private String folderName;
     
     public UserCard() {}
     
@@ -47,4 +52,6 @@ public class UserCard {
     public void setPrice(double price) { this.price = price; }
     public LocalDate getPriceUpdatedAt() { return priceUpdatedAt; }
     public void setPriceUpdatedAt(LocalDate priceUpdatedAt) { this.priceUpdatedAt = priceUpdatedAt; }
+    public String getFolderName() { return folderName; }
+    public void setFolderName(String folderName) { this.folderName = folderName; }
 }

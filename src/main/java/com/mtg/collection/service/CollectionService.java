@@ -33,15 +33,18 @@ public class CollectionService {
     private final ScryfallCardRepository scryfallCardRepository;
     private final ScryfallService scryfallService;
     private final ImportHistoryRepository importHistoryRepository;
+    private final UserDeckService userDeckService;
 
     public CollectionService(UserCardRepository userCardRepository,
                             ScryfallCardRepository scryfallCardRepository,
                             ScryfallService scryfallService,
-                            ImportHistoryRepository importHistoryRepository) {
+                            ImportHistoryRepository importHistoryRepository,
+                            UserDeckService userDeckService) {
         this.userCardRepository = userCardRepository;
         this.scryfallCardRepository = scryfallCardRepository;
         this.scryfallService = scryfallService;
         this.importHistoryRepository = importHistoryRepository;
+        this.userDeckService = userDeckService;
     }
 
     public List<UserCard> getUserCardsBySet(String user, String setCode) {
@@ -119,6 +122,9 @@ public class CollectionService {
                     .collect(Collectors.toList());
 
             saveUserCards(user, importedCards);
+
+            // Extract and persist user's physical decks from folder names
+            userDeckService.buildAndSaveDecks(user, importedCards);
 
             Set<String> importedSetCodes = importedCards.stream()
                     .map(UserCard::getSetCode)
@@ -206,12 +212,17 @@ public class CollectionService {
                 card.setSetCode(fixSet(record.get("Set Code").toLowerCase()));
                 card.setCollectorNumber(fixCollectorNumber(record.get("Card Number")));
                 card.setFoil("Foil".equals(record.get("Printing")));
+                card.setFolderName(safeGet(record, "Folder Name"));
             } else if ("dragonshield_app".equals(format)) {
                 card.setName(record.get("Name"));
                 card.setQuantity(Integer.parseInt(record.get("Quantity")));
                 card.setSetCode(fixSet(record.get(" Expansion Code").toLowerCase()));
                 card.setCollectorNumber(record.get(" CardNumber"));
                 card.setFoil("true".equals(record.get(" Foil")));
+                // DragonShield app may use " Folder Name" (with leading space) or "Folder Name"
+                String folder = safeGet(record, " Folder Name");
+                if (folder == null) folder = safeGet(record, "Folder Name");
+                card.setFolderName(folder);
             }
 
             if (card.getName() == null || card.getName().isEmpty()) {
@@ -233,6 +244,15 @@ public class CollectionService {
 
     private String fixCollectorNumber(String collectorNumber) {
         return collectorNumber.replaceAll("[^0-9]", "");
+    }
+
+    /** Returns null instead of throwing if the column doesn't exist in the record. */
+    private String safeGet(CSVRecord record, String columnName) {
+        try {
+            return record.get(columnName);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public List<CardWithUserData> getCardsWithUserData(String user, String setCode, List<String> filters) {

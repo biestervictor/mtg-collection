@@ -13,7 +13,7 @@
     
     <groupId>com.mtg</groupId>
     <artifactId>mtg-collection-manager</artifactId>
-    <version>0.1.19</version>
+    <version>0.1.28</version>
     <name>MTG Collection Manager</name>
     <description>Magic The Gathering Collection Manager - Spring Boot Thymeleaf</description>
     
@@ -77,6 +77,12 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
         
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.17.2</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

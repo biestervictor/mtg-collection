@@ -69,6 +69,7 @@
                     <li class="nav-item"><a class="nav-link active" th:href="@{/show}">Show</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/compare}">Compare</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/statistics}">Statistics</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/deck-suggest}">Deck Suggest</a></li>
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item">
@@ -133,7 +134,8 @@
                             <label class="form-label">Set</label>
                             <select class="form-select select2-set" name="set" id="setSelect" required>
                                 <option value="">-- Select Set --</option>
-                                <option th:each="s : ${sets}" th:value="${s.setCode}" th:text="${s.setCode} + ' - ' + ${s.name}"></option>
+                                <option th:each="s : ${sets}" th:value="${s.setCode}" th:text="${s.setCode} + ' - ' + ${s.name}"
+                                        th:attr="data-icon=${s.icon}"></option>
                             </select>
                         </div>
                         <div class="col-md-2 d-flex align-items-end">
@@ -151,7 +153,7 @@
                         <input type="hidden" name="set" th:value="${selectedSet}">
                         <input type="hidden" name="user" th:value="${selectedUser}">
                         <div class="row g-3">
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label">Filter</label>
                                 <select class="form-select" name="state">
                                     <option value="all" th:selected="${state == 'all' or state == null}">All</option>
@@ -167,7 +169,7 @@
                                     <option value="foil" th:selected="${printing == 'foil'}">Foil</option>
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label">Rarity</label>
                                 <select class="form-select" name="rarity">
                                     <option value="" th:selected="${rarity == null or rarity == ''}">All</option>
@@ -178,21 +180,29 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">Search</label>
-                                <input type="text" class="form-control" name="search" th:value="${search}" placeholder="Card Name or #">
+                                <label class="form-label">Card Style</label>
+                                <select class="form-select" name="frameStyle">
+                                    <option value="" th:selected="${frameStyle == null or frameStyle == ''}">All</option>
+                                    <option value="extendedart" th:selected="${frameStyle == 'extendedart'}">Extended Art</option>
+                                    <option value="showcase" th:selected="${frameStyle == 'showcase'}">Showcase</option>
+                                    <option value="borderless" th:selected="${frameStyle == 'borderless'}">Borderless</option>
+                                    <option value="fullart" th:selected="${frameStyle == 'fullart'}">Full Art</option>
+                                </select>
                             </div>
-                            <div class="col-md-2">
-                                <div class="form-check mt-2">
-                                    <input class="form-check-input" type="checkbox" name="showBasics" value="true" id="showBasics" th:checked="${showBasics == 'true'}">
-                                    <label class="form-check-label" for="showBasics">Basic Lands</label>
-                                </div>
-                                <div class="form-check mt-2">
-                                    <input class="form-check-input" type="checkbox" name="showExtendedArt" value="true" id="showExtendedArt" th:checked="${showExtendedArt == 'true'}">
-                                    <label class="form-check-label" for="showExtendedArt">Extended Art</label>
-                                </div>
-                                <div class="form-check mt-2">
-                                    <input class="form-check-input" type="checkbox" name="showShowcase" value="true" id="showShowcase" th:checked="${showShowcase == 'true'}">
-                                    <label class="form-check-label" for="showShowcase">Showcase</label>
+                            <div class="col-md-1">
+                                <label class="form-label">Search</label>
+                                <input type="text" class="form-control" name="search" th:value="${search}" placeholder="#, Name">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <div>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input" type="checkbox" name="showBasics" value="true" id="showBasics" th:checked="${showBasics == 'true'}">
+                                        <label class="form-check-label" for="showBasics">Basics</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="hideTokens" value="true" id="hideTokens" th:checked="${hideTokens == 'true'}">
+                                        <label class="form-check-label" for="hideTokens">Hide Tokens</label>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-1 d-flex align-items-end">
@@ -263,11 +273,20 @@
         $(document).ready(function() {
             var selectedSet = /*[[${selectedSet}]]*/ '';
             var selectedUser = /*[[${selectedUser}]]*/ '';
+
+            function formatSet(option) {
+                if (!option.id) return option.text;
+                var iconUrl = $(option.element).data('icon');
+                if (!iconUrl) return $('<span>' + option.text + '</span>');
+                return $('<span><img src="' + iconUrl + '" style="width:14px;height:14px;filter:invert(0.7);vertical-align:middle;margin-right:6px;" />' + option.text + '</span>');
+            }
             
             $('.select2-set').select2({
                 placeholder: '-- Select Set --',
                 allowClear: true,
-                minimumInputLength: 0
+                minimumInputLength: 0,
+                templateResult: formatSet,
+                templateSelection: formatSet
             });
             
             if (selectedSet) {

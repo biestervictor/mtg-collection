@@ -2,6 +2,7 @@ package com.mtg.collection.controller;
 
 import com.mtg.collection.dto.ImportResult;
 import com.mtg.collection.model.ImportHistory;
+import com.mtg.collection.model.ImportHistory.ImportedCardInfo;
 import com.mtg.collection.repository.ImportHistoryRepository;
 import com.mtg.collection.service.CollectionService;
 import com.mtg.collection.service.InventoryImportService;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Controller
@@ -52,6 +54,17 @@ public class ImportController {
         model.addAttribute("result", result);
         model.addAttribute("selectedFormat", format);
         model.addAttribute("selectedUser", user);
+
+        // Sort added/removed by set code then collector number for per-set grouping in template
+        Comparator<ImportedCardInfo> bySetThenNumber = Comparator
+                .comparing(ImportedCardInfo::getSetCode)
+                .thenComparingInt(c -> {
+                    try { return Integer.parseInt(c.getCollectorNumber()); }
+                    catch (NumberFormatException e) { return Integer.MAX_VALUE; }
+                })
+                .thenComparing(ImportedCardInfo::getCollectorNumber);
+        if (result.getAddedCards() != null)   result.getAddedCards().sort(bySetThenNumber);
+        if (result.getRemovedCards() != null) result.getRemovedCards().sort(bySetThenNumber);
         
         return "import";
     }

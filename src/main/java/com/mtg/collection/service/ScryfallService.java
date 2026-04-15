@@ -53,7 +53,8 @@ public class ScryfallService {
             }
         }
         
-        return sets;
+        // Filter out digital sets that may have been cached before this check was added
+        return sets.stream().filter(s -> !s.isDigital()).collect(Collectors.toList());
     }
 
     private List<ScryfallSet> fetchSetsFromApi() throws Exception {
@@ -67,15 +68,18 @@ public class ScryfallService {
             if (response.has("data")) {
                 for (JsonNode setNode : response.get("data")) {
                     String setType = setNode.has("set_type") ? setNode.get("set_type").asText() : "";
+                    boolean isDigital = setNode.has("digital") && setNode.get("digital").asBoolean();
                     int cardCount = setNode.has("card_count") ? setNode.get("card_count").asInt() : 0;
 
-                    if (!excludeTypes.contains(setType) && cardCount > 0) {
+                    if (!isDigital && !excludeTypes.contains(setType) && cardCount > 0) {
                         ScryfallSet set = new ScryfallSet();
                         set.setName(setNode.get("name").asText());
                         set.setSetCode(setNode.get("code").asText());
                         set.setCardCount(cardCount);
                         set.setReleasedAt(setNode.has("released_at") ? setNode.get("released_at").asText() : null);
                         set.setIcon(setNode.has("icon_svg_uri") ? setNode.get("icon_svg_uri").asText() : null);
+                        set.setDigital(false);
+                        set.setSetType(setType);
                         sets.add(set);
                     }
                 }
@@ -133,6 +137,8 @@ return sets;
                     existing.setRarity(newCard.getRarity());
                     existing.setTypeLine(newCard.getTypeLine());
                     existing.setFrameStatus(newCard.getFrameStatus());
+                    existing.setBorderColor(newCard.getBorderColor());
+                    existing.setFullArt(newCard.isFullArt());
                     existing.setThumbnailFront(newCard.getThumbnailFront());
                     existing.setImageFront(newCard.getImageFront());
                     existing.setThumbnailBack(newCard.getThumbnailBack());
@@ -170,7 +176,11 @@ return sets;
         query.append(" -is:digital order:set direction:asc");
         
         String encodedQuery = java.net.URLEncoder.encode(query.toString(), "UTF-8");
-        String nextPageUri = SCRYFALL_API + "/cards/search?q=" + encodedQuery;
+        // unique=prints: return every print (collector number) of each card, not just one per name.
+        // Without this the API defaults to unique=cards (1 result per oracle id),
+        // which only returns draft cards and misses all alternate treatments
+        // (borderless, showcase, extended art, full-art, etc.).
+        String nextPageUri = SCRYFALL_API + "/cards/search?q=" + encodedQuery + "&unique=prints";
         
         while (nextPageUri != null) {
             String responseBody = restTemplate.getForObject(URI.create(nextPageUri), String.class);
@@ -227,8 +237,23 @@ return sets;
             }
         }
 
-        if (cardNode.has("frame_status")) {
-            card.setFrameStatus(cardNode.get("frame_status").asText());
+        // frame_effects is an array in the Scryfall API (e.g. ["extendedart"], ["showcase"])
+        if (cardNode.has("frame_effects")) {
+            List<String> effects = new ArrayList<>();
+            for (JsonNode effect : cardNode.get("frame_effects")) {
+                effects.add(effect.asText());
+            }
+            if (!effects.isEmpty()) {
+                card.setFrameStatus(String.join(",", effects));
+            }
+        }
+        // border_color: "black", "borderless", "white", "silver", "gold"
+        if (cardNode.has("border_color")) {
+            card.setBorderColor(cardNode.get("border_color").asText());
+        }
+        // full_art: true for full-art cards (e.g. full-art lands)
+        if (cardNode.has("full_art")) {
+            card.setFullArt(cardNode.get("full_art").asBoolean());
         }
 
         // Extract image URLs: regular card vs. double-faced card (DFC)

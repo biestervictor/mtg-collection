@@ -136,6 +136,38 @@ class InventoryImportServiceTest {
     }
 
     @Test
+    void testImportRecognizesAllFoilVariants() {
+        // DragonShield exports many special foil treatments – all must be detected as foil
+        String csvContent = """
+            sep=,
+            Folder Name,Quantity,Trade Quantity,Card Name,Set Code,Set Name,Card Number,Condition,Printing,Language
+            TLA,1,0,"Surge Card",TLA,Avatar,1,NearMint,Surge Foil,English
+            TLA,1,0,"Galaxy Card",TLA,Avatar,2,NearMint,Galaxy Foil,English
+            TLA,1,0,"Gilded Card",TLA,Avatar,3,NearMint,Gilded Foil,English
+            TLA,1,0,"Normal Card",TLA,Avatar,4,NearMint,Normal,English
+            """;
+
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "all-folders.csv",
+            "text/csv",
+            csvContent.getBytes()
+        );
+
+        when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
+        when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
+
+        importService.importInventory("Victor", file);
+
+        verify(userCardRepository).saveAll(argThat(cards -> {
+            List<UserCard> cardList = (List<UserCard>) cards;
+            long foilCount   = cardList.stream().filter(UserCard::isFoil).count();
+            long normalCount = cardList.stream().filter(c -> !c.isFoil()).count();
+            return foilCount == 3 && normalCount == 1;
+        }));
+    }
+
+    @Test
     void testImportWithScryfallCards() {
         String csvContent = """
             sep=,

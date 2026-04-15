@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Decks - MTG</title>
+    <link th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root { --primary-color: #1a1a2e; --secondary-color: #16213e; --accent-color: #e94560; --text-light: #f1f1f1; }
+        body { background-color: #0f0f23; color: var(--text-light); min-height: 100vh; }
+        .navbar { background-color: var(--primary-color) !important; }
+        .navbar-brand { font-weight: bold; color: var(--accent-color) !important; }
+        .nav-link { color: var(--text-light) !important; }
+        .nav-link.active { color: var(--accent-color) !important; border-bottom: 2px solid var(--accent-color); }
+        .card { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
+        footer { background-color: var(--primary-color); color: #888; }
+
+        /* Table dark theme */
+        .table {
+            --bs-table-color: var(--text-light);
+            --bs-table-bg: transparent;
+            --bs-table-striped-color: var(--text-light);
+            --bs-table-striped-bg: rgba(255,255,255,0.05);
+            --bs-table-hover-color: var(--text-light);
+            --bs-table-hover-bg: rgba(255,255,255,0.07);
+            --bs-table-border-color: #2a2a4a;
+            color: var(--text-light);
+        }
+        .table > :not(caption) > * > * { color: var(--text-light); }
+
+        /* Deck card styles */
+        .deck-card       { margin-bottom: 1.5rem; }
+        .deck-card .card-header {
+            display: flex; align-items: center; gap: 0.5rem;
+            background-color: #1a1a3e; border-bottom: 1px solid #2a2a4a;
+            cursor: pointer;
+        }
+        .deck-card .card-header:hover { background-color: #22224a; }
+        .deck-name       { font-size: 1.1rem; font-weight: bold; }
+        .badge-commander { background-color: #7b2fff; font-size: 0.72rem; }
+        .badge-normal    { background-color: #1a6b4a; font-size: 0.72rem; }
+        .badge-count     { background-color: #2a2a4a; color: #bbb; font-size: 0.72rem; }
+        .badge-foil      { background: linear-gradient(135deg,#b06c24,#e8c95a,#a0c860); color:#111; font-size: 0.68rem; }
+        .badge-sb        { background-color: #2a4a7a; font-size: 0.72rem; }
+        .badge-eb        { background-color: #4a2a6a; font-size: 0.72rem; }
+
+        .section-header td {
+            font-size: 0.7rem; font-weight: bold; letter-spacing: 1px;
+            text-transform: uppercase; color: #888;
+            background-color: rgba(0,0,0,0.2);
+            padding: 0.2rem 0.5rem;
+        }
+        .card-row { font-size: 0.85rem; }
+        .card-row td { padding: 0.25rem 0.5rem; border-color: #2a2a4a; vertical-align: middle; }
+
+        .empty-state { text-align: center; padding: 4rem 1rem; color: #666; }
+        .empty-state i { font-size: 3rem; display: block; margin-bottom: 1rem; }
+
+        .deck-summary { font-size: 0.8rem; color: #888; }
+        .collapse-icon { transition: transform 0.2s; }
+        .collapsed .collapse-icon { transform: rotate(-90deg); }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark" th:replace="~{fragments/nav :: main-nav}"></nav>
+    <div th:replace="~{fragments/nav :: price-update-utils}"></div>
+
+    <main class="container-fluid py-4">
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <h2 class="mb-0"><i class="bi bi-stack"></i> My Decks</h2>
+
+            <!-- User selector -->
+            <form method="get" action="/my-decks" class="d-flex align-items-center gap-2 ms-3">
+                <select name="user" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                    <option value="Victor" th:selected="${user == 'Victor'}">Victor</option>
+                    <option value="Andre"  th:selected="${user == 'Andre'}">Andre</option>
+                </select>
+            </form>
+
+            <span class="badge bg-secondary ms-auto" th:text="${decks.size()} + ' Deck(s)'"></span>
+        </div>
+
+        <!-- Empty state -->
+        <div th:if="${decks.isEmpty()}" class="empty-state">
+            <i class="bi bi-collection"></i>
+            <p>No decks found for <strong th:text="${user}"></strong>.</p>
+            <p class="small text-muted">Import a DragonShield CSV with deck folders (e.g. <code>MB_Burn</code>, <code>MB_CM_Entfesselte Untote</code>) to detect decks automatically.</p>
+        </div>
+
+        <!-- Deck list -->
+        <div th:each="deck, dStat : ${decks}" class="deck-card">
+            <div class="card">
+                <!-- Header (click to expand/collapse) -->
+                <div class="card-header"
+                     data-bs-toggle="collapse"
+                     th:data-bs-target="${'#deck-' + dStat.index}"
+                     aria-expanded="true">
+                    <i class="bi bi-chevron-down collapse-icon"></i>
+                    <span class="deck-name" th:text="${deck.name}">Deck Name</span>
+                    <span th:if="${deck.commander}" class="badge badge-commander">Commander</span>
+                    <span th:unless="${deck.commander}" class="badge badge-normal">Normal</span>
+                    <span class="badge badge-count ms-1"
+                          th:text="${deck.mainboardCount} + ' cards'">0 cards</span>
+                    <span th:if="${deck.sideboardCount > 0}" class="badge badge-sb"
+                          th:text="'SB: ' + ${deck.sideboardCount}">SB: 0</span>
+                    <span th:if="${deck.extraboardCount > 0}" class="badge badge-eb"
+                          th:text="'EB: ' + ${deck.extraboardCount}">EB: 0</span>
+                    <span class="deck-summary ms-auto" th:text="${#temporals.format(deck.updatedAt, 'dd.MM.yyyy')}"></span>
+                </div>
+
+                <!-- Collapsible body -->
+                <div class="collapse show" th:id="${'deck-' + dStat.index}">
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr style="font-size:0.75rem; color:#888; border-color:#2a2a4a;">
+                                    <th style="width:40px">#</th>
+                                    <th>Card</th>
+                                    <th style="width:60px">Set</th>
+                                    <th style="width:50px">#Nr</th>
+                                    <th style="width:50px">Foil</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Mainboard -->
+                                <tr th:if="${!deck.mainboard.isEmpty()}" class="section-header">
+                                    <td colspan="5">Mainboard</td>
+                                </tr>
+                                <tr th:each="c : ${deck.mainboard}" class="card-row">
+                                    <td class="text-muted" th:text="${c.quantity}">1</td>
+                                    <td th:text="${c.name}">Card Name</td>
+                                    <td class="text-uppercase text-muted small" th:text="${c.setCode}">XXX</td>
+                                    <td class="text-muted small" th:text="${c.collectorNumber}">001</td>
+                                    <td>
+                                        <span th:if="${c.foil}" class="badge badge-foil">Foil</span>
+                                    </td>
+                                </tr>
+
+                                <!-- Sideboard -->
+                                <tr th:if="${!deck.sideboard.isEmpty()}" class="section-header">
+                                    <td colspan="5">Sideboard</td>
+                                </tr>
+                                <tr th:each="c : ${deck.sideboard}" class="card-row">
+                                    <td class="text-muted" th:text="${c.quantity}">1</td>
+                                    <td th:text="${c.name}">Card Name</td>
+                                    <td class="text-uppercase text-muted small" th:text="${c.setCode}">XXX</td>
+                                    <td class="text-muted small" th:text="${c.collectorNumber}">001</td>
+                                    <td>
+                                        <span th:if="${c.foil}" class="badge badge-foil">Foil</span>
+                                    </td>
+                                </tr>
+
+                                <!-- Extra Board -->
+                                <tr th:if="${!deck.extraboard.isEmpty()}" class="section-header">
+                                    <td colspan="5">Extra Board</td>
+                                </tr>
+                                <tr th:each="c : ${deck.extraboard}" class="card-row">
+                                    <td class="text-muted" th:text="${c.quantity}">1</td>
+                                    <td th:text="${c.name}">Card Name</td>
+                                    <td class="text-uppercase text-muted small" th:text="${c.setCode}">XXX</td>
+                                    <td class="text-muted small" th:text="${c.collectorNumber}">001</td>
+                                    <td>
+                                        <span th:if="${c.foil}" class="badge badge-foil">Foil</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center py-3 mt-4"><p>MTG Collection Manager</p></footer>
+
+    <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <script>
+        // Flip chevron icon on collapse toggle
+        document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(btn => {
+            const target = document.querySelector(btn.dataset.bsTarget);
+            if (!target) return;
+            target.addEventListener('hide.bs.collapse', () => btn.classList.add('collapsed'));
+            target.addEventListener('show.bs.collapse', () => btn.classList.remove('collapsed'));
+        });
+    </script>
+</body>
+</html>

@@ -45,7 +45,13 @@
     </nav>
 
     <main class="container py-4">
-        <h1 class="mb-4"><i class="bi bi-graph-up"></i> Statistics</h1>
+        <h1 class="mb-4 d-flex align-items-center gap-3">
+            <span><i class="bi bi-graph-up"></i> Statistics</span>
+            <button type="button" class="btn btn-sm btn-outline-warning ms-auto"
+                    id="updatePricesBtn" onclick="triggerPriceUpdate()">
+                <i class="bi bi-arrow-repeat"></i> Update Prices
+            </button>
+        </h1>
         
         <div class="row mb-4">
             <div class="col-md-12">
@@ -460,6 +466,50 @@
                 target.addEventListener('hide.bs.collapse', () => { btn.textContent = 'Show more'; });
             }
         });
+
+        // ── Price Update ─────────────────────────────────────────────────────
+        function triggerPriceUpdate() {
+            const btn = document.getElementById('updatePricesBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Updating…';
+
+            fetch('/api/prices/update', { method: 'POST' })
+                .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+                .then(data => {
+                    showPriceToast('success', 'Prices updated', buildPerUserText(data));
+                    // Reload page so statistics reflect new prices
+                    setTimeout(() => location.reload(), 2000);
+                })
+                .catch(err => showPriceToast('danger', 'Update failed', String(err)))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Update Prices';
+                });
+        }
+
+        function buildPerUserText(data) {
+            const parts = Object.entries(data.perUser || {})
+                .map(([u, n]) => u + ': ' + n + ' card' + (n !== 1 ? 's' : ''));
+            return 'Total: ' + data.totalUpdated + ' — ' + parts.join(', ');
+        }
+
+        function showPriceToast(type, title, message) {
+            const container = document.getElementById('toastContainer');
+            const id = 'toast-' + Date.now();
+            container.insertAdjacentHTML('beforeend', `
+                <div id="${id}" class="toast align-items-center text-bg-${type} border-0" role="alert" aria-live="assertive">
+                    <div class="d-flex">
+                        <div class="toast-body"><strong>${title}</strong><br>${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`);
+            const el = document.getElementById(id);
+            new bootstrap.Toast(el, { delay: 6000 }).show();
+            el.addEventListener('hidden.bs.toast', () => el.remove());
+        }
     </script>
+
+    <!-- Toast container -->
+    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:11000"></div>
 </body>
 </html>

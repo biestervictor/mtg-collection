@@ -9,4 +9,6 @@ import java.util.List;
 public interface ImportHistoryRepository extends MongoRepository<ImportHistory, String> {
     
     List<ImportHistory> findByUserOrderByImportedAtDesc(String user);
+
+    void deleteByUser(String user);
 }

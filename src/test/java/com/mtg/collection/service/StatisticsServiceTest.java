@@ -5,6 +5,7 @@ import com.mtg.collection.model.ImportHistory;
 import com.mtg.collection.model.ScryfallSet;
 import com.mtg.collection.model.UserCard;
 import com.mtg.collection.repository.ImportHistoryRepository;
+import com.mtg.collection.repository.ScryfallCardRepository;
 import com.mtg.collection.repository.UserCardRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,12 +26,16 @@ class StatisticsServiceTest {
     @Mock private UserCardRepository userCardRepository;
     @Mock private ImportHistoryRepository importHistoryRepository;
     @Mock private ScryfallService scryfallService;
+    @Mock private ScryfallCardRepository scryfallCardRepository;
 
     private StatisticsService statisticsService;
 
     @BeforeEach
     void setUp() {
-        statisticsService = new StatisticsService(userCardRepository, importHistoryRepository, scryfallService);
+        statisticsService = new StatisticsService(userCardRepository, importHistoryRepository,
+                scryfallService, scryfallCardRepository);
+        // By default, Scryfall lookups return no extra data → effective price = UserCard.price
+        lenient().when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

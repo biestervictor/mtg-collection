@@ -38,40 +38,8 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" th:href="@{/}"><i class="bi bi-collection"></i> MTG Collection Manager</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" th:href="@{/}">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/import}">Import</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/show}">Show</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/compare}">Compare</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/statistics}">Statistics</a></li>
-                    <li class="nav-item"><a class="nav-link active" th:href="@{/deck-suggest}">Deck Suggest</a></li>
-                </ul>
-                <ul class="navbar-nav align-items-center gap-2">
-                    <li class="nav-item">
-                        <button type="button" class="btn btn-sm btn-outline-warning"
-                                id="updatePricesBtn" onclick="triggerPriceUpdate()">
-                            <i class="bi bi-arrow-repeat"></i> Update Prices
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <form class="d-flex" th:action="@{/search}" method="get">
-                            <input class="form-control form-control-sm me-2"
-                                   style="background-color:#fff;border-color:#ccc;color:#333;"
-                                   type="search" name="q" placeholder="Card search..." aria-label="Search">
-                            <button class="btn btn-sm btn-outline-light" type="submit"><i class="bi bi-search"></i></button>
-                        </form>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <nav class="navbar navbar-expand-lg navbar-dark" th:replace="~{fragments/nav :: main-nav}"></nav>
+    <div th:replace="~{fragments/nav :: price-update-utils}"></div>
 
     <main class="container py-4">
 
@@ -244,6 +212,5 @@
             });
         });
     </script>
-    <div th:replace="~{fragments/nav :: price-update-utils}"></div>
 </body>
 </html>

@@ -56,43 +56,15 @@
         .tier-70 { background: #713f12; color: #fed7aa; }
         .tier-60 { background: #4a1d5e; color: #e9d5ff; }
         .tier-50 { background: #3b2a1a; color: #fde68a; }
+
+        /* Hover card preview */
+        #card-preview { display:none; position:fixed; z-index:9999; pointer-events:none; }
+        #card-preview img { width:230px; border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,.85); }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" th:href="@{/}"><i class="bi bi-collection"></i> MTG Collection Manager</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" th:href="@{/}">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/import}">Import</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/show}">Show</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/compare}">Compare</a></li>
-                    <li class="nav-item"><a class="nav-link active" th:href="@{/statistics}">Statistics</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/deck-suggest}">Deck Suggest</a></li>
-                </ul>
-                <ul class="navbar-nav align-items-center gap-2">
-                    <li class="nav-item">
-                        <button type="button" class="btn btn-sm btn-outline-warning"
-                                id="updatePricesBtn" onclick="triggerPriceUpdate()">
-                            <i class="bi bi-arrow-repeat"></i> Update Prices
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <form class="d-flex" th:action="@{/search}" method="get">
-                            <input class="form-control form-control-sm me-2"
-                                   style="background-color:#fff;border-color:#ccc;color:#333;"
-                                   type="search" name="q" placeholder="Card search..." aria-label="Search">
-                            <button class="btn btn-sm btn-outline-light" type="submit"><i class="bi bi-search"></i></button>
-                        </form>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <nav class="navbar navbar-expand-lg navbar-dark" th:replace="~{fragments/nav :: main-nav}"></nav>
+    <div th:replace="~{fragments/nav :: price-update-utils}"></div>
 
     <main class="container py-4">
         <h1 class="mb-4"><i class="bi bi-graph-up"></i> Statistics</h1>
@@ -176,13 +148,14 @@
                                 </thead>
                                 <!-- All rows in one tbody; JS controls visibility -->
                                 <tbody id="expensive-tbody">
-                                    <tr th:each="card : ${userStatistics.mostExpensiveCards}"
-                                        th:attr="data-price=${card.pricePerCard},data-total=${card.totalPrice}">
-                                        <td th:text="${card.name}">Card Name</td>
-                                        <td><span class="set-code" th:text="${card.setCode}">SET</span></td>
-                                        <td class="text-end" th:text="${#numbers.formatCurrency(card.pricePerCard)}">€0</td>
-                                        <td class="text-end" th:text="${#numbers.formatCurrency(card.totalPrice)}">€0</td>
-                                    </tr>
+                                     <tr th:each="card : ${userStatistics.mostExpensiveCards}"
+                                         th:attr="data-price=${card.pricePerCard},data-total=${card.totalPrice},data-img=${card.thumbnailUrl}"
+                                         style="cursor:default;">
+                                         <td th:text="${card.name}">Card Name</td>
+                                         <td><span class="set-code" th:text="${card.setCode}">SET</span></td>
+                                         <td class="text-end" th:text="${#numbers.formatCurrency(card.pricePerCard)}">€0</td>
+                                         <td class="text-end" th:text="${#numbers.formatCurrency(card.totalPrice)}">€0</td>
+                                     </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -216,7 +189,7 @@
                                              <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
                                                   width="16" height="16"
                                                   style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
-                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                             <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${set.count}">0</td>
                                     </tr>
@@ -228,7 +201,7 @@
                                              <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
                                                   width="16" height="16"
                                                   style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
-                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                             <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${set.count}">0</td>
                                     </tr>
@@ -271,7 +244,7 @@
                                              <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
                                                   width="16" height="16"
                                                   style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
-                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                             <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${#numbers.formatCurrency(set.value)}">$0</td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCardsInSet}">0/0</td>
@@ -285,7 +258,7 @@
                                              <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
                                                   width="16" height="16"
                                                   style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
-                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                             <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${#numbers.formatCurrency(set.value)}">$0</td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCardsInSet}">0/0</td>
@@ -315,7 +288,7 @@
                                              <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
                                                   width="16" height="16"
                                                   style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
-                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                             <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${set.ownedCards}">0</td>
                                     </tr>
@@ -327,7 +300,7 @@
                                              <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
                                                   width="16" height="16"
                                                   style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
-                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                             <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${set.ownedCards}">0</td>
                                     </tr>
@@ -354,7 +327,7 @@
                                              <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
                                                   width="16" height="16"
                                                   style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
-                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                             <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
@@ -374,7 +347,7 @@
                                              <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
                                                   width="16" height="16"
                                                   style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
-                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                             <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
@@ -394,7 +367,7 @@
                                              <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
                                                   width="16" height="16"
                                                   style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
-                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                             <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
@@ -414,7 +387,7 @@
                                              <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
                                                   width="16" height="16"
                                                   style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
-                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                             <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
@@ -434,7 +407,7 @@
                                              <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
                                                   width="16" height="16"
                                                   style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
-                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                             <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
@@ -664,6 +637,34 @@
         }
     </script>
 
-    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:11000"></div>
+    <!-- Hover card preview -->
+    <div id="card-preview"><img src="" alt="Card Preview"></div>
+    <script>
+        (function() {
+            const preview    = document.getElementById('card-preview');
+            const previewImg = preview.querySelector('img');
+
+            document.querySelectorAll('#expensive-tbody tr[data-img]').forEach(row => {
+                const img = row.dataset.img;
+                if (!img) return;
+                row.addEventListener('mouseenter', e => {
+                    previewImg.src = img;
+                    preview.style.display = 'block';
+                    moveStatPreview(e);
+                });
+                row.addEventListener('mousemove', moveStatPreview);
+                row.addEventListener('mouseleave', () => { preview.style.display = 'none'; });
+            });
+
+            function moveStatPreview(e) {
+                const offset = 16;
+                let x = e.clientX + offset, y = e.clientY + offset;
+                if (x + 248 > window.innerWidth)  x = e.clientX - 248 - offset;
+                if (y + 330 > window.innerHeight) y = e.clientY - 330 - offset;
+                preview.style.left = x + 'px';
+                preview.style.top  = y + 'px';
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -47,6 +48,45 @@ public class UserDeck {
         return extraboard == null ? 0 : extraboard.stream().mapToInt(DeckCard::getQuantity).sum();
     }
 
+    /** Sum of price × quantity across all boards. */
+    public double getTotalValue() {
+        return allBoards().stream().mapToDouble(c -> c.getPrice() * c.getQuantity()).sum();
+    }
+
+    /** Thumbnail URL of the most expensive card across all boards, or null. */
+    public String getCoverArtUrl() {
+        return allBoards().stream()
+                .filter(c -> c.getThumbnailUrl() != null && !c.getThumbnailUrl().isEmpty())
+                .max(Comparator.comparingDouble(DeckCard::getPrice))
+                .map(DeckCard::getThumbnailUrl)
+                .orElse(null);
+    }
+
+    /**
+     * Best available cover image: stored thumbnail, or Scryfall API fallback from first mainboard card.
+     * Returns null only when there are no mainboard cards at all.
+     */
+    public String getCoverImageUrl() {
+        String thumb = getCoverArtUrl();
+        if (thumb != null) return thumb;
+        if (mainboard != null && !mainboard.isEmpty()) {
+            DeckCard first = mainboard.get(0);
+            if (first.getSetCode() != null && first.getCollectorNumber() != null) {
+                return "https://api.scryfall.com/cards/" + first.getSetCode().toLowerCase()
+                        + "/" + first.getCollectorNumber() + "?format=image&version=small";
+            }
+        }
+        return null;
+    }
+
+    private List<DeckCard> allBoards() {
+        List<DeckCard> all = new ArrayList<>();
+        if (mainboard  != null) all.addAll(mainboard);
+        if (sideboard  != null) all.addAll(sideboard);
+        if (extraboard != null) all.addAll(extraboard);
+        return all;
+    }
+
     // ── Getters / Setters ─────────────────────────────────────────────────────
 
     public String getId()                       { return id; }
@@ -81,6 +121,9 @@ public class UserDeck {
         private String  collectorNumber;
         private int     quantity;
         private boolean foil;
+        private String  thumbnailUrl;
+        private String  imageUrl;
+        private double  price;
 
         public DeckCard() {}
 
@@ -106,5 +149,32 @@ public class UserDeck {
 
         public boolean isFoil()                      { return foil; }
         public void    setFoil(boolean foil)         { this.foil = foil; }
+
+        public String  getThumbnailUrl()             { return thumbnailUrl; }
+        public void    setThumbnailUrl(String u)     { this.thumbnailUrl = u; }
+
+        /** Stored thumbnail, or Scryfall API small-image URL as fallback. */
+        public String  getEffectiveThumbnailUrl() {
+            if (thumbnailUrl != null && !thumbnailUrl.isEmpty()) return thumbnailUrl;
+            if (setCode != null && collectorNumber != null)
+                return "https://api.scryfall.com/cards/" + setCode.toLowerCase()
+                        + "/" + collectorNumber + "?format=image&version=small";
+            return null;
+        }
+
+        public String  getImageUrl()                 { return imageUrl; }
+        public void    setImageUrl(String u)         { this.imageUrl = u; }
+
+        /** Stored image, or Scryfall API normal-image URL as fallback. */
+        public String  getEffectiveImageUrl() {
+            if (imageUrl != null && !imageUrl.isEmpty()) return imageUrl;
+            if (setCode != null && collectorNumber != null)
+                return "https://api.scryfall.com/cards/" + setCode.toLowerCase()
+                        + "/" + collectorNumber + "?format=image&version=normal";
+            return null;
+        }
+
+        public double  getPrice()                    { return price; }
+        public void    setPrice(double price)        { this.price = price; }
     }
 }

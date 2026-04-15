@@ -1,0 +1,12 @@
+"sep=,"
+Folder Name,Quantity,Trade Quantity,Card Name,Set Code,Set Name,Card Number,Condition,Printing,Language,Price Bought,Date Bought,AVG,LOW,TREND
+Sets,2,0,"Lightning Bolt",DMU,Dominaria United,142,NearMint,Normal,English,0.50,2024-01-01,0.50,0.30,0.45
+Sets,1,0,"Counterspell",DMU,Dominaria United,56,NearMint,Foil,English,1.20,2024-01-01,1.20,0.80,1.10
+Sets,3,0,"Serra Angel",NEO,Kamigawa Neon Dynasty,25,NearMint,Normal,English,0.30,2024-01-01,0.30,0.20,0.28
+Sets,1,0,"Dark Ritual",MH2,Modern Horizons 2,83,NearMint,Foil,English,2.00,2024-01-01,2.00,1.50,1.90
+Sets,2,0,"Giant Growth",ZNR,Zendikar Rising,170,NearMint,Normal,English,0.20,2024-01-01,0.20,0.10,0.18
+Sets,1,0,"Llanowar Elves",BRO,The Brothers' War,175,NearMint,Normal,English,0.40,2024-01-01,0.40,0.25,0.38
+Sets,1,0,"Opt",SNC,Streets of New Capenna,56,NearMint,Foil,English,0.80,2024-01-01,0.80,0.50,0.75
+Sets,4,0,"Shock",VOW,Innistrad: Crimson Vow,159,NearMint,Normal,English,0.15,2024-01-01,0.15,0.10,0.14
+Sets,1,0,"Divination",MID,Innistrad: Midnight Hunt,48,NearMint,Foil,English,0.60,2024-01-01,0.60,0.40,0.55
+Sets,2,0,"Naturalize",AFR,Adventures in the Forgotten Realms,186,NearMint,Normal,English,0.25,2024-01-01,0.25,0.15,0.23

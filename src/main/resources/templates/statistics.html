@@ -54,7 +54,7 @@
                             <div class="col-md-4">
                                 <select class="form-select" name="user" onchange="this.form.submit()">
                                     <option value="">-- Select User --</option>
-                                    <option th:each="user : ${allStatistics.keySet()}" 
+                                     <option th:each="user : ${allStatistics.keySet()}" 
                                             th:value="${user}" 
                                             th:text="${user}"
                                             th:selected="${selectedUser == user}">User</option>
@@ -170,7 +170,7 @@
                                         <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
                                         <td th:text="${#numbers.formatCurrency(set.value)}">$0</td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCardsInSet}">0/0</td>
-                                        <td th:text="${#numbers.formatPercent(set.ownedCards / set.totalCardsInSet, 1, 0)}">0%</td>
+                                         <td th:text="${set.totalCardsInSet > 0 ? #numbers.formatPercent(set.ownedCards / set.totalCardsInSet, 1, 0) : '0%'}">0%</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -295,7 +295,7 @@
                                 </thead>
                                 <tbody>
                                     <tr th:each="stat : ${allStatistics}">
-                                        <td>
+                                         <td>
                                             <a th:href="@{/statistics(user=${stat.value.user})}" 
                                                th:text="${stat.value.user}">user</a>
                                         </td>

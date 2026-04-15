@@ -127,18 +127,18 @@ class StatisticsServiceTest {
     @Test
     void testGetStatisticsForAllUsers() {
         when(userCardRepository.findAll()).thenReturn(List.of(
-                new UserCard("user1", "Card", "SET", "1", 1, false),
-                new UserCard("user2", "Card", "SET", "1", 1, false)
+                new UserCard("Andre", "Card", "SET", "1", 1, false),
+                new UserCard("Victor", "Card", "SET", "1", 1, false)
         ));
         
-        when(importHistoryRepository.findByUserOrderByImportedAtDesc("user1")).thenReturn(Collections.emptyList());
-        when(importHistoryRepository.findByUserOrderByImportedAtDesc("user2")).thenReturn(Collections.emptyList());
+        when(importHistoryRepository.findByUserOrderByImportedAtDesc("Andre")).thenReturn(Collections.emptyList());
+        when(importHistoryRepository.findByUserOrderByImportedAtDesc("Victor")).thenReturn(Collections.emptyList());
         when(scryfallService.getAllSets(false)).thenReturn(Collections.emptyList());
 
         Map<String, UserStatistics> allStats = statisticsService.getStatisticsForAllUsers();
 
         assertEquals(2, allStats.size());
-        assertTrue(allStats.containsKey("user1"));
-        assertTrue(allStats.containsKey("user2"));
+        assertTrue(allStats.containsKey("Andre"));
+        assertTrue(allStats.containsKey("Victor"));
     }
 }

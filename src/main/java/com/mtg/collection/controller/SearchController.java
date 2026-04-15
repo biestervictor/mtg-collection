@@ -27,7 +27,7 @@ public class SearchController {
     @GetMapping("/search")
     public String searchCards(Model model, @RequestParam(required = false) String q, @RequestParam(required = false) String user) {
         
-        String searchUser = (user == null || user.trim().isEmpty()) ? "user2" : user;
+        String searchUser = (user == null || user.trim().isEmpty()) ? "Victor" : user;
         
         if (q != null && !q.trim().isEmpty()) {
             String searchTerm = q.trim().toLowerCase();

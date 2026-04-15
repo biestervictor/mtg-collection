@@ -62,17 +62,17 @@ class ImportHistoryServiceTest {
             csvContent.getBytes()
         );
         
-        when(userCardRepository.findByUser("user1")).thenReturn(Collections.emptyList());
+        when(userCardRepository.findByUser("Andre")).thenReturn(Collections.emptyList());
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         ArgumentCaptor<ImportHistory> historyCaptor = ArgumentCaptor.forClass(ImportHistory.class);
         verify(importHistoryRepository).save(historyCaptor.capture());
         
         ImportHistory savedHistory = historyCaptor.getValue();
-        assertEquals("user1", savedHistory.getUser());
+        assertEquals("Andre", savedHistory.getUser());
         assertEquals("inventory", savedHistory.getFormat());
         assertEquals(1, savedHistory.getTotalCardsCount());
     }
@@ -92,11 +92,11 @@ class ImportHistoryServiceTest {
             csvContent.getBytes()
         );
         
-        when(userCardRepository.findByUser("user1")).thenReturn(Collections.emptyList());
+        when(userCardRepository.findByUser("Andre")).thenReturn(Collections.emptyList());
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         assertEquals(1, result.getAddedCardsCount());
         assertNotNull(result.getAddedCards());
@@ -120,18 +120,18 @@ class ImportHistoryServiceTest {
         );
         
         UserCard existingCard = new UserCard();
-        existingCard.setUser("user1");
+        existingCard.setUser("Andre");
         existingCard.setName("Removed Card");
         existingCard.setSetCode("tla");
         existingCard.setCollectorNumber("1");
         existingCard.setQuantity(1);
         existingCard.setFoil(false);
         
-        when(userCardRepository.findByUser("user1")).thenReturn(Arrays.asList(existingCard));
+        when(userCardRepository.findByUser("Andre")).thenReturn(Arrays.asList(existingCard));
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         assertEquals(1, result.getRemovedCardsCount());
         assertNotNull(result.getRemovedCards());
@@ -154,18 +154,18 @@ class ImportHistoryServiceTest {
         );
         
         UserCard existingCard = new UserCard();
-        existingCard.setUser("user1");
+        existingCard.setUser("Andre");
         existingCard.setName("Old Card");
         existingCard.setSetCode("tla");
         existingCard.setCollectorNumber("2");
         existingCard.setQuantity(1);
         existingCard.setFoil(false);
         
-        when(userCardRepository.findByUser("user1")).thenReturn(Arrays.asList(existingCard));
+        when(userCardRepository.findByUser("Andre")).thenReturn(Arrays.asList(existingCard));
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         assertEquals(1, result.getAddedCardsCount());
         assertEquals(1, result.getRemovedCardsCount());
@@ -187,18 +187,18 @@ class ImportHistoryServiceTest {
         );
         
         UserCard existingCard = new UserCard();
-        existingCard.setUser("user1");
+        existingCard.setUser("Andre");
         existingCard.setName("Same Card");
         existingCard.setSetCode("tla");
         existingCard.setCollectorNumber("1");
         existingCard.setQuantity(1);
         existingCard.setFoil(false);
         
-        when(userCardRepository.findByUser("user1")).thenReturn(Arrays.asList(existingCard));
+        when(userCardRepository.findByUser("Andre")).thenReturn(Arrays.asList(existingCard));
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         assertEquals(0, result.getAddedCardsCount());
         assertEquals(0, result.getRemovedCardsCount());
@@ -220,18 +220,18 @@ class ImportHistoryServiceTest {
         );
         
         UserCard existingCard = new UserCard();
-        existingCard.setUser("user1");
+        existingCard.setUser("Andre");
         existingCard.setName("Same Card");
         existingCard.setSetCode("tla");
         existingCard.setCollectorNumber("1");
         existingCard.setQuantity(1);
         existingCard.setFoil(false);
         
-        when(userCardRepository.findByUser("user1")).thenReturn(Arrays.asList(existingCard));
+        when(userCardRepository.findByUser("Andre")).thenReturn(Arrays.asList(existingCard));
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         assertEquals(0, result.getAddedCardsCount());
         assertEquals(0, result.getRemovedCardsCount());
@@ -254,18 +254,18 @@ class ImportHistoryServiceTest {
         );
         
         UserCard existingCard = new UserCard();
-        existingCard.setUser("user1");
+        existingCard.setUser("Andre");
         existingCard.setName("Existing Card");
         existingCard.setSetCode("tla");
         existingCard.setCollectorNumber("1");
         existingCard.setQuantity(2);
         existingCard.setFoil(false);
         
-        when(userCardRepository.findByUser("user1")).thenReturn(Arrays.asList(existingCard));
+        when(userCardRepository.findByUser("Andre")).thenReturn(Arrays.asList(existingCard));
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         assertEquals(1, result.getRemovedCardsCount());
         assertEquals(1, result.getAddedCardsCount());
@@ -290,18 +290,18 @@ class ImportHistoryServiceTest {
         );
         
         UserCard existingCard = new UserCard();
-        existingCard.setUser("user1");
+        existingCard.setUser("Andre");
         existingCard.setName("Existing Card");
         existingCard.setSetCode("tla");
         existingCard.setCollectorNumber("1");
         existingCard.setQuantity(1);
         existingCard.setFoil(false);
         
-        when(userCardRepository.findByUser("user1")).thenReturn(Arrays.asList(existingCard));
+        when(userCardRepository.findByUser("Andre")).thenReturn(Arrays.asList(existingCard));
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         assertEquals(1, result.getAddedCardsCount());
         assertEquals(0, result.getRemovedCardsCount());
@@ -325,11 +325,11 @@ class ImportHistoryServiceTest {
             csvContent.getBytes()
         );
         
-        when(userCardRepository.findByUser("user1")).thenReturn(Collections.emptyList());
+        when(userCardRepository.findByUser("Andre")).thenReturn(Collections.emptyList());
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         assertEquals(10, result.getCardsCount());
         assertEquals(3, result.getNewCardsCount());
@@ -351,11 +351,11 @@ class ImportHistoryServiceTest {
             csvContent.getBytes()
         );
         
-        when(userCardRepository.findByUser("user1")).thenReturn(Collections.emptyList());
+        when(userCardRepository.findByUser("Andre")).thenReturn(Collections.emptyList());
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         assertEquals(2, result.getAddedCardsCount());
         
@@ -389,11 +389,11 @@ class ImportHistoryServiceTest {
             csvContent.getBytes()
         );
         
-        when(userCardRepository.findByUser("user1")).thenReturn(Collections.emptyList());
+        when(userCardRepository.findByUser("Andre")).thenReturn(Collections.emptyList());
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        importService.importInventory("user1", file);
+        importService.importInventory("Andre", file);
         
         ArgumentCaptor<ImportHistory> historyCaptor = ArgumentCaptor.forClass(ImportHistory.class);
         verify(importHistoryRepository).save(historyCaptor.capture());

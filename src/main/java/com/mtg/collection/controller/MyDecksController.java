@@ -27,4 +27,17 @@ public class MyDecksController {
         model.addAttribute("user", user);
         return "my-decks";
     }
+
+    @GetMapping("/detail")
+    public String deckDetail(@RequestParam String id,
+                             @RequestParam(defaultValue = "Victor") String user,
+                             Model model) {
+        userDeckService.getDeckById(id)
+                .ifPresentOrElse(
+                        deck -> model.addAttribute("deck", deck),
+                        () -> model.addAttribute("error", "Deck not found: " + id)
+                );
+        model.addAttribute("user", user);
+        return "my-deck-detail";
+    }
 }

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${deck != null ? deck.name + ' – My Decks' : 'Deck Detail – MTG'}">Deck Detail – MTG</title>
+    <link th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root { --primary-color: #1a1a2e; --secondary-color: #16213e; --accent-color: #e94560; --text-light: #f1f1f1; }
+        body { background-color: #0f0f23; color: var(--text-light); min-height: 100vh; }
+        .navbar { background-color: var(--primary-color) !important; }
+        .navbar-brand { font-weight: bold; color: var(--accent-color) !important; }
+        .nav-link { color: var(--text-light) !important; }
+        .nav-link.active { color: var(--accent-color) !important; border-bottom: 2px solid var(--accent-color); }
+        .card { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
+        footer { background-color: var(--primary-color); color: #888; }
+
+        /* ── Summary stats ── */
+        .stat-block { text-align: center; padding: 0.8rem 1.4rem; background: var(--secondary-color);
+                      border: 1px solid #2a2a4a; border-radius: 8px; }
+        .stat-val   { font-size: 1.5rem; font-weight: bold; color: var(--accent-color); }
+        .stat-label { font-size: 0.72rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* ── Board section heading ── */
+        .board-title { font-size: 0.72rem; font-weight: bold; letter-spacing: 1px;
+                       text-transform: uppercase; color: #666; margin-bottom: 6px; }
+
+        /* ── Card table ── */
+        .board-table { font-size: 0.88rem; width: 100%; border-collapse: collapse; }
+        .board-table td { padding: 4px 8px; border-bottom: 1px solid #1e1e3a; vertical-align: middle; }
+        .board-table tr:last-child td { border-bottom: none; }
+        .board-table tr.card-row:hover { background-color: rgba(255,255,255,0.04); cursor: pointer; }
+
+        /* Thumbnail cell */
+        .thumb-cell { width: 46px; padding: 3px 4px !important; }
+        .thumb-sm   { width: 42px; height: 58px; object-fit: cover; border-radius: 3px; display: block; }
+        .thumb-ph   { width: 42px; height: 58px; background: #2a2a4a; border-radius: 3px; display: flex;
+                      align-items: center; justify-content: center; font-size: 0.55rem; color: #555; }
+
+        /* Qty column */
+        .qty-cell   { width: 32px; text-align: center; color: #aaa; font-weight: bold; }
+
+        /* Set icon */
+        .set-cell   { width: 56px; white-space: nowrap; }
+        .set-icon   { width: 13px; height: 13px; filter: invert(50%); vertical-align: middle; }
+
+        /* Price column */
+        .price-cell { width: 68px; text-align: right; color: #888; font-size: 0.82rem; }
+
+        /* Foil badge */
+        .badge-foil { background: linear-gradient(135deg,#b06c24,#e8c95a); color: #111; font-size: 0.62rem; }
+
+        .badge-commander { background-color: #7b2fff; }
+        .badge-normal    { background-color: #1a6b4a; }
+
+        /* ── Hover card preview ── */
+        #card-preview { display: none; position: fixed; z-index: 9999; pointer-events: none; }
+        #card-preview img { width: 230px; border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,.85); }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark" th:replace="~{fragments/nav :: main-nav}"></nav>
+    <div th:replace="~{fragments/nav :: price-update-utils}"></div>
+
+    <main class="container py-4">
+
+        <!-- Back + title row -->
+        <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+            <a th:href="@{/my-decks(user=${user})}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> My Decks
+            </a>
+            <div th:if="${deck != null}" class="d-flex align-items-center gap-2 flex-wrap">
+                <h2 class="mb-0" th:text="${deck.name}">Deck Name</h2>
+                <span class="badge badge-commander" th:if="${deck.commander}">Commander</span>
+                <span class="badge badge-normal"    th:unless="${deck.commander}">Normal</span>
+                <span class="text-muted small ms-1"
+                      th:if="${deck.updatedAt != null}"
+                      th:text="'Updated ' + ${#temporals.format(deck.updatedAt, 'dd.MM.yyyy')}"></span>
+            </div>
+        </div>
+
+        <!-- Error -->
+        <div th:if="${error != null}" class="alert alert-danger" th:text="${error}"></div>
+
+        <div th:if="${deck != null}">
+
+            <!-- Summary row -->
+            <div class="d-flex gap-3 mb-4 flex-wrap">
+                <div class="stat-block">
+                    <div class="stat-val" th:text="${deck.mainboardCount}">0</div>
+                    <div class="stat-label">Mainboard</div>
+                </div>
+                <div class="stat-block" th:if="${deck.sideboardCount > 0}">
+                    <div class="stat-val" th:text="${deck.sideboardCount}">0</div>
+                    <div class="stat-label">Sideboard</div>
+                </div>
+                <div class="stat-block" th:if="${deck.extraboardCount > 0}">
+                    <div class="stat-val" th:text="${deck.extraboardCount}">0</div>
+                    <div class="stat-label">Extra Board</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-val"
+                         th:if="${deck.totalValue > 0}"
+                         th:text="'&euro; ' + ${#numbers.formatDecimal(deck.totalValue, 1, 2)}">€0</div>
+                    <div class="stat-val text-muted" th:unless="${deck.totalValue > 0}">—</div>
+                    <div class="stat-label">Est. Value</div>
+                </div>
+            </div>
+
+            <!-- ── Mainboard ── -->
+            <div th:if="${!deck.mainboard.isEmpty()}" class="mb-4">
+                <div class="board-title">
+                    Mainboard &middot; <span th:text="${deck.mainboardCount}">0</span> cards
+                </div>
+                <div class="card">
+                    <table class="board-table">
+                        <tbody>
+                            <tr th:each="c : ${deck.mainboard}"
+                                class="card-row"
+                                th:data-img="${c.imageUrl}"
+                                th:data-thumb="${c.thumbnailUrl}">
+                                <td class="thumb-cell">
+                                    <img th:if="${c.thumbnailUrl != null}"
+                                         th:src="${c.thumbnailUrl}" class="thumb-sm" th:alt="${c.name}"
+                                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                    <div class="thumb-ph"
+                                         th:style="${c.thumbnailUrl != null} ? 'display:none' : ''"></div>
+                                </td>
+                                <td class="qty-cell" th:text="${c.quantity}">1</td>
+                                <td>
+                                    <span th:text="${c.name}">Card Name</span>
+                                    <span th:if="${c.foil}" class="badge badge-foil ms-1">Foil</span>
+                                </td>
+                                <td class="set-cell">
+                                    <img th:src="${'https://svgs.scryfall.io/sets/' + c.setCode + '.svg'}"
+                                         class="set-icon" alt="" onerror="this.style.display='none'">
+                                    <span class="text-muted small" th:text="${c.setCode}">SET</span>
+                                </td>
+                                <td class="price-cell">
+                                    <span th:if="${c.price > 0}"
+                                          th:text="'&euro; ' + ${#numbers.formatDecimal(c.price, 1, 2)}">€0</span>
+                                    <span th:unless="${c.price > 0}" class="text-muted">—</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── Sideboard ── -->
+            <div th:if="${!deck.sideboard.isEmpty()}" class="mb-4">
+                <div class="board-title">
+                    Sideboard &middot; <span th:text="${deck.sideboardCount}">0</span> cards
+                </div>
+                <div class="card">
+                    <table class="board-table">
+                        <tbody>
+                            <tr th:each="c : ${deck.sideboard}"
+                                class="card-row"
+                                th:data-img="${c.imageUrl}"
+                                th:data-thumb="${c.thumbnailUrl}">
+                                <td class="thumb-cell">
+                                    <img th:if="${c.thumbnailUrl != null}"
+                                         th:src="${c.thumbnailUrl}" class="thumb-sm" th:alt="${c.name}"
+                                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                    <div class="thumb-ph"
+                                         th:style="${c.thumbnailUrl != null} ? 'display:none' : ''"></div>
+                                </td>
+                                <td class="qty-cell" th:text="${c.quantity}">1</td>
+                                <td>
+                                    <span th:text="${c.name}">Card Name</span>
+                                    <span th:if="${c.foil}" class="badge badge-foil ms-1">Foil</span>
+                                </td>
+                                <td class="set-cell">
+                                    <img th:src="${'https://svgs.scryfall.io/sets/' + c.setCode + '.svg'}"
+                                         class="set-icon" alt="" onerror="this.style.display='none'">
+                                    <span class="text-muted small" th:text="${c.setCode}">SET</span>
+                                </td>
+                                <td class="price-cell">
+                                    <span th:if="${c.price > 0}"
+                                          th:text="'&euro; ' + ${#numbers.formatDecimal(c.price, 1, 2)}">€0</span>
+                                    <span th:unless="${c.price > 0}" class="text-muted">—</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── Extra Board ── -->
+            <div th:if="${!deck.extraboard.isEmpty()}" class="mb-4">
+                <div class="board-title">
+                    Extra Board &middot; <span th:text="${deck.extraboardCount}">0</span> cards
+                </div>
+                <div class="card">
+                    <table class="board-table">
+                        <tbody>
+                            <tr th:each="c : ${deck.extraboard}"
+                                class="card-row"
+                                th:data-img="${c.imageUrl}"
+                                th:data-thumb="${c.thumbnailUrl}">
+                                <td class="thumb-cell">
+                                    <img th:if="${c.thumbnailUrl != null}"
+                                         th:src="${c.thumbnailUrl}" class="thumb-sm" th:alt="${c.name}"
+                                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                    <div class="thumb-ph"
+                                         th:style="${c.thumbnailUrl != null} ? 'display:none' : ''"></div>
+                                </td>
+                                <td class="qty-cell" th:text="${c.quantity}">1</td>
+                                <td>
+                                    <span th:text="${c.name}">Card Name</span>
+                                    <span th:if="${c.foil}" class="badge badge-foil ms-1">Foil</span>
+                                </td>
+                                <td class="set-cell">
+                                    <img th:src="${'https://svgs.scryfall.io/sets/' + c.setCode + '.svg'}"
+                                         class="set-icon" alt="" onerror="this.style.display='none'">
+                                    <span class="text-muted small" th:text="${c.setCode}">SET</span>
+                                </td>
+                                <td class="price-cell">
+                                    <span th:if="${c.price > 0}"
+                                          th:text="'&euro; ' + ${#numbers.formatDecimal(c.price, 1, 2)}">€0</span>
+                                    <span th:unless="${c.price > 0}" class="text-muted">—</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /deck != null -->
+    </main>
+
+    <footer class="text-center py-3 mt-4"><p>MTG Collection Manager</p></footer>
+
+    <!-- Hover card preview -->
+    <div id="card-preview"><img src="" alt="Card Preview"></div>
+
+    <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+    <script>
+        const preview    = document.getElementById('card-preview');
+        const previewImg = preview.querySelector('img');
+
+        document.querySelectorAll('.card-row[data-img]').forEach(row => {
+            const img = row.dataset.img || row.dataset.thumb;
+            if (!img) return;
+            row.addEventListener('mouseenter', e => {
+                previewImg.src = img;
+                preview.style.display = 'block';
+                movePreview(e);
+            });
+            row.addEventListener('mousemove', movePreview);
+            row.addEventListener('mouseleave', () => { preview.style.display = 'none'; });
+        });
+
+        function movePreview(e) {
+            const offset = 18;
+            let x = e.clientX + offset, y = e.clientY - 115;
+            if (x + 248 > window.innerWidth)  x = e.clientX - 248 - offset;
+            if (y < 10) y = 10;
+            if (y + 330 > window.innerHeight) y = window.innerHeight - 330;
+            preview.style.left = x + 'px';
+            preview.style.top  = y + 'px';
+        }
+    </script>
+</body>
+</html>

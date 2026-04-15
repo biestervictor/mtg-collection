@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -45,6 +46,28 @@ public class UserDeck {
 
     public int getExtraboardCount() {
         return extraboard == null ? 0 : extraboard.stream().mapToInt(DeckCard::getQuantity).sum();
+    }
+
+    /** Sum of price × quantity across all boards. */
+    public double getTotalValue() {
+        return allBoards().stream().mapToDouble(c -> c.getPrice() * c.getQuantity()).sum();
+    }
+
+    /** Thumbnail URL of the most expensive card across all boards, or null. */
+    public String getCoverArtUrl() {
+        return allBoards().stream()
+                .filter(c -> c.getThumbnailUrl() != null && !c.getThumbnailUrl().isEmpty())
+                .max(Comparator.comparingDouble(DeckCard::getPrice))
+                .map(DeckCard::getThumbnailUrl)
+                .orElse(null);
+    }
+
+    private List<DeckCard> allBoards() {
+        List<DeckCard> all = new ArrayList<>();
+        if (mainboard  != null) all.addAll(mainboard);
+        if (sideboard  != null) all.addAll(sideboard);
+        if (extraboard != null) all.addAll(extraboard);
+        return all;
     }
 
     // ── Getters / Setters ─────────────────────────────────────────────────────

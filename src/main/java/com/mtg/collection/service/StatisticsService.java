@@ -1,9 +1,11 @@
 package com.mtg.collection.service;
 
 import com.mtg.collection.dto.UserStatistics;
+import com.mtg.collection.model.ScryfallCard;
 import com.mtg.collection.model.ScryfallSet;
 import com.mtg.collection.model.UserCard;
 import com.mtg.collection.repository.ImportHistoryRepository;
+import com.mtg.collection.repository.ScryfallCardRepository;
 import com.mtg.collection.repository.UserCardRepository;
 import org.springframework.stereotype.Service;
 
@@ -18,13 +20,16 @@ public class StatisticsService {
     private final UserCardRepository userCardRepository;
     private final ImportHistoryRepository importHistoryRepository;
     private final ScryfallService scryfallService;
+    private final ScryfallCardRepository scryfallCardRepository;
 
     public StatisticsService(UserCardRepository userCardRepository,
                           ImportHistoryRepository importHistoryRepository,
-                          ScryfallService scryfallService) {
+                          ScryfallService scryfallService,
+                          ScryfallCardRepository scryfallCardRepository) {
         this.userCardRepository = userCardRepository;
         this.importHistoryRepository = importHistoryRepository;
         this.scryfallService = scryfallService;
+        this.scryfallCardRepository = scryfallCardRepository;
     }
 
     public Map<String, UserStatistics> getStatisticsForAllUsers() {
@@ -46,7 +51,10 @@ public class StatisticsService {
     public UserStatistics getStatisticsForUser(String user) {
         List<UserCard> userCards = userCardRepository.findByUser(user);
         List<com.mtg.collection.model.ImportHistory> imports = importHistoryRepository.findByUserOrderByImportedAtDesc(user);
-        
+
+        // Enrich: for cards with price=0, fall back to ScryfallCard price
+        Map<String, ScryfallCard> sfMap = buildScryfallMap(userCards);
+
         UserStatistics stats = new UserStatistics();
         stats.setUser(user);
         
@@ -60,13 +68,19 @@ public class StatisticsService {
         stats.setTotalCards(totalCards);
         
         double totalValue = userCards.stream()
-                .mapToDouble(c -> c.getPrice() * c.getQuantity())
+                .mapToDouble(c -> effectivePrice(c, sfMap) * c.getQuantity())
                 .sum();
         stats.setTotalValue(totalValue);
         
         List<CardWithPrice> expensiveCards = userCards.stream()
-                .filter(c -> c.getPrice() > 0)
-                .map(c -> new CardWithPrice(c.getName(), c.getSetCode(), c.getPrice() * c.getQuantity(), c.getPrice()))
+                .map(c -> {
+                    double p = effectivePrice(c, sfMap);
+                    if (p <= 0) return null;
+                    ScryfallCard sf = sfMap.get(c.getSetCode() + "_" + c.getCollectorNumber());
+                    String thumb = sf != null ? sf.getThumbnailFront() : null;
+                    return new CardWithPrice(c.getName(), c.getSetCode(), p * c.getQuantity(), p, thumb);
+                })
+                .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(CardWithPrice::getTotalPrice).reversed()
                         .thenComparing(Comparator.comparing(CardWithPrice::getPricePerCard).reversed()))
                 .limit(100)
@@ -108,11 +122,11 @@ public class StatisticsService {
                 .collect(Collectors.toList());
         stats.setTopSetsByCount(topSets);
         
-        Map<String, Double> setValues = userCards.stream()
-                .collect(Collectors.groupingBy(
-                        UserCard::getSetCode,
-                        Collectors.summingDouble(c -> c.getPrice() * c.getQuantity())
-                ));
+        Map<String, Double> setValues = new HashMap<>();
+        for (UserCard c : userCards) {
+            double p = effectivePrice(c, sfMap);
+            setValues.merge(c.getSetCode(), p * c.getQuantity(), Double::sum);
+        }
         
         List<SetValue> topSetsByValue = setValues.entrySet().stream()
                 .filter(e -> e.getValue() > 0)   // hide sets where all prices are 0
@@ -242,23 +256,63 @@ public class StatisticsService {
         stats.setTopLosers(losers.stream().limit(30).collect(Collectors.toList()));
     }
 
+    // ── Price enrichment helpers ──────────────────────────────────────────────
+
+    /**
+     * Builds a map from "setCode_collectorNumber" → ScryfallCard for all set codes
+     * present in the given user cards. Used to fill in prices when UserCard.price == 0.
+     */
+    private Map<String, ScryfallCard> buildScryfallMap(List<UserCard> userCards) {
+        Set<String> setCodes = userCards.stream()
+                .map(UserCard::getSetCode)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<String, ScryfallCard> sfMap = new HashMap<>();
+        for (String sc : setCodes) {
+            for (ScryfallCard sf : scryfallCardRepository.findBySetCode(sc)) {
+                sfMap.put(sf.getSetCode() + "_" + sf.getCollectorNumber(), sf);
+            }
+        }
+        return sfMap;
+    }
+
+    /**
+     * Returns the best available price: UserCard.price if > 0, else ScryfallCard price.
+     */
+    private double effectivePrice(UserCard c, Map<String, ScryfallCard> sfMap) {
+        if (c.getPrice() > 0) return c.getPrice();
+        ScryfallCard sf = sfMap.get(c.getSetCode() + "_" + c.getCollectorNumber());
+        if (sf == null) return 0.0;
+        double p = c.isFoil()
+                ? (sf.getPriceFoil()  != null ? sf.getPriceFoil()  : 0.0)
+                : (sf.getPriceRegular() != null ? sf.getPriceRegular() : 0.0);
+        return p;
+    }
+
     public static class CardWithPrice {
         private String name;
         private String setCode;
         private double totalPrice;
         private double pricePerCard;
+        private String thumbnailUrl;
 
         public CardWithPrice(String name, String setCode, double totalPrice, double pricePerCard) {
+            this(name, setCode, totalPrice, pricePerCard, null);
+        }
+
+        public CardWithPrice(String name, String setCode, double totalPrice, double pricePerCard, String thumbnailUrl) {
             this.name = name;
             this.setCode = setCode;
             this.totalPrice = totalPrice;
             this.pricePerCard = pricePerCard;
+            this.thumbnailUrl = thumbnailUrl;
         }
 
         public String getName() { return name; }
         public String getSetCode() { return setCode; }
         public double getTotalPrice() { return totalPrice; }
         public double getPricePerCard() { return pricePerCard; }
+        public String getThumbnailUrl() { return thumbnailUrl; }
     }
 
     public static class SetCount {

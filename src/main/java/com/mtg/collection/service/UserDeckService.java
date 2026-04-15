@@ -96,6 +96,10 @@ public class UserDeckService {
         return userDeckRepository.findByUserOrderByCommanderDescNameAsc(user);
     }
 
+    public Optional<UserDeck> getDeckById(String id) {
+        return userDeckRepository.findById(id);
+    }
+
     // ── private helpers ───────────────────────────────────────────────────────
 
     /**

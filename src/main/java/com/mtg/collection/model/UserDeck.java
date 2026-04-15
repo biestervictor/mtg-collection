@@ -81,6 +81,9 @@ public class UserDeck {
         private String  collectorNumber;
         private int     quantity;
         private boolean foil;
+        private String  thumbnailUrl;
+        private String  imageUrl;
+        private double  price;
 
         public DeckCard() {}
 
@@ -106,5 +109,14 @@ public class UserDeck {
 
         public boolean isFoil()                      { return foil; }
         public void    setFoil(boolean foil)         { this.foil = foil; }
+
+        public String  getThumbnailUrl()             { return thumbnailUrl; }
+        public void    setThumbnailUrl(String u)     { this.thumbnailUrl = u; }
+
+        public String  getImageUrl()                 { return imageUrl; }
+        public void    setImageUrl(String u)         { this.imageUrl = u; }
+
+        public double  getPrice()                    { return price; }
+        public void    setPrice(double price)        { this.price = price; }
     }
 }

@@ -1,5 +1,6 @@
 package com.mtg.collection.controller;
 
+import com.mtg.collection.dto.CardWithUserData;
 import com.mtg.collection.dto.ImportResult;
 import com.mtg.collection.model.ImportHistory;
 import com.mtg.collection.model.ImportHistory.ImportedCardInfo;
@@ -13,8 +14,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
 public class ImportController {
@@ -65,6 +66,36 @@ public class ImportController {
                 .thenComparing(ImportedCardInfo::getCollectorNumber);
         if (result.getAddedCards() != null)   result.getAddedCards().sort(bySetThenNumber);
         if (result.getRemovedCards() != null) result.getRemovedCards().sort(bySetThenNumber);
+
+        // Aggregate newCards by card name (keep most expensive thumbnail), sort by setCode
+        if (result.getNewCards() != null && !result.getNewCards().isEmpty()) {
+            Map<String, CardWithUserData> aggregated = new LinkedHashMap<>();
+            for (CardWithUserData cwu : result.getNewCards()) {
+                if (cwu.getCard() == null) continue;
+                String name = cwu.getCard().getName();
+                CardWithUserData existing = aggregated.get(name);
+                if (existing == null) {
+                    aggregated.put(name, cwu);
+                } else {
+                    double existingPrice = maxPrice(existing);
+                    double newPrice      = maxPrice(cwu);
+                    if (newPrice > existingPrice) {
+                        int qty  = existing.getQuantity()     + cwu.getQuantity();
+                        int foil = existing.getFoilQuantity() + cwu.getFoilQuantity();
+                        cwu.setQuantity(qty);
+                        cwu.setFoilQuantity(foil);
+                        aggregated.put(name, cwu);
+                    } else {
+                        existing.setQuantity(existing.getQuantity() + cwu.getQuantity());
+                        existing.setFoilQuantity(existing.getFoilQuantity() + cwu.getFoilQuantity());
+                    }
+                }
+            }
+            List<CardWithUserData> sorted = aggregated.values().stream()
+                    .sorted(Comparator.comparing(c -> c.getCard().getSetCode()))
+                    .collect(Collectors.toList());
+            result.setNewCards(sorted);
+        }
         
         return "import";
     }
@@ -80,5 +111,12 @@ public class ImportController {
         model.addAttribute("history", history);
         model.addAttribute("selectedUser", user);
         return "import-history";
+    }
+
+    private double maxPrice(CardWithUserData cwu) {
+        if (cwu.getCard() == null) return 0;
+        double r = cwu.getCard().getPriceRegular() != null ? cwu.getCard().getPriceRegular() : 0;
+        double f = cwu.getCard().getPriceFoil()    != null ? cwu.getCard().getPriceFoil()    : 0;
+        return Math.max(r, f);
     }
 }

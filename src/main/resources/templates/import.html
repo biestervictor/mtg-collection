@@ -22,55 +22,38 @@
         .stats-value { font-size: 2rem; font-weight: bold; color: var(--accent-color); }
         .stats-label { color: #888; }
         .error-item { color: var(--accent-color); }
-        .added-card { border-left: 3px solid #28a745; padding-left: 10px; }
         .removed-card { border-left: 3px solid var(--accent-color); padding-left: 10px; }
-        .badge-added { background-color: #28a745; }
-        .badge-removed { background-color: var(--accent-color); }
-        .card-list { display: flex; flex-wrap: wrap; gap: 10px; }
-        .card-item { width: 80px; text-align: center; }
-        .card-image { width: 70px; height: 98px; object-fit: cover; border-radius: 4px; }
-        .badge-quantity { position: absolute; top: -5px; left: -5px; background-color: #28a745; font-size: 0.7rem; }
-        .badge-foil { position: absolute; top: -5px; right: -5px; background-color: #ffc107; color: #000; font-size: 0.7rem; }
-        .tooltip-inner { background-color: var(--secondary-color); color: var(--text-light); }
+
+        /* Card image grid */
+        .card-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+        .card-tile { width: 76px; text-align: center; cursor: pointer; }
+        .card-thumb { width: 70px; height: 98px; object-fit: cover; border-radius: 5px;
+                      transition: transform 0.12s, box-shadow 0.12s; display: block; }
+        .card-tile:hover .card-thumb { transform: scale(1.08); box-shadow: 0 4px 16px rgba(0,0,0,.6); }
+        .badge-qty  { position: absolute; top: -5px; left: -5px; background-color: #28a745; font-size: 0.7rem; }
+        .badge-foil { position: absolute; top: -5px; right: -5px; background: linear-gradient(135deg,#b06c24,#e8c95a); color:#111; font-size: 0.68rem; }
+
+        /* Set section headers inside the card grid */
+        .set-section { width: 100%; margin: 0.7rem 0 0.25rem; display: flex; align-items: center;
+                       gap: 6px; color: #aaa; font-size: 0.75rem; font-weight: bold;
+                       letter-spacing: 0.5px; text-transform: uppercase; }
+        .set-icon { width: 16px; height: 16px; filter: invert(70%); vertical-align: middle; }
+
+        /* Hover preview popup */
+        #card-preview { display:none; position:fixed; z-index:9999; pointer-events:none; }
+        #card-preview img { width: 230px; border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,.85); }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" th:href="@{/}"><i class="bi bi-collection"></i> MTG Collection Manager</a>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" th:href="@{/}">Home</a></li>
-                    <li class="nav-item"><a class="nav-link active" th:href="@{/import}">Import</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/show}">Show</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/compare}">Compare</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/statistics}">Statistics</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/deck-suggest}">Deck Suggest</a></li>
-                </ul>
-                <ul class="navbar-nav align-items-center gap-2">
-                    <li class="nav-item">
-                        <button type="button" class="btn btn-sm btn-outline-warning"
-                                id="updatePricesBtn" onclick="triggerPriceUpdate()">
-                            <i class="bi bi-arrow-repeat"></i> Update Prices
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <form class="d-flex" th:action="@{/search}" method="get">
-                            <input class="form-control form-control-sm me-2" style="background-color: #ffffff; border-color: #ccc; color: #333;" type="search" name="q" placeholder="Card search..." aria-label="Search">
-                            <button class="btn btn-sm btn-outline-light" type="submit"><i class="bi bi-search"></i></button>
-                        </form>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <nav class="navbar navbar-expand-lg navbar-dark" th:replace="~{fragments/nav :: main-nav}"></nav>
+    <div th:replace="~{fragments/nav :: price-update-utils}"></div>
 
     <main class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="mb-0"><i class="bi bi-upload"></i> Collection Importer</h1>
             <a th:href="@{/import/history}" class="btn btn-outline-light"><i class="bi bi-clock-history"></i> View History</a>
         </div>
-        
+
         <div class="row">
             <div class="col-md-8">
                 <div class="card">
@@ -82,7 +65,7 @@
                                     <label class="form-label">User</label>
                                     <select class="form-select" name="user" required>
                                         <option value="">-- Select User --</option>
-                                        <option value="Andre" th:selected="${selectedUser == 'Andre'}">Andre</option>
+                                        <option value="Andre"  th:selected="${selectedUser == 'Andre'}">Andre</option>
                                         <option value="Victor" th:selected="${selectedUser == 'Victor'}">Victor</option>
                                     </select>
                                 </div>
@@ -90,7 +73,7 @@
                                     <label class="form-label">File Format</label>
                                     <select class="form-select" name="format" required>
                                         <option value="">-- Select format --</option>
-                                        <option value="inventory" th:selected="${selectedFormat == 'inventory'}">Card Market Inventory (CSV)</option>
+                                        <option value="inventory"        th:selected="${selectedFormat == 'inventory'}">Card Market Inventory (CSV)</option>
                                         <option value="dragonshield_web" th:selected="${selectedFormat == 'dragonshield_web'}">Dragonshield Web</option>
                                         <option value="dragonshield_app" th:selected="${selectedFormat == 'dragonshield_app'}">Dragonshield App</option>
                                     </select>
@@ -108,46 +91,40 @@
                 </div>
             </div>
         </div>
-        
+
         <div th:if="${result != null}" class="mt-4">
+            <!-- Summary stats -->
             <div class="row mb-4">
                 <div class="col-md-3">
-                    <div class="card stats-card" data-bs-toggle="tooltip" data-bs-placement="top" title="Summe aller importierten Karten (Gesamtstückzahl)">
+                    <div class="card stats-card">
                         <div class="stats-value" th:text="${result.cardsCount}">0</div>
-                        <div class="stats-label">
-                            <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Summe aller importierten Karten (Gesamtstückzahl)"></i> Cards
-                        </div>
+                        <div class="stats-label">Cards</div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card stats-card" data-bs-toggle="tooltip" data-bs-placement="top" title="Anzahl unterschiedlicher Karten (ohne Duplikate zu zählen)">
+                    <div class="card stats-card">
                         <div class="stats-value" th:text="${result.newCardsCount}">0</div>
-                        <div class="stats-label">
-                            <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Anzahl unterschiedlicher Karten (ohne Duplikate zu zählen)"></i> Unique Cards
-                        </div>
+                        <div class="stats-label">Unique Cards</div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card stats-card" data-bs-toggle="tooltip" data-bs-placement="top" title="Karten die neu in der Sammlung sind (existierten vorher nicht)">
-                        <div class="stats-value" style="color: #28a745;" th:text="${result.addedCardsCount}">0</div>
-                        <div class="stats-label">
-                            <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Karten die neu in der Sammlung sind (existierten vorher nicht)"></i> New
-                        </div>
+                    <div class="card stats-card">
+                        <div class="stats-value" style="color:#28a745;" th:text="${result.addedCardsCount}">0</div>
+                        <div class="stats-label">New</div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card stats-card" data-bs-toggle="tooltip" data-bs-placement="top" title="Karten die nicht mehr in der Import-Datei sind (nicht mehr in Sammlung)">
+                    <div class="card stats-card">
                         <div class="stats-value" th:text="${result.removedCardsCount}">0</div>
-                        <div class="stats-label">
-                            <i class="bi bi-info-circle" data-bs-toggle="tooltip" title="Karten die nicht mehr in der Import-Datei sind (werden aus Sammlung entfernt)"></i> Removed
-                        </div>
+                        <div class="stats-label">Removed</div>
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Errors -->
             <div th:if="${result.errors != null and not #lists.isEmpty(result.errors)}" class="card mb-4">
                 <div class="card-header"><h5 class="mb-0">Errors</h5></div>
-                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                <div class="card-body" style="max-height:300px;overflow-y:auto;">
                     <ul class="list-unstyled">
                         <li th:each="error : ${result.errors}" class="error-item mb-2">
                             <i class="bi bi-exclamation-circle"></i> <span th:text="${error}"></span>
@@ -156,51 +133,65 @@
                 </div>
             </div>
 
+            <!-- New Cards — image grid grouped by set -->
             <div class="row" th:if="${result.newCards != null and not #lists.isEmpty(result.newCards)}">
                 <div class="col-12">
                     <div class="card mb-4">
                         <div class="card-header">
                             <h5 class="mb-0">
-                                <i class="bi bi-plus-circle" style="color: #28a745;"></i>
+                                <i class="bi bi-plus-circle" style="color:#28a745;"></i>
                                 New Cards (<span th:text="${result.newCards.size()}">0</span>)
                             </h5>
                         </div>
                         <div class="card-body">
-                            <div class="card-list">
-                                <div th:each="cardData : ${result.newCards}" class="card-item">
-                                    <div style="position: relative;">
-                                        <span class="badge badge-quantity" th:if="${cardData.quantity > 0}" th:text="${cardData.quantity}">1</span>
-                                        <span class="badge badge-foil" th:if="${cardData.foilQuantity > 0}" th:text="${cardData.foilQuantity}">F</span>
-                                        <img th:src="${cardData.card.thumbnailFront}" class="card-image" th:title="${cardData.card.name}"
-                                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3Ctext x=\'75\' y=\'105\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'10\'%3ENo Image%3C/text%3E%3C/svg%3E'">
+                            <div class="card-grid">
+                                <th:block th:each="cardData, iterStat : ${result.newCards}">
+                                    <!-- Set section header when set code changes -->
+                                    <div th:if="${iterStat.first or result.newCards.get(iterStat.index - 1).card.setCode != cardData.card.setCode}"
+                                         class="set-section">
+                                        <img th:src="${'https://svgs.scryfall.io/sets/' + cardData.card.setCode + '.svg'}"
+                                             class="set-icon" alt="" onerror="this.style.display='none'">
+                                        <span th:text="${cardData.card.setCode}">SET</span>
                                     </div>
-                                    <small th:text="${cardData.card.name}" class="text-muted" style="font-size:0.65rem; display:block; word-break:break-word;">Card Name</small>
-                                </div>
+                                    <!-- Card tile -->
+                                    <div class="card-tile"
+                                         th:data-img="${cardData.card.imageFront}"
+                                         th:data-thumb="${cardData.card.thumbnailFront}">
+                                        <div style="position:relative;">
+                                            <span class="badge badge-qty"  th:if="${cardData.quantity > 0}"     th:text="${cardData.quantity}">1</span>
+                                            <span class="badge badge-foil" th:if="${cardData.foilQuantity > 0}" th:text="'F' + ${cardData.foilQuantity}">F1</span>
+                                            <img th:src="${cardData.card.thumbnailFront}" class="card-thumb"
+                                                 th:alt="${cardData.card.name}"
+                                                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
+                                        </div>
+                                        <small th:text="${cardData.card.name}" style="font-size:0.62rem;color:#aaa;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" th:title="${cardData.card.name}">Name</small>
+                                    </div>
+                                </th:block>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Removed Cards -->
             <div class="row" th:if="${result.removedCards != null and not #lists.isEmpty(result.removedCards)}">
                 <div class="col-12">
                     <div class="card mb-4">
                         <div class="card-header">
                             <h5 class="mb-0">
-                                <i class="bi bi-dash-circle" style="color: var(--accent-color);"></i> Removed Cards (<span th:text="${result.removedCards.size()}">0</span>)
-                                <small class="text-muted ms-2" data-bs-toggle="tooltip" title="Karten die nicht mehr in der Import-Datei sind und aus der Sammlung entfernt werden">
-                                    <i class="bi bi-question-circle"></i>
-                                </small>
+                                <i class="bi bi-dash-circle" style="color:var(--accent-color);"></i>
+                                Removed Cards (<span th:text="${result.removedCards.size()}">0</span>)
                             </h5>
                         </div>
-                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        <div class="card-body" style="max-height:400px;overflow-y:auto;">
                             <ul class="list-unstyled mb-0">
                                 <th:block th:each="card, iterStat : ${result.removedCards}">
-                                    <!-- Section header when set changes -->
                                     <li th:if="${iterStat.first or result.removedCards.get(iterStat.index - 1).setCode != card.setCode}"
-                                        class="mt-2 mb-1 small fw-bold"
-                                        style="list-style:none;border-left:none;padding-left:0;color:#aaa;">
-                                        <i class="bi bi-layers"></i> <span th:text="${card.setCode}">SET</span>
+                                        class="mt-2 mb-1 small fw-bold d-flex align-items-center gap-1"
+                                        style="list-style:none;color:#aaa;">
+                                        <img th:src="${'https://svgs.scryfall.io/sets/' + card.setCode + '.svg'}"
+                                             style="width:14px;height:14px;filter:invert(70%);" alt="" onerror="this.style.display='none'">
+                                        <span th:text="${card.setCode}">SET</span>
                                     </li>
                                     <li class="removed-card mb-1">
                                         <strong th:text="${card.name}">Card Name</strong>
@@ -214,18 +205,37 @@
                     </div>
                 </div>
             </div>
-            
         </div>
     </main>
 
     <footer class="text-center py-3 mt-4"><p>MTG Collection Manager</p></footer>
+
+    <!-- Hover card preview -->
+    <div id="card-preview"><img src="" alt="Card Preview"></div>
+
     <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
     <script>
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        })
+        const preview = document.getElementById('card-preview');
+        const previewImg = preview.querySelector('img');
+        document.querySelectorAll('.card-tile[data-img]').forEach(tile => {
+            const img = tile.dataset.img || tile.dataset.thumb;
+            if (!img) return;
+            tile.addEventListener('mouseenter', e => {
+                previewImg.src = img;
+                preview.style.display = 'block';
+                movePreview(e);
+            });
+            tile.addEventListener('mousemove', movePreview);
+            tile.addEventListener('mouseleave', () => { preview.style.display = 'none'; });
+        });
+        function movePreview(e) {
+            const offset = 16;
+            let x = e.clientX + offset, y = e.clientY + offset;
+            if (x + 240 > window.innerWidth)  x = e.clientX - 240 - offset;
+            if (y + 320 > window.innerHeight) y = e.clientY - 320 - offset;
+            preview.style.left = x + 'px';
+            preview.style.top  = y + 'px';
+        }
     </script>
-    <div th:replace="~{fragments/nav :: price-update-utils}"></div>
 </body>
 </html>

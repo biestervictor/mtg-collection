@@ -134,14 +134,17 @@ public class StatisticsService {
         List<SetCompletion> nearComplete70 = new ArrayList<>();
         List<SetCompletion> nearComplete60 = new ArrayList<>();
         List<SetCompletion> nearComplete50 = new ArrayList<>();
-        
-        for (SetValue sv : topSetsByValue) {
-            int uniqueOwned    = sv.getOwnedCards();
-            int totalCardsInSet = sv.getTotalCardsInSet();
+
+        // Use ALL sets where the user owns cards – not just those with price > 0
+        for (Map.Entry<String, Integer> entry : setUniqueCardCounts.entrySet()) {
+            String setCode       = entry.getKey();
+            int    uniqueOwned   = entry.getValue();
+            ScryfallSet s        = setMap.get(setCode.toLowerCase());
+            int totalCardsInSet  = s != null ? s.getCardCount() : 0;
             if (totalCardsInSet > 0) {
                 double percentage = (uniqueOwned * 100.0) / totalCardsInSet;
-                SetCompletion sc = new SetCompletion(sv.getSetCode(), uniqueOwned, totalCardsInSet, percentage);
-                sc.setIconUrl(sv.getIconUrl());
+                SetCompletion sc = new SetCompletion(setCode, uniqueOwned, totalCardsInSet, percentage);
+                if (s != null) sc.setIconUrl(s.getIcon());
                 if (uniqueOwned >= totalCardsInSet) {
                     completeSets.add(sc);
                 } else if (percentage >= 90) {

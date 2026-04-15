@@ -16,50 +16,47 @@
         .card { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
         footer { background-color: var(--primary-color); color: #888; }
 
-        /* Table dark theme */
-        .table {
-            --bs-table-color: var(--text-light);
-            --bs-table-bg: transparent;
-            --bs-table-striped-color: var(--text-light);
-            --bs-table-striped-bg: rgba(255,255,255,0.05);
-            --bs-table-hover-color: var(--text-light);
-            --bs-table-hover-bg: rgba(255,255,255,0.07);
-            --bs-table-border-color: #2a2a4a;
-            color: var(--text-light);
-        }
-        .table > :not(caption) > * > * { color: var(--text-light); }
+        .deck-header { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;
+            background-color:#1a1a3e; border-bottom:1px solid #2a2a4a;
+            padding:0.6rem 1rem; cursor:pointer; }
+        .deck-header:hover { background-color:#22224a; }
+        .deck-name       { font-size:1.05rem; font-weight:bold; }
+        .badge-commander { background-color:#7b2fff; font-size:0.72rem; }
+        .badge-normal    { background-color:#1a6b4a; font-size:0.72rem; }
+        .badge-count     { background-color:#2a2a4a; color:#bbb; font-size:0.72rem; }
+        .badge-sb        { background-color:#2a4a7a; font-size:0.72rem; }
+        .badge-eb        { background-color:#4a2a6a; font-size:0.72rem; }
+        .collapse-icon   { transition:transform 0.2s; }
+        .collapsed .collapse-icon { transform:rotate(-90deg); }
+        .deck-meta { font-size:0.78rem; color:#555; margin-left:auto; }
 
-        /* Deck card styles */
-        .deck-card       { margin-bottom: 1.5rem; }
-        .deck-card .card-header {
-            display: flex; align-items: center; gap: 0.5rem;
-            background-color: #1a1a3e; border-bottom: 1px solid #2a2a4a;
-            cursor: pointer;
-        }
-        .deck-card .card-header:hover { background-color: #22224a; }
-        .deck-name       { font-size: 1.1rem; font-weight: bold; }
-        .badge-commander { background-color: #7b2fff; font-size: 0.72rem; }
-        .badge-normal    { background-color: #1a6b4a; font-size: 0.72rem; }
-        .badge-count     { background-color: #2a2a4a; color: #bbb; font-size: 0.72rem; }
-        .badge-foil      { background: linear-gradient(135deg,#b06c24,#e8c95a,#a0c860); color:#111; font-size: 0.68rem; }
-        .badge-sb        { background-color: #2a4a7a; font-size: 0.72rem; }
-        .badge-eb        { background-color: #4a2a6a; font-size: 0.72rem; }
+        .board-section  { padding:0.6rem 1rem 0.4rem; }
+        .board-label    { font-size:0.68rem; font-weight:bold; letter-spacing:1px;
+                          text-transform:uppercase; color:#555; margin-bottom:0.5rem; }
+        .card-grid      { display:flex; flex-wrap:wrap; gap:8px; }
+        .card-tile      { width:76px; text-align:center; cursor:pointer; }
+        .card-thumb     { width:70px; height:98px; object-fit:cover; border-radius:5px;
+                          display:block; transition:transform 0.12s, box-shadow 0.12s; }
+        .card-tile:hover .card-thumb { transform:scale(1.08); box-shadow:0 4px 16px rgba(0,0,0,.65); }
+        .badge-qty      { position:absolute; top:-5px; left:-5px; background:#28a745;
+                          font-size:0.68rem; border-radius:999px; padding:1px 5px; color:#fff; }
+        .badge-foil-t   { position:absolute; top:-5px; right:-5px;
+                          background:linear-gradient(135deg,#b06c24,#e8c95a); color:#111;
+                          font-size:0.65rem; border-radius:999px; padding:1px 4px; }
+        .card-lbl       { font-size:0.6rem; color:#777; display:block; overflow:hidden;
+                          white-space:nowrap; text-overflow:ellipsis; margin-top:2px; }
+        .set-badge      { font-size:0.58rem; color:#555; display:flex; align-items:center;
+                          gap:2px; justify-content:center; }
+        .set-icon       { width:12px; height:12px; filter:invert(50%); }
+        .no-thumb       { width:70px; height:98px; background:#2a2a4a; border-radius:5px;
+                          display:flex; align-items:center; justify-content:center;
+                          font-size:0.55rem; color:#555; padding:4px; word-break:break-word; text-align:center; }
 
-        .section-header td {
-            font-size: 0.7rem; font-weight: bold; letter-spacing: 1px;
-            text-transform: uppercase; color: #888;
-            background-color: rgba(0,0,0,0.2);
-            padding: 0.2rem 0.5rem;
-        }
-        .card-row { font-size: 0.85rem; }
-        .card-row td { padding: 0.25rem 0.5rem; border-color: #2a2a4a; vertical-align: middle; }
+        #card-preview   { display:none; position:fixed; z-index:9999; pointer-events:none; }
+        #card-preview img { width:230px; border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,.85); }
 
-        .empty-state { text-align: center; padding: 4rem 1rem; color: #666; }
-        .empty-state i { font-size: 3rem; display: block; margin-bottom: 1rem; }
-
-        .deck-summary { font-size: 0.8rem; color: #888; }
-        .collapse-icon { transition: transform 0.2s; }
-        .collapsed .collapse-icon { transform: rotate(-90deg); }
+        .empty-state { text-align:center; padding:4rem 1rem; color:#666; }
+        .empty-state i { font-size:3rem; display:block; margin-bottom:1rem; }
     </style>
 </head>
 <body>
@@ -113,60 +110,85 @@
                 <!-- Collapsible body -->
                 <div class="collapse show" th:id="${'deck-' + dStat.index}">
                     <div class="card-body p-0">
-                        <table class="table table-sm mb-0">
-                            <thead>
-                                <tr style="font-size:0.75rem; color:#888; border-color:#2a2a4a;">
-                                    <th style="width:40px">#</th>
-                                    <th>Card</th>
-                                    <th style="width:60px">Set</th>
-                                    <th style="width:50px">#Nr</th>
-                                    <th style="width:50px">Foil</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Mainboard -->
-                                <tr th:if="${!deck.mainboard.isEmpty()}" class="section-header">
-                                    <td colspan="5">Mainboard</td>
-                                </tr>
-                                <tr th:each="c : ${deck.mainboard}" class="card-row">
-                                    <td class="text-muted" th:text="${c.quantity}">1</td>
-                                    <td th:text="${c.name}">Card Name</td>
-                                    <td class="text-uppercase text-muted small" th:text="${c.setCode}">XXX</td>
-                                    <td class="text-muted small" th:text="${c.collectorNumber}">001</td>
-                                    <td>
-                                        <span th:if="${c.foil}" class="badge badge-foil">Foil</span>
-                                    </td>
-                                </tr>
 
-                                <!-- Sideboard -->
-                                <tr th:if="${!deck.sideboard.isEmpty()}" class="section-header">
-                                    <td colspan="5">Sideboard</td>
-                                </tr>
-                                <tr th:each="c : ${deck.sideboard}" class="card-row">
-                                    <td class="text-muted" th:text="${c.quantity}">1</td>
-                                    <td th:text="${c.name}">Card Name</td>
-                                    <td class="text-uppercase text-muted small" th:text="${c.setCode}">XXX</td>
-                                    <td class="text-muted small" th:text="${c.collectorNumber}">001</td>
-                                    <td>
-                                        <span th:if="${c.foil}" class="badge badge-foil">Foil</span>
-                                    </td>
-                                </tr>
+                        <!-- Mainboard -->
+                        <div class="board-section" th:if="${!deck.mainboard.isEmpty()}">
+                            <div class="board-label">Mainboard &middot; <span th:text="${deck.mainboardCount}">0</span> cards</div>
+                            <div class="card-grid">
+                                <div th:each="c : ${deck.mainboard}"
+                                     class="card-tile"
+                                     th:data-img="${c.imageUrl}"
+                                     th:data-thumb="${c.thumbnailUrl}">
+                                    <div style="position:relative; display:inline-block;">
+                                        <span class="badge badge-qty" th:if="${c.quantity > 1}" th:text="${c.quantity}">2</span>
+                                        <span class="badge badge-foil-t" th:if="${c.foil}">F</span>
+                                        <img th:src="${c.thumbnailUrl != null ? c.thumbnailUrl : ''}"
+                                             class="card-thumb" th:alt="${c.name}"
+                                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                        <div class="no-thumb" style="display:none;" th:text="${c.name}">Name</div>
+                                    </div>
+                                    <span class="card-lbl" th:text="${c.name}" th:title="${c.name}">Name</span>
+                                    <span class="set-badge">
+                                        <img th:src="${'https://svgs.scryfall.io/sets/' + c.setCode + '.svg'}"
+                                             class="set-icon" alt="" onerror="this.style.display='none'">
+                                        <span th:text="${c.setCode}">SET</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
 
-                                <!-- Extra Board -->
-                                <tr th:if="${!deck.extraboard.isEmpty()}" class="section-header">
-                                    <td colspan="5">Extra Board</td>
-                                </tr>
-                                <tr th:each="c : ${deck.extraboard}" class="card-row">
-                                    <td class="text-muted" th:text="${c.quantity}">1</td>
-                                    <td th:text="${c.name}">Card Name</td>
-                                    <td class="text-uppercase text-muted small" th:text="${c.setCode}">XXX</td>
-                                    <td class="text-muted small" th:text="${c.collectorNumber}">001</td>
-                                    <td>
-                                        <span th:if="${c.foil}" class="badge badge-foil">Foil</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <!-- Sideboard -->
+                        <div class="board-section" th:if="${!deck.sideboard.isEmpty()}">
+                            <div class="board-label">Sideboard &middot; <span th:text="${deck.sideboardCount}">0</span> cards</div>
+                            <div class="card-grid">
+                                <div th:each="c : ${deck.sideboard}"
+                                     class="card-tile"
+                                     th:data-img="${c.imageUrl}"
+                                     th:data-thumb="${c.thumbnailUrl}">
+                                    <div style="position:relative; display:inline-block;">
+                                        <span class="badge badge-qty" th:if="${c.quantity > 1}" th:text="${c.quantity}">2</span>
+                                        <span class="badge badge-foil-t" th:if="${c.foil}">F</span>
+                                        <img th:src="${c.thumbnailUrl != null ? c.thumbnailUrl : ''}"
+                                             class="card-thumb" th:alt="${c.name}"
+                                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                        <div class="no-thumb" style="display:none;" th:text="${c.name}">Name</div>
+                                    </div>
+                                    <span class="card-lbl" th:text="${c.name}" th:title="${c.name}">Name</span>
+                                    <span class="set-badge">
+                                        <img th:src="${'https://svgs.scryfall.io/sets/' + c.setCode + '.svg'}"
+                                             class="set-icon" alt="" onerror="this.style.display='none'">
+                                        <span th:text="${c.setCode}">SET</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Extra Board -->
+                        <div class="board-section" th:if="${!deck.extraboard.isEmpty()}">
+                            <div class="board-label">Extra Board &middot; <span th:text="${deck.extraboardCount}">0</span> cards</div>
+                            <div class="card-grid">
+                                <div th:each="c : ${deck.extraboard}"
+                                     class="card-tile"
+                                     th:data-img="${c.imageUrl}"
+                                     th:data-thumb="${c.thumbnailUrl}">
+                                    <div style="position:relative; display:inline-block;">
+                                        <span class="badge badge-qty" th:if="${c.quantity > 1}" th:text="${c.quantity}">2</span>
+                                        <span class="badge badge-foil-t" th:if="${c.foil}">F</span>
+                                        <img th:src="${c.thumbnailUrl != null ? c.thumbnailUrl : ''}"
+                                             class="card-thumb" th:alt="${c.name}"
+                                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                        <div class="no-thumb" style="display:none;" th:text="${c.name}">Name</div>
+                                    </div>
+                                    <span class="card-lbl" th:text="${c.name}" th:title="${c.name}">Name</span>
+                                    <span class="set-badge">
+                                        <img th:src="${'https://svgs.scryfall.io/sets/' + c.setCode + '.svg'}"
+                                             class="set-icon" alt="" onerror="this.style.display='none'">
+                                        <span th:text="${c.setCode}">SET</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -174,6 +196,9 @@
     </main>
 
     <footer class="text-center py-3 mt-4"><p>MTG Collection Manager</p></footer>
+
+    <!-- Hover card preview -->
+    <div id="card-preview"><img src="" alt="Card Preview"></div>
 
     <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
     <script>
@@ -184,6 +209,29 @@
             target.addEventListener('hide.bs.collapse', () => btn.classList.add('collapsed'));
             target.addEventListener('show.bs.collapse', () => btn.classList.remove('collapsed'));
         });
+
+        // Hover card preview popup
+        const preview = document.getElementById('card-preview');
+        const previewImg = preview.querySelector('img');
+        document.querySelectorAll('.card-tile[data-img]').forEach(tile => {
+            const img = tile.dataset.img || tile.dataset.thumb;
+            if (!img) return;
+            tile.addEventListener('mouseenter', e => {
+                previewImg.src = img;
+                preview.style.display = 'block';
+                movePreview(e);
+            });
+            tile.addEventListener('mousemove', movePreview);
+            tile.addEventListener('mouseleave', () => { preview.style.display = 'none'; });
+        });
+        function movePreview(e) {
+            const offset = 16;
+            let x = e.clientX + offset, y = e.clientY + offset;
+            if (x + 240 > window.innerWidth)  x = e.clientX - 240 - offset;
+            if (y + 320 > window.innerHeight) y = e.clientY - 320 - offset;
+            preview.style.left = x + 'px';
+            preview.style.top  = y + 'px';
+        }
     </script>
 </body>
 </html>

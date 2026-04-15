@@ -227,7 +227,8 @@ public class InventoryImportService {
             }
             
             String printing = fields[8].trim();
-            boolean isFoil = printing.equalsIgnoreCase("Foil");
+            // DragonShield exports many foil variants: "Foil", "Surge Foil", "Galaxy Foil", etc.
+            boolean isFoil = printing.toLowerCase().contains("foil");
 
             if (cardName.isEmpty() || setCode.isEmpty()) {
                 log.warn("Line {} has empty card name or set code", lineNum);

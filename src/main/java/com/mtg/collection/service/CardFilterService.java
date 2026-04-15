@@ -10,19 +10,26 @@ import java.util.stream.Collectors;
 @Service
 public class CardFilterService {
 
+    /**
+     * @param frameStyle one of: null/"" = all, "extendedart", "showcase", "borderless", "fullart"
+     */
     public List<CardWithUserData> filterCards(List<CardWithUserData> cards, String state,
-                                              String printing, String rarity, String search, String showBasics,
-                                              String showExtendedArt, String showShowcase) {
+                                              String printing, String rarity, String search,
+                                              String showBasics, String frameStyle) {
         List<CardWithUserData> filtered = cards;
 
         if (!"true".equals(showBasics)) {
             filtered = filterOutBasicLands(filtered);
         }
 
-        if ("true".equals(showExtendedArt)) {
-            filtered = filterToOnlyExtendedArt(filtered);
-        } else if ("true".equals(showShowcase)) {
-            filtered = filterToOnlyShowcase(filtered);
+        if (frameStyle != null && !frameStyle.isEmpty() && !"all".equals(frameStyle)) {
+            switch (frameStyle) {
+                case "extendedart": filtered = filterToOnlyExtendedArt(filtered); break;
+                case "showcase":    filtered = filterToOnlyShowcase(filtered);    break;
+                case "borderless":  filtered = filterToOnlyBorderless(filtered);  break;
+                case "fullart":     filtered = filterToOnlyFullArt(filtered);     break;
+                default: break;
+            }
         }
 
         if (state != null && !state.isEmpty() && !"all".equals(state)) {
@@ -125,28 +132,34 @@ public class CardFilterService {
                 .collect(Collectors.toList());
     }
 
-    private List<CardWithUserData> filterToOnlyBasicLands(List<CardWithUserData> cards) {
-        return cards.stream()
-                .filter(c -> c.getCard() != null && c.getCard().getTypeLine() != null &&
-                            c.getCard().getTypeLine().toLowerCase().contains("basic land"))
-                .collect(Collectors.toList());
-    }
-
-    private List<CardWithUserData> filterOutExtendedArt(List<CardWithUserData> cards) {
-        return cards.stream()
-                .filter(c -> c.getCard() == null || !"extendedart".equalsIgnoreCase(c.getCard().getFrameStatus()))
-                .collect(Collectors.toList());
-    }
-
+    // frame_effects contains "extendedart"
     private List<CardWithUserData> filterToOnlyExtendedArt(List<CardWithUserData> cards) {
         return cards.stream()
-                .filter(c -> c.getCard() != null && "extendedart".equalsIgnoreCase(c.getCard().getFrameStatus()))
+                .filter(c -> c.getCard() != null && c.getCard().getFrameStatus() != null &&
+                            c.getCard().getFrameStatus().contains("extendedart"))
                 .collect(Collectors.toList());
     }
 
+    // frame_effects contains "showcase"
     private List<CardWithUserData> filterToOnlyShowcase(List<CardWithUserData> cards) {
         return cards.stream()
-                .filter(c -> c.getCard() != null && "extendedart".equalsIgnoreCase(c.getCard().getFrameStatus()))
+                .filter(c -> c.getCard() != null && c.getCard().getFrameStatus() != null &&
+                            c.getCard().getFrameStatus().contains("showcase"))
+                .collect(Collectors.toList());
+    }
+
+    // border_color == "borderless"
+    private List<CardWithUserData> filterToOnlyBorderless(List<CardWithUserData> cards) {
+        return cards.stream()
+                .filter(c -> c.getCard() != null &&
+                            "borderless".equalsIgnoreCase(c.getCard().getBorderColor()))
+                .collect(Collectors.toList());
+    }
+
+    // full_art == true (e.g. full-art basic lands, full-art promos)
+    private List<CardWithUserData> filterToOnlyFullArt(List<CardWithUserData> cards) {
+        return cards.stream()
+                .filter(c -> c.getCard() != null && c.getCard().isFullArt())
                 .collect(Collectors.toList());
     }
 

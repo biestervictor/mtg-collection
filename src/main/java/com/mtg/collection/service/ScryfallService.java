@@ -133,6 +133,8 @@ return sets;
                     existing.setRarity(newCard.getRarity());
                     existing.setTypeLine(newCard.getTypeLine());
                     existing.setFrameStatus(newCard.getFrameStatus());
+                    existing.setBorderColor(newCard.getBorderColor());
+                    existing.setFullArt(newCard.isFullArt());
                     existing.setThumbnailFront(newCard.getThumbnailFront());
                     existing.setImageFront(newCard.getImageFront());
                     existing.setThumbnailBack(newCard.getThumbnailBack());
@@ -227,8 +229,23 @@ return sets;
             }
         }
 
-        if (cardNode.has("frame_status")) {
-            card.setFrameStatus(cardNode.get("frame_status").asText());
+        // frame_effects is an array in the Scryfall API (e.g. ["extendedart"], ["showcase"])
+        if (cardNode.has("frame_effects")) {
+            List<String> effects = new ArrayList<>();
+            for (JsonNode effect : cardNode.get("frame_effects")) {
+                effects.add(effect.asText());
+            }
+            if (!effects.isEmpty()) {
+                card.setFrameStatus(String.join(",", effects));
+            }
+        }
+        // border_color: "black", "borderless", "white", "silver", "gold"
+        if (cardNode.has("border_color")) {
+            card.setBorderColor(cardNode.get("border_color").asText());
+        }
+        // full_art: true for full-art cards (e.g. full-art lands)
+        if (cardNode.has("full_art")) {
+            card.setFullArt(cardNode.get("full_art").asBoolean());
         }
 
         // Extract image URLs: regular card vs. double-faced card (DFC)

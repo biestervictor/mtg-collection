@@ -31,15 +31,18 @@ public class InventoryImportService {
     private final ScryfallCardRepository scryfallCardRepository;
     private final ScryfallService scryfallService;
     private final ImportHistoryRepository importHistoryRepository;
+    private final UserDeckService userDeckService;
 
     public InventoryImportService(UserCardRepository userCardRepository,
                                  ScryfallCardRepository scryfallCardRepository,
                                  ScryfallService scryfallService,
-                                 ImportHistoryRepository importHistoryRepository) {
+                                 ImportHistoryRepository importHistoryRepository,
+                                 UserDeckService userDeckService) {
         this.userCardRepository = userCardRepository;
         this.scryfallCardRepository = scryfallCardRepository;
         this.scryfallService = scryfallService;
         this.importHistoryRepository = importHistoryRepository;
+        this.userDeckService = userDeckService;
     }
 
     public ImportResult importInventory(String user, MultipartFile file) {
@@ -106,6 +109,9 @@ public class InventoryImportService {
 
             saveUserCards(user, importedCards);
 
+            // Extract and persist user's physical decks from folder names
+            userDeckService.buildAndSaveDecks(user, importedCards);
+
             importedCards.forEach(card -> importedSetCodes.add(card.getSetCode()));
 
             for (String setCode : importedSetCodes) {
@@ -125,8 +131,9 @@ public class InventoryImportService {
                     ));
 
             for (UserCard uc : importedCards) {
-                String key = uc.getSetCode() + "_" + uc.getCollectorNumber();
-                ScryfallCard sfCard = cardMap.get(key);
+                String key = uc.getSetCode() + "_" + uc.getCollectorNumber() + "_" + uc.isFoil();
+                if (!addedKeys.contains(key)) continue; // only truly new cards
+                ScryfallCard sfCard = cardMap.get(uc.getSetCode() + "_" + uc.getCollectorNumber());
                 if (sfCard != null) {
                     CardWithUserData cwu = new CardWithUserData(
                             sfCard,
@@ -139,7 +146,7 @@ public class InventoryImportService {
                 }
             }
 
-            result.setNewCardsCount(importedCards.size());
+            result.setNewCardsCount(importedCards.size()); // = unique imported cards (shown as "Unique Cards" stat)
             result.setNewCards(newCards);
             result.setErrors(errors);
 
@@ -241,6 +248,7 @@ public class InventoryImportService {
             card.setCollectorNumber(cardNumber.replaceAll("[^0-9]", ""));
             card.setQuantity(quantity);
             card.setFoil(isFoil);
+            card.setFolderName(fields[0].trim()); // Folder Name column
 
             return card;
         } catch (Exception e) {

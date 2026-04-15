@@ -30,6 +30,7 @@ class InventoryImportDiffTest {
     @Mock private ScryfallCardRepository scryfallCardRepository;
     @Mock private ScryfallService scryfallService;
     @Mock private ImportHistoryRepository importHistoryRepository;
+    @Mock private UserDeckService userDeckService;
 
     private InventoryImportService importService;
 
@@ -37,7 +38,7 @@ class InventoryImportDiffTest {
     void setUp() {
         importService = new InventoryImportService(
                 userCardRepository, scryfallCardRepository,
-                scryfallService, importHistoryRepository);
+                scryfallService, importHistoryRepository, userDeckService);
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
     }

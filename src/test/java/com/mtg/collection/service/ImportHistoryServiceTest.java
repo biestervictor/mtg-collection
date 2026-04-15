@@ -39,12 +39,15 @@ class ImportHistoryServiceTest {
     
     @Mock
     private ImportHistoryRepository importHistoryRepository;
+
+    @Mock
+    private UserDeckService userDeckService;
     
     private InventoryImportService importService;
 
     @BeforeEach
     void setUp() {
-        importService = new InventoryImportService(userCardRepository, scryfallCardRepository, scryfallService, importHistoryRepository);
+        importService = new InventoryImportService(userCardRepository, scryfallCardRepository, scryfallService, importHistoryRepository, userDeckService);
     }
 
     @Test

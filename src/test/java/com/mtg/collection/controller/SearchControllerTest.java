@@ -61,7 +61,7 @@ class SearchControllerTest {
         
         ScryfallCard sfCard = createScryfallCard("Test Card", "tla", "1");
         
-        when(userCardRepository.findByUser("user2")).thenReturn(Arrays.asList(card1, card2));
+        when(userCardRepository.findByUser("Victor")).thenReturn(Arrays.asList(card1, card2));
         when(scryfallCardRepository.findAll()).thenReturn(Arrays.asList(sfCard));
         
         String view = searchController.searchCards(model, "Test Card", null);
@@ -76,7 +76,7 @@ class SearchControllerTest {
         UserCard card = createUserCard("Test Card", "tla", "42", false, 1);
         ScryfallCard sfCard = createScryfallCard("Test Card", "tla", "42");
         
-        when(userCardRepository.findByUser("user2")).thenReturn(Arrays.asList(card));
+        when(userCardRepository.findByUser("Victor")).thenReturn(Arrays.asList(card));
         when(scryfallCardRepository.findAll()).thenReturn(Arrays.asList(sfCard));
         
         String view = searchController.searchCards(model, "42", null);
@@ -87,7 +87,7 @@ class SearchControllerTest {
 
     @Test
     void testSearchNoResults() {
-        when(userCardRepository.findByUser("user2")).thenReturn(Collections.emptyList());
+        when(userCardRepository.findByUser("Victor")).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findAll()).thenReturn(Collections.emptyList());
         
         String view = searchController.searchCards(model, "Nonexistent", null);
@@ -103,7 +103,7 @@ class SearchControllerTest {
         
         ScryfallCard sfCard = createScryfallCard("Test Card", "tla", "1");
         
-        when(userCardRepository.findByUser("user2")).thenReturn(Arrays.asList(card1, card2));
+        when(userCardRepository.findByUser("Victor")).thenReturn(Arrays.asList(card1, card2));
         when(scryfallCardRepository.findAll()).thenReturn(Arrays.asList(sfCard));
         
         String view = searchController.searchCards(model, "Test Card", null);
@@ -119,14 +119,14 @@ class SearchControllerTest {
 
     @Test
     void testSearchWithSpecificUser() {
-        when(userCardRepository.findByUser("user1")).thenReturn(Collections.emptyList());
+        when(userCardRepository.findByUser("Andre")).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findAll()).thenReturn(Collections.emptyList());
         
-        String view = searchController.searchCards(model, "test", "user1");
+        String view = searchController.searchCards(model, "test", "Andre");
         
         assertEquals("search", view);
-        verify(userCardRepository).findByUser("user1");
-        verify(model).addAttribute("searchUser", "user1");
+        verify(userCardRepository).findByUser("Andre");
+        verify(model).addAttribute("searchUser", "Andre");
     }
 
     @Test
@@ -134,7 +134,7 @@ class SearchControllerTest {
         UserCard card = createUserCard("Test Card", "tla", "1", false, 1);
         ScryfallCard sfCard = createScryfallCard("Test Card", "tla", "1");
         
-        when(userCardRepository.findByUser("user2")).thenReturn(Arrays.asList(card));
+        when(userCardRepository.findByUser("Victor")).thenReturn(Arrays.asList(card));
         when(scryfallCardRepository.findAll()).thenReturn(Arrays.asList(sfCard));
         
         String view = searchController.searchCards(model, "TEST CARD", null);

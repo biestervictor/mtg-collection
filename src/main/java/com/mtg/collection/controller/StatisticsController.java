@@ -20,13 +20,13 @@ public class StatisticsController {
 
     @GetMapping("/statistics")
     public String statisticsPage(Model model, @RequestParam(required = false) String user) {
+        Map<String, UserStatistics> allStats = statisticsService.getStatisticsForAllUsers();
+        model.addAttribute("allStatistics", allStats);
+
         if (user != null && !user.isEmpty()) {
             UserStatistics stats = statisticsService.getStatisticsForUser(user);
             model.addAttribute("userStatistics", stats);
             model.addAttribute("selectedUser", user);
-        } else {
-            Map<String, UserStatistics> allStats = statisticsService.getStatisticsForAllUsers();
-            model.addAttribute("allStatistics", allStats);
         }
         
         return "statistics";

@@ -64,9 +64,9 @@ class InventoryImportServiceTest {
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
-        verify(userCardRepository).deleteByUser("user1");
+        verify(userCardRepository).deleteByUser("Andre");
         verify(userCardRepository).saveAll(argThat(cards -> {
             List<UserCard> cardList = (List<UserCard>) cards;
             long foilCount = cardList.stream().filter(UserCard::isFoil).count();
@@ -95,7 +95,7 @@ class InventoryImportServiceTest {
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         verify(userCardRepository).saveAll(argThat(cards -> {
             List<UserCard> cardList = (List<UserCard>) cards;
@@ -129,7 +129,7 @@ class InventoryImportServiceTest {
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Collections.emptyList());
         when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         assertEquals(8, result.getCardsCount()); // 5 + 3 = 8
         assertEquals(2, result.getNewCardsCount()); // 2 unique cards
@@ -159,7 +159,7 @@ class InventoryImportServiceTest {
         when(scryfallService.getCardsBySet(anyString(), any())).thenReturn(Arrays.asList(sfCard));
         when(scryfallCardRepository.findBySetCode("tla")).thenReturn(Arrays.asList(sfCard));
         
-        ImportResult result = importService.importInventory("user1", file);
+        ImportResult result = importService.importInventory("Andre", file);
         
         assertNotNull(result.getNewCards());
         assertEquals(1, result.getNewCards().size());

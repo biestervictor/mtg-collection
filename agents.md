@@ -1,11 +1,25 @@
 # Agent Configuration
 
-## Development Rules
+## Development Workflow
+
+### Pflichtschritte bei jeder Änderung
+
+1. **Lokal testen** – Tests müssen lokal grün sein vor dem Push
+2. **Push auf `dev`** – löst den GitHub Actions CI/CD-Build automatisch aus
+3. **CI/CD abwarten** – Build inkl. Maven-Tests, Docker-Image-Build und Push nach `ghcr.io`
+4. **ArgoCD deployed automatisch** – bei erfolgreichem Build zieht ArgoCD das neue Image und deployed auf die Dev-Stage
+5. **Dev-Stage testen** – manueller Test unter `https://mtg-dev.biester.vip`
+6. **Bei Fehler** – Logs/Exception analysieren, Fix implementieren, Schleife ab Schritt 1 wiederholen
+7. **Produktion** – nach erfolgreichem Dev-Test: `dev` → `main` mergen. ArgoCD erkennt den Merge auf `main` und aktualisiert das Produktions-Deployment automatisch
+
+### Produktions-URL
+- **Prod:** `https://mtg-kubitos.biester.vip`
+- **Dev:** `https://mtg-dev.biester.vip`
 
 ### Tests Required
 **Every feature change MUST include unit tests.** Before pushing to GitHub:
 1. Write tests for new functionality
-2. Run tests locally: `JAVA_HOME=/mnt/usb/java17 /mnt/usb/maven/bin/mvn test`
+2. Run tests locally: `mvn test`
 3. Tests must pass before push
 
 ## External Tools Location

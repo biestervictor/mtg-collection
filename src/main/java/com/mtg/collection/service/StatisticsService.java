@@ -72,16 +72,27 @@ public class StatisticsService {
                 .collect(Collectors.toList());
         stats.setMostExpensiveCards(expensiveCards);
         
+        // Total physical card count per set (sum of quantities) – used for "Top 5 by Count"
         Map<String, Integer> setCounts = userCards.stream()
                 .collect(Collectors.groupingBy(
                         UserCard::getSetCode,
-                        Collectors.summingInt(c -> c.getQuantity())
+                        Collectors.summingInt(UserCard::getQuantity)
                 ));
-        
+
+        // Unique card count per set (distinct collector numbers, foil/normal merged)
+        // This is the correct basis for set-completion: card 1/453 … 453/453
+        Map<String, Integer> setUniqueCardCounts = userCards.stream()
+                .collect(Collectors.groupingBy(
+                        UserCard::getSetCode,
+                        Collectors.collectingAndThen(
+                                Collectors.mapping(UserCard::getCollectorNumber, Collectors.toSet()),
+                                Set::size)
+                ));
+
         List<SetCount> topSets = setCounts.entrySet().stream()
                 .map(e -> new SetCount(e.getKey(), e.getValue().longValue()))
                 .sorted(Comparator.comparing(SetCount::getCount).reversed())
-                .limit(5)
+                .limit(30)
                 .collect(Collectors.toList());
         stats.setTopSetsByCount(topSets);
         
@@ -92,14 +103,18 @@ public class StatisticsService {
                 ));
         
         Map<String, ScryfallSet> setMap = scryfallService.getAllSets(false).stream()
-                .collect(Collectors.toMap(ScryfallSet::getSetCode, s -> s, (a, b) -> a));
+                .collect(Collectors.toMap(
+                        s -> s.getSetCode().toLowerCase(),
+                        s -> s,
+                        (a, b) -> a));
         
         List<SetValue> topSetsByValue = setValues.entrySet().stream()
+                .filter(e -> e.getValue() > 0)   // hide sets where all prices are 0
                 .map(e -> {
-                    ScryfallSet set = setMap.get(e.getKey());
+                    ScryfallSet set = setMap.get(e.getKey().toLowerCase());
                     int totalCardsInSet = set != null ? set.getCardCount() : 0;
-                    int ownedCards = setCounts.getOrDefault(e.getKey(), 0);
-                    return new SetValue(e.getKey(), e.getValue(), totalCardsInSet, ownedCards);
+                    int uniqueOwned = setUniqueCardCounts.getOrDefault(e.getKey(), 0);
+                    return new SetValue(e.getKey(), e.getValue(), totalCardsInSet, uniqueOwned);
                 })
                 .sorted(Comparator.comparing(SetValue::getValue).reversed())
                 .collect(Collectors.toList());
@@ -109,12 +124,12 @@ public class StatisticsService {
         List<SetCompletion> nearCompleteSets = new ArrayList<>();
         
         for (SetValue sv : topSetsByValue) {
-            int ownedCards = sv.getOwnedCards();
+            int uniqueOwned    = sv.getOwnedCards();
             int totalCardsInSet = sv.getTotalCardsInSet();
             if (totalCardsInSet > 0) {
-                double percentage = (ownedCards * 100.0) / totalCardsInSet;
-                SetCompletion sc = new SetCompletion(sv.getSetCode(), ownedCards, totalCardsInSet, percentage);
-                if (ownedCards >= totalCards) {
+                double percentage = (uniqueOwned * 100.0) / totalCardsInSet;
+                SetCompletion sc = new SetCompletion(sv.getSetCode(), uniqueOwned, totalCardsInSet, percentage);
+                if (uniqueOwned >= totalCardsInSet) {   // fixed: was comparing to totalCards (all sets)
                     completeSets.add(sc);
                 } else if (percentage >= 90) {
                     nearCompleteSets.add(sc);
@@ -126,7 +141,7 @@ public class StatisticsService {
         nearCompleteSets.sort(Comparator.comparing(SetCompletion::getPercentage).reversed());
         
         stats.setCompleteSets(completeSets);
-        stats.setNearCompleteSets(nearCompleteSets.stream().limit(10).collect(Collectors.toList()));
+        stats.setNearCompleteSets(nearCompleteSets.stream().limit(30).collect(Collectors.toList()));
         
         calculateDailyChanges(user, stats);
         
@@ -191,8 +206,8 @@ public class StatisticsService {
         winners.sort(Comparator.comparing(CardPriceChange::getChange).reversed());
         losers.sort(Comparator.comparing(CardPriceChange::getChange));
         
-        stats.setTopWinners(winners.stream().limit(10).collect(Collectors.toList()));
-        stats.setTopLosers(losers.stream().limit(10).collect(Collectors.toList()));
+        stats.setTopWinners(winners.stream().limit(30).collect(Collectors.toList()));
+        stats.setTopLosers(losers.stream().limit(30).collect(Collectors.toList()));
     }
 
     public static class CardWithPrice {

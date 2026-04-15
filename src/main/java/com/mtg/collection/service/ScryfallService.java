@@ -53,7 +53,8 @@ public class ScryfallService {
             }
         }
         
-        return sets;
+        // Filter out digital sets that may have been cached before this check was added
+        return sets.stream().filter(s -> !s.isDigital()).collect(Collectors.toList());
     }
 
     private List<ScryfallSet> fetchSetsFromApi() throws Exception {
@@ -67,15 +68,18 @@ public class ScryfallService {
             if (response.has("data")) {
                 for (JsonNode setNode : response.get("data")) {
                     String setType = setNode.has("set_type") ? setNode.get("set_type").asText() : "";
+                    boolean isDigital = setNode.has("digital") && setNode.get("digital").asBoolean();
                     int cardCount = setNode.has("card_count") ? setNode.get("card_count").asInt() : 0;
 
-                    if (!excludeTypes.contains(setType) && cardCount > 0) {
+                    if (!isDigital && !excludeTypes.contains(setType) && cardCount > 0) {
                         ScryfallSet set = new ScryfallSet();
                         set.setName(setNode.get("name").asText());
                         set.setSetCode(setNode.get("code").asText());
                         set.setCardCount(cardCount);
                         set.setReleasedAt(setNode.has("released_at") ? setNode.get("released_at").asText() : null);
                         set.setIcon(setNode.has("icon_svg_uri") ? setNode.get("icon_svg_uri").asText() : null);
+                        set.setDigital(false);
+                        set.setSetType(setType);
                         sets.add(set);
                     }
                 }

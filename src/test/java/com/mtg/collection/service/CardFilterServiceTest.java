@@ -48,35 +48,35 @@ class CardFilterServiceTest {
 
     @Test
     void testFilterAll_ReturnsAllCards() {
-        List<CardWithUserData> result = filterService.filterCards(testCards, "all", null, null, null, null, null);
+        List<CardWithUserData> result = filterService.filterCards(testCards, "all", null, null, null, null, null, null);
         
         assertEquals(4, result.size());
     }
 
     @Test
     void testFilterOwned_ReturnsCardsWithQuantity() {
-        List<CardWithUserData> result = filterService.filterCards(testCards, "owned", null, null, null, null, null);
+        List<CardWithUserData> result = filterService.filterCards(testCards, "owned", null, null, null, null, null, null);
         
         assertEquals(3, result.size());
     }
 
     @Test
     void testFilterMissing_ReturnsCardsWithNoQuantity() {
-        List<CardWithUserData> result = filterService.filterCards(testCards, "missing", null, null, null, null, null);
+        List<CardWithUserData> result = filterService.filterCards(testCards, "missing", null, null, null, null, null, null);
         
         assertEquals(1, result.size());
     }
 
     @Test
     void testFilterByRarity() {
-        List<CardWithUserData> result = filterService.filterCards(testCards, "all", null, "mythic,rare", null, null, null);
+        List<CardWithUserData> result = filterService.filterCards(testCards, "all", null, "mythic,rare", null, null, null, null);
         
         assertEquals(2, result.size());
     }
 
     @Test
     void testFilterBySearchName() {
-        List<CardWithUserData> result = filterService.filterCards(testCards, "all", null, null, "Card 1", null, null);
+        List<CardWithUserData> result = filterService.filterCards(testCards, "all", null, null, "Card 1", null, null, null);
         
         assertEquals(1, result.size());
         assertEquals("1", result.get(0).getCard().getCollectorNumber());
@@ -84,7 +84,7 @@ class CardFilterServiceTest {
 
     @Test
     void testEmptyList() {
-        List<CardWithUserData> result = filterService.filterCards(Collections.emptyList(), "owned", null, null, null, null, null);
+        List<CardWithUserData> result = filterService.filterCards(Collections.emptyList(), "owned", null, null, null, null, null, null);
         
         assertTrue(result.isEmpty());
     }
@@ -99,7 +99,7 @@ class CardFilterServiceTest {
             createCardWithUserData(createCard("6", "Lightning Bolt", "uncommon"), 1, 0)
         );
         
-        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, null);
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, null, null);
         
         assertEquals(1, result.size());
         assertEquals("Lightning Bolt", result.get(0).getCard().getName());
@@ -115,7 +115,7 @@ class CardFilterServiceTest {
             createCardWithUserData(createCard("6", "Lightning Bolt", "uncommon"), 1, 0)
         );
         
-        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, "true", null);
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, "true", null, null);
         
         assertEquals(2, result.size());
     }
@@ -131,7 +131,7 @@ class CardFilterServiceTest {
             createCardWithUserData(normalCard, 1, 0)
         );
 
-        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "extendedart");
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "extendedart", null);
 
         assertEquals(1, result.size());
         assertEquals("Extended Art Card", result.get(0).getCard().getName());
@@ -148,7 +148,7 @@ class CardFilterServiceTest {
             createCardWithUserData(normalCard, 1, 0)
         );
 
-        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "showcase");
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "showcase", null);
 
         assertEquals(1, result.size());
         assertEquals("Showcase Card", result.get(0).getCard().getName());
@@ -166,7 +166,7 @@ class CardFilterServiceTest {
             createCardWithUserData(normalCard, 1, 0)
         );
 
-        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "borderless");
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "borderless", null);
 
         assertEquals(1, result.size());
         assertEquals("Borderless Card", result.get(0).getCard().getName());
@@ -187,7 +187,7 @@ class CardFilterServiceTest {
         );
 
         // showBasics=true so basic lands are not filtered out; frameStyle=fullart
-        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, "true", "fullart");
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, "true", "fullart", null);
 
         assertEquals(1, result.size());
         assertEquals("Full Art Forest", result.get(0).getCard().getName());
@@ -201,8 +201,38 @@ class CardFilterServiceTest {
 
         List<CardWithUserData> cards = Arrays.asList(createCardWithUserData(card, 1, 0));
 
-        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "extendedart");
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "extendedart", null);
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void testHideTokens_FiltersOutTokenCards() {
+        ScryfallCard tokenCard = createCard("30", "Soldier Token", "common");
+        tokenCard.setTypeLine("Token Creature — Soldier");
+        ScryfallCard normalCard = createCard("31", "Lightning Bolt", "uncommon");
+        normalCard.setTypeLine("Instant");
+
+        List<CardWithUserData> cards = Arrays.asList(
+            createCardWithUserData(tokenCard, 1, 0),
+            createCardWithUserData(normalCard, 1, 0)
+        );
+
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, null, "true");
+
+        assertEquals(1, result.size());
+        assertEquals("Lightning Bolt", result.get(0).getCard().getName());
+    }
+
+    @Test
+    void testHideTokens_Null_IncludesTokenCards() {
+        ScryfallCard tokenCard = createCard("32", "Goblin Token", "common");
+        tokenCard.setTypeLine("Token Creature — Goblin");
+
+        List<CardWithUserData> cards = Arrays.asList(createCardWithUserData(tokenCard, 1, 0));
+
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, null, null);
+
+        assertEquals(1, result.size());
     }
 }

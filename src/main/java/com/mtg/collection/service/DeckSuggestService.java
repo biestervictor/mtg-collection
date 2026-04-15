@@ -61,13 +61,14 @@ public class DeckSuggestService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        // 4. Build name → cheapest regular EUR price map (one DB query)
+        // 4. Build name → cheapest regular EUR price map AND thumbnail map (one DB query)
         Map<String, Double> minPriceByName = buildMinPriceMap(allCardNames);
+        Map<String, String> thumbnailByName = buildThumbnailMap(allCardNames);
 
         // 5. Build a suggestion for each deck
         List<DeckSuggestion> suggestions = new ArrayList<>();
         for (MetaDeck deck : metaDecks) {
-            suggestions.add(buildSuggestion(deck, owned, minPriceByName));
+            suggestions.add(buildSuggestion(deck, owned, minPriceByName, thumbnailByName));
         }
 
         // 6. Sort: fewest missing first; ties broken by most complete first
@@ -110,8 +111,25 @@ public class DeckSuggestService {
         return minPrice;
     }
 
+    /**
+     * Fetches all printings for the given card names in one DB query and
+     * returns a map from card name → thumbnail URL (first printing found).
+     */
+    Map<String, String> buildThumbnailMap(List<String> cardNames) {
+        if (cardNames.isEmpty()) return Collections.emptyMap();
+        List<ScryfallCard> cards = scryfallCardRepository.findByNameIn(cardNames);
+        Map<String, String> thumbnails = new HashMap<>();
+        for (ScryfallCard sc : cards) {
+            if (sc.getThumbnailFront() != null && !thumbnails.containsKey(sc.getName())) {
+                thumbnails.put(sc.getName(), sc.getThumbnailFront());
+            }
+        }
+        return thumbnails;
+    }
+
     private DeckSuggestion buildSuggestion(MetaDeck deck, Map<String, Integer> owned,
-                                            Map<String, Double> minPriceByName) {
+                                            Map<String, Double> minPriceByName,
+                                            Map<String, String> thumbnailByName) {
         List<MissingCardEntry> missing = new ArrayList<>();
         int totalUnique = 0;
         int ownedUnique = 0;
@@ -154,6 +172,8 @@ public class DeckSuggestService {
         suggestion.setTotalMissingCost(Math.round(deckMissingCost * 100.0) / 100.0);
         suggestion.setMissingCards(missing);
         suggestion.setFetchedAt(deck.getFetchedAt());
+        suggestion.setCardMinPrices(minPriceByName);
+        suggestion.setCardThumbnails(thumbnailByName);
         return suggestion;
     }
 }

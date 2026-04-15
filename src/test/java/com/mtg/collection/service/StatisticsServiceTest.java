@@ -233,7 +233,8 @@ class StatisticsServiceTest {
         assertTrue(stats.getNearCompleteSets().isEmpty(), "40% set must not be in nearCompleteSets (90%+)");
         assertTrue(stats.getNearComplete80().isEmpty(),   "40% set must not be in nearComplete80");
         assertTrue(stats.getNearComplete70().isEmpty(),   "40% set must not be in nearComplete70");
-        assertTrue(stats.getNearComplete65().isEmpty(),   "40% set must not be in nearComplete65");
+        assertTrue(stats.getNearComplete60().isEmpty(),   "40% set must not be in nearComplete60");
+        assertTrue(stats.getNearComplete50().isEmpty(),   "40% set must not be in nearComplete50");
     }
 
     @Test
@@ -311,5 +312,41 @@ class StatisticsServiceTest {
         assertEquals("HIGH", sets.get(0).getSetCode());
         assertEquals("MID",  sets.get(1).getSetCode());
         assertEquals("LOW",  sets.get(2).getSetCode());
+    }
+
+    @Test
+    void setCompletion_nearCompleteSet_detectedAt60Percent() {
+        // Own 6 of 10 cards → exactly 60% → nearComplete60
+        List<UserCard> cards = new ArrayList<>();
+        for (int i = 1; i <= 6; i++) {
+            cards.add(card("TST", String.valueOf(i), false, 1, 1.0));
+        }
+        when(userCardRepository.findByUser("testuser")).thenReturn(cards);
+        noImports();
+        when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 10)));
+
+        UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
+
+        assertTrue(stats.getNearComplete70().isEmpty(), "60% set must NOT be in 70%+ list");
+        assertFalse(stats.getNearComplete60().isEmpty(),  "60% set must appear in nearComplete60");
+        assertEquals(60.0, stats.getNearComplete60().get(0).getPercentage(), 0.01);
+    }
+
+    @Test
+    void setCompletion_nearCompleteSet_detectedAt50Percent() {
+        // Own 5 of 10 cards → exactly 50% → nearComplete50
+        List<UserCard> cards = new ArrayList<>();
+        for (int i = 1; i <= 5; i++) {
+            cards.add(card("TST", String.valueOf(i), false, 1, 1.0));
+        }
+        when(userCardRepository.findByUser("testuser")).thenReturn(cards);
+        noImports();
+        when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 10)));
+
+        UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
+
+        assertTrue(stats.getNearComplete60().isEmpty(), "50% set must NOT be in 60%+ list");
+        assertFalse(stats.getNearComplete50().isEmpty(),  "50% set must appear in nearComplete50");
+        assertEquals(50.0, stats.getNearComplete50().get(0).getPercentage(), 0.01);
     }
 }

@@ -167,14 +167,22 @@
                                 </small>
                             </h5>
                         </div>
-                        <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                            <ul class="list-unstyled">
-                                <li th:each="card : ${result.addedCards}" class="added-card mb-2">
-                                    <strong th:text="${card.name}">Card Name</strong>
-                                    <span th:text="${card.setCode}">SET</span> #<span th:text="${card.collectorNumber}">1</span>
-                                    <span th:if="${card.foil}" class="badge bg-warning text-dark">Foil</span>
-                                    <span class="badge bg-secondary" th:text="'x' + ${card.quantity}">x1</span>
-                                </li>
+                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                            <ul class="list-unstyled mb-0">
+                                <th:block th:each="card, iterStat : ${result.addedCards}">
+                                    <!-- Section header when set changes -->
+                                    <li th:if="${iterStat.first or result.addedCards.get(iterStat.index - 1).setCode != card.setCode}"
+                                        class="mt-2 mb-1 small fw-bold"
+                                        style="list-style:none;border-left:none;padding-left:0;color:#aaa;">
+                                        <i class="bi bi-layers"></i> <span th:text="${card.setCode}">SET</span>
+                                    </li>
+                                    <li class="added-card mb-1">
+                                        <strong th:text="${card.name}">Card Name</strong>
+                                        #<span th:text="${card.collectorNumber}">1</span>
+                                        <span th:if="${card.foil}" class="badge bg-warning text-dark">Foil</span>
+                                        <span class="badge bg-secondary" th:text="'x' + ${card.quantity}">x1</span>
+                                    </li>
+                                </th:block>
                             </ul>
                         </div>
                     </div>
@@ -192,14 +200,22 @@
                                 </small>
                             </h5>
                         </div>
-                        <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                            <ul class="list-unstyled">
-                                <li th:each="card : ${result.removedCards}" class="removed-card mb-2">
-                                    <strong th:text="${card.name}">Card Name</strong>
-                                    <span th:text="${card.setCode}">SET</span> #<span th:text="${card.collectorNumber}">1</span>
-                                    <span th:if="${card.foil}" class="badge bg-warning text-dark">Foil</span>
-                                    <span class="badge bg-secondary" th:text="'x' + ${card.quantity}">x1</span>
-                                </li>
+                        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                            <ul class="list-unstyled mb-0">
+                                <th:block th:each="card, iterStat : ${result.removedCards}">
+                                    <!-- Section header when set changes -->
+                                    <li th:if="${iterStat.first or result.removedCards.get(iterStat.index - 1).setCode != card.setCode}"
+                                        class="mt-2 mb-1 small fw-bold"
+                                        style="list-style:none;border-left:none;padding-left:0;color:#aaa;">
+                                        <i class="bi bi-layers"></i> <span th:text="${card.setCode}">SET</span>
+                                    </li>
+                                    <li class="removed-card mb-1">
+                                        <strong th:text="${card.name}">Card Name</strong>
+                                        #<span th:text="${card.collectorNumber}">1</span>
+                                        <span th:if="${card.foil}" class="badge bg-warning text-dark">Foil</span>
+                                        <span class="badge bg-secondary" th:text="'x' + ${card.quantity}">x1</span>
+                                    </li>
+                                </th:block>
                             </ul>
                         </div>
                     </div>

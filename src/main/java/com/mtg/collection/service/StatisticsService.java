@@ -69,7 +69,7 @@ public class StatisticsService {
                 .map(c -> new CardWithPrice(c.getName(), c.getSetCode(), c.getPrice() * c.getQuantity(), c.getPrice()))
                 .sorted(Comparator.comparing(CardWithPrice::getTotalPrice).reversed()
                         .thenComparing(Comparator.comparing(CardWithPrice::getPricePerCard).reversed()))
-                .limit(30)
+                .limit(100)
                 .collect(Collectors.toList());
         stats.setMostExpensiveCards(expensiveCards);
         
@@ -132,7 +132,8 @@ public class StatisticsService {
         List<SetCompletion> nearCompleteSets = new ArrayList<>();
         List<SetCompletion> nearComplete80 = new ArrayList<>();
         List<SetCompletion> nearComplete70 = new ArrayList<>();
-        List<SetCompletion> nearComplete65 = new ArrayList<>();
+        List<SetCompletion> nearComplete60 = new ArrayList<>();
+        List<SetCompletion> nearComplete50 = new ArrayList<>();
         
         for (SetValue sv : topSetsByValue) {
             int uniqueOwned    = sv.getOwnedCards();
@@ -149,8 +150,10 @@ public class StatisticsService {
                     nearComplete80.add(sc);
                 } else if (percentage >= 70) {
                     nearComplete70.add(sc);
-                } else if (percentage >= 65) {
-                    nearComplete65.add(sc);
+                } else if (percentage >= 60) {
+                    nearComplete60.add(sc);
+                } else if (percentage >= 50) {
+                    nearComplete50.add(sc);
                 }
             }
         }
@@ -159,13 +162,15 @@ public class StatisticsService {
         nearCompleteSets.sort(Comparator.comparing(SetCompletion::getPercentage).reversed());
         nearComplete80.sort(Comparator.comparing(SetCompletion::getPercentage).reversed());
         nearComplete70.sort(Comparator.comparing(SetCompletion::getPercentage).reversed());
-        nearComplete65.sort(Comparator.comparing(SetCompletion::getPercentage).reversed());
+        nearComplete60.sort(Comparator.comparing(SetCompletion::getPercentage).reversed());
+        nearComplete50.sort(Comparator.comparing(SetCompletion::getPercentage).reversed());
         
         stats.setCompleteSets(completeSets);
         stats.setNearCompleteSets(nearCompleteSets.stream().limit(30).collect(Collectors.toList()));
         stats.setNearComplete80(nearComplete80.stream().limit(30).collect(Collectors.toList()));
         stats.setNearComplete70(nearComplete70.stream().limit(30).collect(Collectors.toList()));
-        stats.setNearComplete65(nearComplete65.stream().limit(30).collect(Collectors.toList()));
+        stats.setNearComplete60(nearComplete60.stream().limit(30).collect(Collectors.toList()));
+        stats.setNearComplete50(nearComplete50.stream().limit(30).collect(Collectors.toList()));
         
         calculateDailyChanges(user, stats);
         

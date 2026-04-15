@@ -11,15 +11,21 @@ import java.util.stream.Collectors;
 public class CardFilterService {
 
     /**
-     * @param frameStyle one of: null/"" = all, "extendedart", "showcase", "borderless", "fullart"
+     * @param frameStyle  one of: null/"" = all, "extendedart", "showcase", "borderless", "fullart"
+     * @param hideTokens  "true" to exclude Token cards
      */
     public List<CardWithUserData> filterCards(List<CardWithUserData> cards, String state,
                                               String printing, String rarity, String search,
-                                              String showBasics, String frameStyle) {
+                                              String showBasics, String frameStyle,
+                                              String hideTokens) {
         List<CardWithUserData> filtered = cards;
 
         if (!"true".equals(showBasics)) {
             filtered = filterOutBasicLands(filtered);
+        }
+
+        if ("true".equals(hideTokens)) {
+            filtered = filterOutTokens(filtered);
         }
 
         if (frameStyle != null && !frameStyle.isEmpty() && !"all".equals(frameStyle)) {
@@ -129,6 +135,13 @@ public class CardFilterService {
         return cards.stream()
                 .filter(c -> c.getCard() == null || c.getCard().getTypeLine() == null || 
                             !c.getCard().getTypeLine().toLowerCase().contains("basic land"))
+                .collect(Collectors.toList());
+    }
+
+    private List<CardWithUserData> filterOutTokens(List<CardWithUserData> cards) {
+        return cards.stream()
+                .filter(c -> c.getCard() == null || c.getCard().getTypeLine() == null ||
+                            !c.getCard().getTypeLine().toLowerCase().contains("token"))
                 .collect(Collectors.toList());
     }
 

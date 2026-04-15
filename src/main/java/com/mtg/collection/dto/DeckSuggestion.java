@@ -2,6 +2,7 @@ package com.mtg.collection.dto;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Represents a meta-deck suggestion for a specific user, enriched with
@@ -23,6 +24,11 @@ public class DeckSuggestion {
     private double totalMissingCost;  // sum of cheapest prices for all missing copies
 
     private List<MissingCardEntry> missingCards;
+
+    /** Min price (EUR) for every non-basic card in the deck (owned + missing). */
+    private Map<String, Double> cardMinPrices;
+    /** Thumbnail URL for every non-basic card in the deck (for hover preview). */
+    private Map<String, String> cardThumbnails;
 
     private LocalDate fetchedAt;
 
@@ -62,6 +68,12 @@ public class DeckSuggestion {
 
     public List<MissingCardEntry> getMissingCards() { return missingCards; }
     public void setMissingCards(List<MissingCardEntry> missingCards) { this.missingCards = missingCards; }
+
+    public Map<String, Double> getCardMinPrices() { return cardMinPrices; }
+    public void setCardMinPrices(Map<String, Double> cardMinPrices) { this.cardMinPrices = cardMinPrices; }
+
+    public Map<String, String> getCardThumbnails() { return cardThumbnails; }
+    public void setCardThumbnails(Map<String, String> cardThumbnails) { this.cardThumbnails = cardThumbnails; }
 
     public LocalDate getFetchedAt() { return fetchedAt; }
     public void setFetchedAt(LocalDate fetchedAt) { this.fetchedAt = fetchedAt; }

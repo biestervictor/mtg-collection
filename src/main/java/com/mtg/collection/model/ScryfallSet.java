@@ -13,6 +13,8 @@ public class ScryfallSet {
     private int cardCount;
     private String releasedAt;
     private String icon;
+    private boolean digital;   // true = Arena/MTGO-only set (excluded from UI)
+    private String setType;    // Scryfall set_type (e.g. "expansion", "starter", "digital")
     
     public ScryfallSet() {}
 
@@ -28,4 +30,8 @@ public class ScryfallSet {
     public void setReleasedAt(String releasedAt) { this.releasedAt = releasedAt; }
     public String getIcon() { return icon; }
     public void setIcon(String icon) { this.icon = icon; }
+    public boolean isDigital() { return digital; }
+    public void setDigital(boolean digital) { this.digital = digital; }
+    public String getSetType() { return setType; }
+    public void setSetType(String setType) { this.setType = setType; }
 }

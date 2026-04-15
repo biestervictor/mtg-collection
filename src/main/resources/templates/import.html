@@ -51,7 +51,88 @@
     <main class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="mb-0"><i class="bi bi-upload"></i> Collection Importer</h1>
-            <a th:href="@{/import/history}" class="btn btn-outline-light"><i class="bi bi-clock-history"></i> View History</a>
+            <div class="d-flex gap-2 align-items-center">
+
+                <!-- User icon / management dropdown -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
+                            type="button" data-bs-toggle="dropdown" aria-expanded="false" id="userMenuBtn">
+                        <i class="bi bi-person-circle fs-5"></i>
+                        <span id="activeUserLabel" th:text="${selectedUser}">Victor</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="min-width:220px;">
+                        <li><h6 class="dropdown-header">Active User</h6></li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" href="#"
+                               onclick="setActiveUser('Victor'); return false;">
+                                <i class="bi bi-person"></i> Victor
+                                <i class="bi bi-check ms-auto text-success" id="check-Victor"
+                                   th:style="${selectedUser == 'Victor'} ? '' : 'display:none'"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" href="#"
+                               onclick="setActiveUser('Andre'); return false;">
+                                <i class="bi bi-person"></i> Andre
+                                <i class="bi bi-check ms-auto text-success" id="check-Andre"
+                                   th:style="${selectedUser == 'Andre'} ? '' : 'display:none'"></i>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 text-warning" href="#"
+                               onclick="rebuildDecksAction(); return false;">
+                                <i class="bi bi-arrow-clockwise"></i> Rebuild Decks
+                                <small class="text-muted ms-auto">(fix images)</small>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 text-danger" href="#"
+                               onclick="showRemoveConfirm(); return false;">
+                                <i class="bi bi-trash3"></i> Remove User Data
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <a th:href="@{/import/history}" class="btn btn-outline-light">
+                    <i class="bi bi-clock-history"></i> View History
+                </a>
+            </div>
+        </div>
+
+        <!-- Remove User Data Confirmation Modal -->
+        <div class="modal fade" id="removeUserModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="background:#16213e;border:1px solid #2a2a4a;color:#f1f1f1;">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle-fill text-danger"></i> Remove User Data
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>This will permanently delete <strong>all</strong> data for
+                            <strong id="removeUserName" class="text-danger">Victor</strong>:</p>
+                        <ul>
+                            <li>All imported cards</li>
+                            <li>All decks</li>
+                            <li>All import history</li>
+                        </ul>
+                        <p class="text-warning mb-0">
+                            <i class="bi bi-exclamation-circle"></i> This action cannot be undone.
+                        </p>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" id="confirmRemoveBtn"
+                                onclick="confirmRemoveUser()">
+                            <i class="bi bi-trash3"></i> Delete All Data
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="row">
@@ -214,7 +295,8 @@
     <div id="card-preview"><img src="" alt="Card Preview"></div>
 
     <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
-    <script>
+    <script th:inline="javascript">
+        // ── Card hover preview ────────────────────────────────────────────────
         const preview = document.getElementById('card-preview');
         const previewImg = preview.querySelector('img');
         document.querySelectorAll('.card-tile[data-img]').forEach(tile => {
@@ -236,6 +318,53 @@
             preview.style.left = x + 'px';
             preview.style.top  = y + 'px';
         }
+
+        // ── User management dropdown ──────────────────────────────────────────
+        let activeUser = /*[[${selectedUser}]]*/ 'Victor';
+
+        function setActiveUser(user) {
+            activeUser = user;
+            document.getElementById('activeUserLabel').textContent = user;
+            document.querySelectorAll('[id^="check-"]').forEach(el => el.style.display = 'none');
+            const chk = document.getElementById('check-' + user);
+            if (chk) chk.style.display = '';
+            // Sync the import form select
+            const formSelect = document.querySelector('select[name="user"]');
+            if (formSelect) formSelect.value = user;
+        }
+
+        function showRemoveConfirm() {
+            document.getElementById('removeUserName').textContent = activeUser;
+            new bootstrap.Modal(document.getElementById('removeUserModal')).show();
+        }
+
+        function confirmRemoveUser() {
+            const modalEl = document.getElementById('removeUserModal');
+            bootstrap.Modal.getInstance(modalEl).hide();
+            const btn = document.getElementById('confirmRemoveBtn');
+            btn.disabled = true;
+            showNavToast('warning', 'Deleting…', 'Removing all data for ' + activeUser);
+            fetch('/api/user/' + encodeURIComponent(activeUser) + '/reset', { method: 'POST' })
+                .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+                .then(data => showNavToast('success', 'Done', data.message))
+                .catch(err => showNavToast('danger', 'Error', String(err)))
+                .finally(() => { btn.disabled = false; });
+        }
+
+        function rebuildDecksAction() {
+            showNavToast('info', 'Rebuilding…', 'Re-enriching deck images for ' + activeUser);
+            fetch('/api/user/' + encodeURIComponent(activeUser) + '/rebuild-decks', { method: 'POST' })
+                .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+                .then(data => showNavToast('success', 'Done', data.message))
+                .catch(err => showNavToast('danger', 'Error', String(err)));
+        }
+
+        // Sync checkmark on load
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[id^="check-"]').forEach(el => el.style.display = 'none');
+            const chk = document.getElementById('check-' + activeUser);
+            if (chk) chk.style.display = '';
+        });
     </script>
 </body>
 </html>

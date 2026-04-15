@@ -62,6 +62,23 @@ public class UserDeck {
                 .orElse(null);
     }
 
+    /**
+     * Best available cover image: stored thumbnail, or Scryfall API fallback from first mainboard card.
+     * Returns null only when there are no mainboard cards at all.
+     */
+    public String getCoverImageUrl() {
+        String thumb = getCoverArtUrl();
+        if (thumb != null) return thumb;
+        if (mainboard != null && !mainboard.isEmpty()) {
+            DeckCard first = mainboard.get(0);
+            if (first.getSetCode() != null && first.getCollectorNumber() != null) {
+                return "https://api.scryfall.com/cards/" + first.getSetCode().toLowerCase()
+                        + "/" + first.getCollectorNumber() + "?format=image&version=small";
+            }
+        }
+        return null;
+    }
+
     private List<DeckCard> allBoards() {
         List<DeckCard> all = new ArrayList<>();
         if (mainboard  != null) all.addAll(mainboard);
@@ -136,8 +153,26 @@ public class UserDeck {
         public String  getThumbnailUrl()             { return thumbnailUrl; }
         public void    setThumbnailUrl(String u)     { this.thumbnailUrl = u; }
 
+        /** Stored thumbnail, or Scryfall API small-image URL as fallback. */
+        public String  getEffectiveThumbnailUrl() {
+            if (thumbnailUrl != null && !thumbnailUrl.isEmpty()) return thumbnailUrl;
+            if (setCode != null && collectorNumber != null)
+                return "https://api.scryfall.com/cards/" + setCode.toLowerCase()
+                        + "/" + collectorNumber + "?format=image&version=small";
+            return null;
+        }
+
         public String  getImageUrl()                 { return imageUrl; }
         public void    setImageUrl(String u)         { this.imageUrl = u; }
+
+        /** Stored image, or Scryfall API normal-image URL as fallback. */
+        public String  getEffectiveImageUrl() {
+            if (imageUrl != null && !imageUrl.isEmpty()) return imageUrl;
+            if (setCode != null && collectorNumber != null)
+                return "https://api.scryfall.com/cards/" + setCode.toLowerCase()
+                        + "/" + collectorNumber + "?format=image&version=normal";
+            return null;
+        }
 
         public double  getPrice()                    { return price; }
         public void    setPrice(double price)        { this.price = price; }

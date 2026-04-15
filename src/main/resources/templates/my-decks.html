@@ -104,11 +104,11 @@
 
                 <!-- Cover art -->
                 <div class="deck-cover">
-                    <img th:if="${deck.coverArtUrl != null}"
-                         th:src="${deck.coverArtUrl}" alt=""
+                    <img th:if="${deck.coverImageUrl != null}"
+                         th:src="${deck.coverImageUrl}" alt=""
                          onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
                     <div class="deck-cover-placeholder"
-                         th:style="${deck.coverArtUrl != null} ? 'display:none' : ''">
+                         th:style="${deck.coverImageUrl != null} ? 'display:none' : ''">
                         <i class="bi bi-collection"></i>
                     </div>
                 </div>

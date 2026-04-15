@@ -61,6 +61,13 @@ public class CollectionService {
         userCardRepository.saveAll(cards);
     }
 
+    public void deleteUserData(String user) {
+        userCardRepository.deleteByUser(user);
+        userDeckService.deleteDecksForUser(user);
+        importHistoryRepository.deleteByUser(user);
+        log.info("Deleted all data for user '{}'", user);
+    }
+
     public ImportResult importCards(String user, MultipartFile file, String format) {
         ImportResult result = new ImportResult();
         List<String> errors = new ArrayList<>();

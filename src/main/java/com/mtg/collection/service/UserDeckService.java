@@ -100,6 +100,26 @@ public class UserDeckService {
         return userDeckRepository.findById(id);
     }
 
+    public void deleteDecksForUser(String user) {
+        userDeckRepository.deleteByUser(user);
+    }
+
+    /**
+     * Re-runs Scryfall enrichment on all existing decks for the user (thumbnail, image, price).
+     * Useful when decks were saved before enrichment was added, or after a Scryfall data refresh.
+     */
+    public int reEnrichDecks(String user) {
+        List<UserDeck> decks = userDeckRepository.findByUserOrderByCommanderDescNameAsc(user);
+        if (decks.isEmpty()) {
+            log.info("No decks found for user '{}', nothing to re-enrich", user);
+            return 0;
+        }
+        enrichAndAggregate(decks);
+        userDeckRepository.saveAll(decks);
+        log.info("Re-enriched {} deck(s) for user '{}'", decks.size(), user);
+        return decks.size();
+    }
+
     // ── private helpers ───────────────────────────────────────────────────────
 
     /**

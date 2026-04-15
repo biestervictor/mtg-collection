@@ -7,11 +7,11 @@ import com.mtg.collection.model.ImportHistory.ImportedCardInfo;
 import com.mtg.collection.repository.ImportHistoryRepository;
 import com.mtg.collection.service.CollectionService;
 import com.mtg.collection.service.InventoryImportService;
+import com.mtg.collection.service.UserDeckService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
@@ -23,18 +23,24 @@ public class ImportController {
     private final CollectionService collectionService;
     private final InventoryImportService inventoryImportService;
     private final ImportHistoryRepository importHistoryRepository;
+    private final UserDeckService userDeckService;
 
-    public ImportController(CollectionService collectionService, 
+    public ImportController(CollectionService collectionService,
                            InventoryImportService inventoryImportService,
-                           ImportHistoryRepository importHistoryRepository) {
+                           ImportHistoryRepository importHistoryRepository,
+                           UserDeckService userDeckService) {
         this.collectionService = collectionService;
         this.inventoryImportService = inventoryImportService;
         this.importHistoryRepository = importHistoryRepository;
+        this.userDeckService = userDeckService;
     }
 
     @GetMapping("/import")
-    public String importPage(Model model, @RequestParam(required = false) String format) {
+    public String importPage(Model model,
+                             @RequestParam(required = false) String format,
+                             @RequestParam(required = false, defaultValue = "Victor") String user) {
         model.addAttribute("selectedFormat", format != null ? format : "");
+        model.addAttribute("selectedUser", user);
         return "import";
     }
 
@@ -43,15 +49,15 @@ public class ImportController {
                              @RequestParam("user") String user,
                              @RequestParam("format") String format,
                              Model model) {
-        
+
         ImportResult result;
-        
+
         if ("inventory".equals(format)) {
             result = inventoryImportService.importInventory(user, file);
         } else {
             result = collectionService.importCards(user, file, format);
         }
-        
+
         model.addAttribute("result", result);
         model.addAttribute("selectedFormat", format);
         model.addAttribute("selectedUser", user);
@@ -96,7 +102,7 @@ public class ImportController {
                     .collect(Collectors.toList());
             result.setNewCards(sorted);
         }
-        
+
         return "import";
     }
 
@@ -111,6 +117,29 @@ public class ImportController {
         model.addAttribute("history", history);
         model.addAttribute("selectedUser", user);
         return "import-history";
+    }
+
+    // ── REST: User data management ────────────────────────────────────────────
+
+    @PostMapping("/api/user/{user}/reset")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> resetUserData(@PathVariable String user) {
+        collectionService.deleteUserData(user);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "ok");
+        result.put("message", "All data deleted for: " + user);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/api/user/{user}/rebuild-decks")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> rebuildDecks(@PathVariable String user) {
+        int count = userDeckService.reEnrichDecks(user);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "ok");
+        result.put("message", "Re-enriched " + count + " deck(s) for: " + user);
+        result.put("decks", count);
+        return ResponseEntity.ok(result);
     }
 
     private double maxPrice(CardWithUserData cwu) {

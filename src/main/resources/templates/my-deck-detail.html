@@ -119,11 +119,11 @@
                 <div class="card p-2">
                     <div class="card-columns">
                         <div th:each="c : ${deck.mainboard}" class="card-entry"
-                             th:data-img="${c.imageUrl}" th:data-thumb="${c.thumbnailUrl}">
-                            <img th:if="${c.thumbnailUrl != null}" th:src="${c.thumbnailUrl}"
+                             th:data-img="${c.effectiveImageUrl}" th:data-thumb="${c.effectiveThumbnailUrl}">
+                            <img th:if="${c.effectiveThumbnailUrl != null}" th:src="${c.effectiveThumbnailUrl}"
                                  class="entry-thumb" th:alt="${c.name}"
                                  onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
-                            <div class="entry-thumb-ph" th:style="${c.thumbnailUrl != null} ? 'display:none' : ''"></div>
+                            <div class="entry-thumb-ph" th:style="${c.effectiveThumbnailUrl != null} ? 'display:none' : ''"></div>
                             <span class="entry-qty" th:text="${c.quantity}">1</span>
                             <span class="entry-name">
                                 <span th:text="${c.name}">Card Name</span>
@@ -146,11 +146,11 @@
                 <div class="card p-2">
                     <div class="card-columns">
                         <div th:each="c : ${deck.sideboard}" class="card-entry"
-                             th:data-img="${c.imageUrl}" th:data-thumb="${c.thumbnailUrl}">
-                            <img th:if="${c.thumbnailUrl != null}" th:src="${c.thumbnailUrl}"
+                             th:data-img="${c.effectiveImageUrl}" th:data-thumb="${c.effectiveThumbnailUrl}">
+                            <img th:if="${c.effectiveThumbnailUrl != null}" th:src="${c.effectiveThumbnailUrl}"
                                  class="entry-thumb" th:alt="${c.name}"
                                  onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
-                            <div class="entry-thumb-ph" th:style="${c.thumbnailUrl != null} ? 'display:none' : ''"></div>
+                            <div class="entry-thumb-ph" th:style="${c.effectiveThumbnailUrl != null} ? 'display:none' : ''"></div>
                             <span class="entry-qty" th:text="${c.quantity}">1</span>
                             <span class="entry-name">
                                 <span th:text="${c.name}">Card Name</span>
@@ -173,11 +173,11 @@
                 <div class="card p-2">
                     <div class="card-columns">
                         <div th:each="c : ${deck.extraboard}" class="card-entry"
-                             th:data-img="${c.imageUrl}" th:data-thumb="${c.thumbnailUrl}">
-                            <img th:if="${c.thumbnailUrl != null}" th:src="${c.thumbnailUrl}"
+                             th:data-img="${c.effectiveImageUrl}" th:data-thumb="${c.effectiveThumbnailUrl}">
+                            <img th:if="${c.effectiveThumbnailUrl != null}" th:src="${c.effectiveThumbnailUrl}"
                                  class="entry-thumb" th:alt="${c.name}"
                                  onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
-                            <div class="entry-thumb-ph" th:style="${c.thumbnailUrl != null} ? 'display:none' : ''"></div>
+                            <div class="entry-thumb-ph" th:style="${c.effectiveThumbnailUrl != null} ? 'display:none' : ''"></div>
                             <span class="entry-qty" th:text="${c.quantity}">1</span>
                             <span class="entry-name">
                                 <span th:text="${c.name}">Card Name</span>

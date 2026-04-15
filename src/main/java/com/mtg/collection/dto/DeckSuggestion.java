@@ -11,6 +11,7 @@ public class DeckSuggestion {
 
     private String deckName;
     private String format;
+    private String slug;             // URL slug for the detail-page link
     private double playRate;         // META% from MTGGoldfish
     private String commanderName;    // null unless format == commander
 
@@ -19,6 +20,7 @@ public class DeckSuggestion {
     private int missingUniqueCards;  // unique card names the user is missing
 
     private double completionPercent; // ownedUniqueCards / totalCards * 100
+    private double totalMissingCost;  // sum of cheapest prices for all missing copies
 
     private List<MissingCardEntry> missingCards;
 
@@ -33,6 +35,9 @@ public class DeckSuggestion {
 
     public String getFormat() { return format; }
     public void setFormat(String format) { this.format = format; }
+
+    public String getSlug() { return slug; }
+    public void setSlug(String slug) { this.slug = slug; }
 
     public double getPlayRate() { return playRate; }
     public void setPlayRate(double playRate) { this.playRate = playRate; }
@@ -51,6 +56,9 @@ public class DeckSuggestion {
 
     public double getCompletionPercent() { return completionPercent; }
     public void setCompletionPercent(double completionPercent) { this.completionPercent = completionPercent; }
+
+    public double getTotalMissingCost() { return totalMissingCost; }
+    public void setTotalMissingCost(double totalMissingCost) { this.totalMissingCost = totalMissingCost; }
 
     public List<MissingCardEntry> getMissingCards() { return missingCards; }
     public void setMissingCards(List<MissingCardEntry> missingCards) { this.missingCards = missingCards; }

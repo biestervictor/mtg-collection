@@ -10,14 +10,22 @@ public class MissingCardEntry {
     private int requiredQuantity;
     private int ownedQuantity;
     private int stillNeeded; // requiredQuantity - ownedQuantity (capped at 0)
+    private double pricePerCard;   // cheapest regular EUR price across all printings
+    private double totalMissingCost; // pricePerCard * stillNeeded
 
     public MissingCardEntry() {}
 
     public MissingCardEntry(String cardName, int requiredQuantity, int ownedQuantity) {
+        this(cardName, requiredQuantity, ownedQuantity, 0.0);
+    }
+
+    public MissingCardEntry(String cardName, int requiredQuantity, int ownedQuantity, double pricePerCard) {
         this.cardName = cardName;
         this.requiredQuantity = requiredQuantity;
         this.ownedQuantity = ownedQuantity;
         this.stillNeeded = Math.max(0, requiredQuantity - ownedQuantity);
+        this.pricePerCard = pricePerCard;
+        this.totalMissingCost = pricePerCard * this.stillNeeded;
     }
 
     public String getCardName() { return cardName; }
@@ -31,4 +39,10 @@ public class MissingCardEntry {
 
     public int getStillNeeded() { return stillNeeded; }
     public void setStillNeeded(int stillNeeded) { this.stillNeeded = stillNeeded; }
+
+    public double getPricePerCard() { return pricePerCard; }
+    public void setPricePerCard(double pricePerCard) { this.pricePerCard = pricePerCard; }
+
+    public double getTotalMissingCost() { return totalMissingCost; }
+    public void setTotalMissingCost(double totalMissingCost) { this.totalMissingCost = totalMissingCost; }
 }

@@ -3,7 +3,9 @@ package com.mtg.collection.service;
 import com.mtg.collection.dto.DeckSuggestion;
 import com.mtg.collection.dto.MissingCardEntry;
 import com.mtg.collection.model.MetaDeck;
+import com.mtg.collection.model.ScryfallCard;
 import com.mtg.collection.model.UserCard;
+import com.mtg.collection.repository.ScryfallCardRepository;
 import com.mtg.collection.repository.UserCardRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,11 +31,14 @@ class DeckSuggestServiceTest {
     @Mock
     private MetaDeckService metaDeckService;
 
+    @Mock
+    private ScryfallCardRepository scryfallCardRepository;
+
     private DeckSuggestService service;
 
     @BeforeEach
     void setUp() {
-        service = new DeckSuggestService(userCardRepository, metaDeckService);
+        service = new DeckSuggestService(userCardRepository, metaDeckService, scryfallCardRepository);
     }
 
     // ── buildOwnedMap ──────────────────────────────────────────────────────────
@@ -57,6 +63,41 @@ class DeckSuggestServiceTest {
         assertTrue(service.buildOwnedMap("Andre").isEmpty());
     }
 
+    // ── buildMinPriceMap ───────────────────────────────────────────────────────
+
+    @Test
+    void buildMinPriceMap_picksLowestPriceAcrossPrintings() {
+        ScryfallCard cheap = scryfallCard("Lightning Bolt", 0.50);
+        ScryfallCard expensive = scryfallCard("Lightning Bolt", 2.00);
+        ScryfallCard other = scryfallCard("Lava Spike", 1.20);
+
+        when(scryfallCardRepository.findByNameIn(anyList())).thenReturn(List.of(cheap, expensive, other));
+
+        Map<String, Double> prices = service.buildMinPriceMap(List.of("Lightning Bolt", "Lava Spike"));
+
+        assertEquals(0.50, prices.get("Lightning Bolt"), 0.001);
+        assertEquals(1.20, prices.get("Lava Spike"), 0.001);
+    }
+
+    @Test
+    void buildMinPriceMap_emptyInputReturnsEmptyMap() {
+        assertTrue(service.buildMinPriceMap(Collections.emptyList()).isEmpty());
+    }
+
+    @Test
+    void buildMinPriceMap_ignoresNullAndZeroPrices() {
+        ScryfallCard noPrice = scryfallCard("Counterspell", null);
+        ScryfallCard zeroPrice = scryfallCard("Dark Ritual", 0.0);
+        ScryfallCard valid = scryfallCard("Dark Ritual", 0.30);
+
+        when(scryfallCardRepository.findByNameIn(anyList())).thenReturn(List.of(noPrice, zeroPrice, valid));
+
+        Map<String, Double> prices = service.buildMinPriceMap(List.of("Counterspell", "Dark Ritual"));
+
+        assertFalse(prices.containsKey("Counterspell"));
+        assertEquals(0.30, prices.get("Dark Ritual"), 0.001);
+    }
+
     // ── getSuggestions ─────────────────────────────────────────────────────────
 
     @Test
@@ -64,6 +105,7 @@ class DeckSuggestServiceTest {
         // User owns exactly what the deck needs
         UserCard lb = new UserCard("Victor", "Lightning Bolt", "M10", "1", 4, false);
         when(userCardRepository.findByUser("Victor")).thenReturn(List.of(lb));
+        when(scryfallCardRepository.findByNameIn(anyList())).thenReturn(Collections.emptyList());
 
         MetaDeck deck = buildDeck("commander", "Burn", List.of(
                 new MetaDeck.MetaDeckCard("Lightning Bolt", 4),
@@ -80,6 +122,7 @@ class DeckSuggestServiceTest {
         assertEquals(1, s.getOwnedUniqueCards());
         assertEquals(100.0, s.getCompletionPercent());
         assertTrue(s.getMissingCards().isEmpty());
+        assertEquals(0.0, s.getTotalMissingCost(), 0.001);
     }
 
     @Test
@@ -87,6 +130,7 @@ class DeckSuggestServiceTest {
         // User owns 2 of Lightning Bolt (needs 4) and 0 of Lava Spike (needs 4)
         UserCard lb = new UserCard("Victor", "Lightning Bolt", "M10", "1", 2, false);
         when(userCardRepository.findByUser("Victor")).thenReturn(List.of(lb));
+        when(scryfallCardRepository.findByNameIn(anyList())).thenReturn(Collections.emptyList());
 
         MetaDeck deck = buildDeck("modern", "Burn", List.of(
                 new MetaDeck.MetaDeckCard("Lightning Bolt", 4),
@@ -120,9 +164,32 @@ class DeckSuggestServiceTest {
     }
 
     @Test
+    void getSuggestions_totalMissingCostSumsAllMissingCopies() {
+        when(userCardRepository.findByUser("Victor")).thenReturn(Collections.emptyList());
+
+        // Lava Spike: 4 needed, €1.00 cheapest → cost = 4 × 1.00 = 4.00
+        // Lightning Bolt: 4 needed, €0.50 cheapest → cost = 4 × 0.50 = 2.00
+        // Total: €6.00
+        ScryfallCard lavaSpike = scryfallCard("Lava Spike", 1.00);
+        ScryfallCard bolt = scryfallCard("Lightning Bolt", 0.50);
+        when(scryfallCardRepository.findByNameIn(anyList())).thenReturn(List.of(lavaSpike, bolt));
+
+        MetaDeck deck = buildDeck("modern", "Burn", List.of(
+                new MetaDeck.MetaDeckCard("Lava Spike", 4),
+                new MetaDeck.MetaDeckCard("Lightning Bolt", 4)
+        ));
+        when(metaDeckService.getMetaDecks("modern")).thenReturn(List.of(deck));
+
+        List<DeckSuggestion> results = service.getSuggestions("Victor", "modern");
+
+        assertEquals(6.0, results.get(0).getTotalMissingCost(), 0.01);
+    }
+
+    @Test
     void getSuggestions_sortedByMissingThenCompletionDesc() {
         // Deck A: 2 missing, Deck B: 1 missing → B first
         when(userCardRepository.findByUser("Victor")).thenReturn(Collections.emptyList());
+        when(scryfallCardRepository.findByNameIn(anyList())).thenReturn(Collections.emptyList());
 
         MetaDeck deckA = buildDeck("modern", "Deck A", List.of(
                 new MetaDeck.MetaDeckCard("CardX", 1),
@@ -142,6 +209,7 @@ class DeckSuggestServiceTest {
     @Test
     void getSuggestions_basicLandsAreExcludedFromMissingCount() {
         when(userCardRepository.findByUser("Victor")).thenReturn(Collections.emptyList());
+        // No scryfallCardRepository stub needed: all cards are basic lands → allCardNames is empty
 
         MetaDeck deck = buildDeck("commander", "Lands", List.of(
                 new MetaDeck.MetaDeckCard("Mountain", 5),
@@ -180,5 +248,12 @@ class DeckSuggestServiceTest {
         d.setMainboard(cards);
         d.setFetchedAt(LocalDate.now());
         return d;
+    }
+
+    private ScryfallCard scryfallCard(String name, Double price) {
+        ScryfallCard sc = new ScryfallCard();
+        sc.setName(name);
+        sc.setPriceRegular(price);
+        return sc;
     }
 }

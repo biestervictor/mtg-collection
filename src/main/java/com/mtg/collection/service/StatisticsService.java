@@ -90,8 +90,19 @@ public class StatisticsService {
                                 Set::size)
                 ));
 
+        Map<String, ScryfallSet> setMap = scryfallService.getAllSets(false).stream()
+                .collect(Collectors.toMap(
+                        s -> s.getSetCode().toLowerCase(),
+                        s -> s,
+                        (a, b) -> a));
+
         List<SetCount> topSets = setCounts.entrySet().stream()
-                .map(e -> new SetCount(e.getKey(), e.getValue().longValue()))
+                .map(e -> {
+                    SetCount sc = new SetCount(e.getKey(), e.getValue().longValue());
+                    ScryfallSet s = setMap.get(e.getKey().toLowerCase());
+                    if (s != null) sc.setIconUrl(s.getIcon());
+                    return sc;
+                })
                 .sorted(Comparator.comparing(SetCount::getCount).reversed())
                 .limit(30)
                 .collect(Collectors.toList());
@@ -103,19 +114,15 @@ public class StatisticsService {
                         Collectors.summingDouble(c -> c.getPrice() * c.getQuantity())
                 ));
         
-        Map<String, ScryfallSet> setMap = scryfallService.getAllSets(false).stream()
-                .collect(Collectors.toMap(
-                        s -> s.getSetCode().toLowerCase(),
-                        s -> s,
-                        (a, b) -> a));
-        
         List<SetValue> topSetsByValue = setValues.entrySet().stream()
                 .filter(e -> e.getValue() > 0)   // hide sets where all prices are 0
                 .map(e -> {
                     ScryfallSet set = setMap.get(e.getKey().toLowerCase());
                     int totalCardsInSet = set != null ? set.getCardCount() : 0;
                     int uniqueOwned = setUniqueCardCounts.getOrDefault(e.getKey(), 0);
-                    return new SetValue(e.getKey(), e.getValue(), totalCardsInSet, uniqueOwned);
+                    SetValue sv = new SetValue(e.getKey(), e.getValue(), totalCardsInSet, uniqueOwned);
+                    if (set != null) sv.setIconUrl(set.getIcon());
+                    return sv;
                 })
                 .sorted(Comparator.comparing(SetValue::getValue).reversed())
                 .collect(Collectors.toList());
@@ -133,6 +140,7 @@ public class StatisticsService {
             if (totalCardsInSet > 0) {
                 double percentage = (uniqueOwned * 100.0) / totalCardsInSet;
                 SetCompletion sc = new SetCompletion(sv.getSetCode(), uniqueOwned, totalCardsInSet, percentage);
+                sc.setIconUrl(sv.getIconUrl());
                 if (uniqueOwned >= totalCardsInSet) {
                     completeSets.add(sc);
                 } else if (percentage >= 90) {
@@ -248,6 +256,7 @@ public class StatisticsService {
     public static class SetCount {
         private String setCode;
         private long count;
+        private String iconUrl;
 
         public SetCount(String setCode, long count) {
             this.setCode = setCode;
@@ -256,6 +265,8 @@ public class StatisticsService {
 
         public String getSetCode() { return setCode; }
         public long getCount() { return count; }
+        public String getIconUrl() { return iconUrl; }
+        public void setIconUrl(String iconUrl) { this.iconUrl = iconUrl; }
     }
 
     public static class SetValue {
@@ -263,6 +274,7 @@ public class StatisticsService {
         private double value;
         private int totalCardsInSet;
         private int ownedCards;
+        private String iconUrl;
 
         public SetValue(String setCode, double value, int totalCardsInSet, int ownedCards) {
             this.setCode = setCode;
@@ -275,6 +287,8 @@ public class StatisticsService {
         public double getValue() { return value; }
         public int getTotalCardsInSet() { return totalCardsInSet; }
         public int getOwnedCards() { return ownedCards; }
+        public String getIconUrl() { return iconUrl; }
+        public void setIconUrl(String iconUrl) { this.iconUrl = iconUrl; }
     }
 
     public static class SetCompletion {
@@ -282,6 +296,7 @@ public class StatisticsService {
         private int ownedCards;
         private int totalCards;
         private double percentage;
+        private String iconUrl;
 
         public SetCompletion(String setCode, int ownedCards, int totalCards, double percentage) {
             this.setCode = setCode;
@@ -294,6 +309,8 @@ public class StatisticsService {
         public int getOwnedCards() { return ownedCards; }
         public int getTotalCards() { return totalCards; }
         public double getPercentage() { return percentage; }
+        public String getIconUrl() { return iconUrl; }
+        public void setIconUrl(String iconUrl) { this.iconUrl = iconUrl; }
     }
 
     public static class CardPriceChange {

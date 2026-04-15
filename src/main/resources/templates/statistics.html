@@ -211,14 +211,24 @@
                                 <tbody>
                                     <tr th:each="set, stat : ${userStatistics.topSetsByCount}"
                                         th:if="${stat.index < 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.count}">0</td>
                                     </tr>
                                 </tbody>
                                 <tbody class="collapse" id="more-sets-count">
                                     <tr th:each="set, stat : ${userStatistics.topSetsByCount}"
                                         th:if="${stat.index >= 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.count}">0</td>
                                     </tr>
                                 </tbody>
@@ -256,7 +266,12 @@
                                 <tbody>
                                     <tr th:each="set, stat : ${userStatistics.topSetsByValue}"
                                         th:if="${stat.index < 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${#numbers.formatCurrency(set.value)}">$0</td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCardsInSet}">0/0</td>
                                         <td th:text="${set.totalCardsInSet > 0 ? #numbers.formatPercent(set.ownedCards / set.totalCardsInSet, 1, 0) : '0%'}">0%</td>
@@ -265,7 +280,12 @@
                                 <tbody class="collapse" id="more-sets-value">
                                     <tr th:each="set, stat : ${userStatistics.topSetsByValue}"
                                         th:if="${stat.index >= 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${#numbers.formatCurrency(set.value)}">$0</td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCardsInSet}">0/0</td>
                                         <td th:text="${set.totalCardsInSet > 0 ? #numbers.formatPercent(set.ownedCards / set.totalCardsInSet, 1, 0) : '0%'}">0%</td>
@@ -290,14 +310,24 @@
                                 <thead><tr><th>Set</th><th>Cards</th></tr></thead>
                                 <tbody>
                                     <tr th:each="set, stat : ${userStatistics.completeSets}" th:if="${stat.index < 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.ownedCards}">0</td>
                                     </tr>
                                 </tbody>
                                 <tbody class="collapse" id="more-complete-sets"
                                        th:if="${userStatistics.completeSets.size() > 10}">
                                     <tr th:each="set, stat : ${userStatistics.completeSets}" th:if="${stat.index >= 10}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.ownedCards}">0</td>
                                     </tr>
                                 </tbody>
@@ -319,7 +349,12 @@
                                 <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
                                 <tbody>
                                     <tr th:each="set : ${userStatistics.nearCompleteSets}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
                                     </tr>
@@ -334,7 +369,12 @@
                                 <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
                                 <tbody>
                                     <tr th:each="set : ${userStatistics.nearComplete80}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
                                     </tr>
@@ -349,7 +389,12 @@
                                 <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
                                 <tbody>
                                     <tr th:each="set : ${userStatistics.nearComplete70}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
                                     </tr>
@@ -364,7 +409,12 @@
                                 <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
                                 <tbody>
                                     <tr th:each="set : ${userStatistics.nearComplete65}">
-                                        <td><span class="set-code" th:text="${set.setCode}">SET</span></td>
+                                         <td>
+                                             <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}"
+                                                  width="16" height="16"
+                                                  style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                             <span class="set-code" th:text="${set.setCode}">SET</span>
+                                         </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
                                     </tr>

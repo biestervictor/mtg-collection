@@ -160,47 +160,45 @@
                                 th:with="mc=${missingByName[card.name.trim()]},
                                          minP=${suggestion != null and suggestion.cardMinPrices != null ? suggestion.cardMinPrices[card.name.trim()] : null},
                                          thumb=${suggestion != null and suggestion.cardThumbnails != null ? suggestion.cardThumbnails[card.name.trim()] : null}"
-                                th:attr="data-thumb=${thumb}">
-                                <td class="text-muted" th:text="${card.quantity}">1</td>
-                                <td th:text="${card.name.trim()}">Card Name</td>
-                                <td class="text-center">
-                                    <span th:if="${mc == null}" class="badge badge-owned">&#x2713;</span>
-                                    <span th:if="${mc != null}" class="text-muted small" th:text="${mc.ownedQuantity}">0</span>
-                                </td>
-                                <td class="text-center">
-                                    <span th:if="${mc != null}" class="badge badge-missing" th:text="${mc.stillNeeded}">1</span>
-                                </td>
-                                <td class="text-end text-muted small"
-                                    th:text="${mc != null and mc.pricePerCard > 0} ? '€ ' + ${#numbers.formatDecimal(mc.pricePerCard, 1, 2)}
-                                             : (mc == null and minP != null) ? '€ ' + ${#numbers.formatDecimal(minP, 1, 2)} : '—'">—</td>
-                                <td class="text-end small"
-                                    th:text="${mc != null and mc.totalMissingCost > 0} ? '€ ' + ${#numbers.formatDecimal(mc.totalMissingCost, 1, 2)} : '—'">—</td>
-                            </tr>
+                                 th:data-thumb="${thumb}">
+                                 <td class="text-muted" th:text="${card.quantity}">1</td>
+                                 <td th:text="${card.name.trim()}">Card Name</td>
+                                 <td class="text-center">
+                                     <span th:if="${mc == null}" class="badge badge-owned">&#x2713;</span>
+                                     <span th:if="${mc != null}" class="text-muted small" th:text="${mc.ownedQuantity}">0</span>
+                                 </td>
+                                 <td class="text-center">
+                                     <span th:if="${mc != null}" class="badge badge-missing" th:text="${mc.stillNeeded}">1</span>
+                                 </td>
+                                 <td class="text-end text-muted small"
+                                     th:text="${mc != null and mc.pricePerCard > 0 ? '€ ' + #numbers.formatDecimal(mc.pricePerCard, 1, 2) : (mc == null and minP != null ? '€ ' + #numbers.formatDecimal(minP, 1, 2) : '—')}">—</td>
+                                 <td class="text-end small"
+                                     th:text="${mc != null and mc.totalMissingCost > 0 ? '€ ' + #numbers.formatDecimal(mc.totalMissingCost, 1, 2) : '—'}">—</td>
+                             </tr>
 
-                            <!-- Non-basic cards section -->
-                            <tr th:if="${!mainCards.isEmpty()}" class="section-header">
-                                <td colspan="6">Mainboard</td>
-                            </tr>
-                            <tr th:each="card : ${mainCards}" class="data-row"
-                                th:with="mc=${missingByName[card.name.trim()]},
-                                         minP=${suggestion != null and suggestion.cardMinPrices != null ? suggestion.cardMinPrices[card.name.trim()] : null},
-                                         thumb=${suggestion != null and suggestion.cardThumbnails != null ? suggestion.cardThumbnails[card.name.trim()] : null}"
-                                th:attr="data-thumb=${thumb}">
-                                <td class="text-muted" th:text="${card.quantity}">1</td>
-                                <td th:text="${card.name.trim()}">Card Name</td>
-                                <td class="text-center">
-                                    <span th:if="${mc == null}" class="badge badge-owned">&#x2713;</span>
-                                    <span th:if="${mc != null}" class="text-muted small" th:text="${mc.ownedQuantity}">0</span>
-                                </td>
-                                <td class="text-center">
-                                    <span th:if="${mc != null}" class="badge badge-missing" th:text="${mc.stillNeeded}">1</span>
-                                </td>
-                                <td class="text-end text-muted small"
-                                    th:text="${mc != null and mc.pricePerCard > 0} ? '€ ' + ${#numbers.formatDecimal(mc.pricePerCard, 1, 2)}
-                                             : (mc == null and minP != null) ? '€ ' + ${#numbers.formatDecimal(minP, 1, 2)} : '—'">—</td>
-                                <td class="text-end small"
-                                    th:text="${mc != null and mc.totalMissingCost > 0} ? '€ ' + ${#numbers.formatDecimal(mc.totalMissingCost, 1, 2)} : '—'">—</td>
-                            </tr>
+                             <!-- Non-basic cards section -->
+                             <tr th:if="${!mainCards.isEmpty()}" class="section-header">
+                                 <td colspan="6">Mainboard</td>
+                             </tr>
+                             <tr th:each="card : ${mainCards}" class="data-row"
+                                 th:with="mc=${missingByName[card.name.trim()]},
+                                          minP=${suggestion != null and suggestion.cardMinPrices != null ? suggestion.cardMinPrices[card.name.trim()] : null},
+                                          thumb=${suggestion != null and suggestion.cardThumbnails != null ? suggestion.cardThumbnails[card.name.trim()] : null}"
+                                 th:data-thumb="${thumb}">
+                                 <td class="text-muted" th:text="${card.quantity}">1</td>
+                                 <td th:text="${card.name.trim()}">Card Name</td>
+                                 <td class="text-center">
+                                     <span th:if="${mc == null}" class="badge badge-owned">&#x2713;</span>
+                                     <span th:if="${mc != null}" class="text-muted small" th:text="${mc.ownedQuantity}">0</span>
+                                 </td>
+                                 <td class="text-center">
+                                     <span th:if="${mc != null}" class="badge badge-missing" th:text="${mc.stillNeeded}">1</span>
+                                 </td>
+                                 <td class="text-end text-muted small"
+                                     th:text="${mc != null and mc.pricePerCard > 0 ? '€ ' + #numbers.formatDecimal(mc.pricePerCard, 1, 2) : (mc == null and minP != null ? '€ ' + #numbers.formatDecimal(minP, 1, 2) : '—')}">—</td>
+                                 <td class="text-end small"
+                                     th:text="${mc != null and mc.totalMissingCost > 0 ? '€ ' + #numbers.formatDecimal(mc.totalMissingCost, 1, 2) : '—'}">—</td>
+                             </tr>
 
                             <!-- Basic lands section -->
                             <tr th:if="${!basicCards.isEmpty()}" class="section-header">

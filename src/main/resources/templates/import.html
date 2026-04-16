@@ -16,32 +16,10 @@
         .card { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
         .btn-primary { background-color: var(--accent-color); border-color: var(--accent-color); }
         .form-control, .form-select { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
-        .form-control-sm { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
         footer { background-color: var(--primary-color); color: #888; }
-        .stats-card { text-align: center; padding: 1rem; }
-        .stats-value { font-size: 2rem; font-weight: bold; color: var(--accent-color); }
-        .stats-label { color: #888; }
-        .error-item { color: var(--accent-color); }
-        .removed-card { border-left: 3px solid var(--accent-color); padding-left: 10px; }
-
-        /* Card image grid */
-        .card-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
-        .card-tile { width: 76px; text-align: center; cursor: pointer; }
-        .card-thumb { width: 70px; height: 98px; object-fit: cover; border-radius: 5px;
-                      transition: transform 0.12s, box-shadow 0.12s; display: block; }
-        .card-tile:hover .card-thumb { transform: scale(1.08); box-shadow: 0 4px 16px rgba(0,0,0,.6); }
-        .badge-qty  { position: absolute; top: -5px; left: -5px; background-color: #28a745; font-size: 0.7rem; }
-        .badge-foil { position: absolute; top: -5px; right: -5px; background: linear-gradient(135deg,#b06c24,#e8c95a); color:#111; font-size: 0.68rem; }
-
-        /* Set section headers inside the card grid */
-        .set-section { width: 100%; margin: 0.7rem 0 0.25rem; display: flex; align-items: center;
-                       gap: 6px; color: #aaa; font-size: 0.75rem; font-weight: bold;
-                       letter-spacing: 0.5px; text-transform: uppercase; }
-        .set-icon { width: 16px; height: 16px; filter: invert(70%); vertical-align: middle; }
-
-        /* Hover preview popup */
-        #card-preview { display:none; position:fixed; z-index:9999; pointer-events:none; }
-        #card-preview img { width: 230px; border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,.85); }
+        .stat-value { font-size: 1.8rem; font-weight: bold; color: var(--accent-color); }
+        .stat-label { color: #888; font-size: 0.85rem; }
+        #jobStatusPanel { display: none; }
     </style>
 </head>
 <body>
@@ -51,112 +29,34 @@
     <main class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="mb-0"><i class="bi bi-upload"></i> Collection Importer</h1>
-            <div class="d-flex gap-2 align-items-center">
-
-                <!-- User icon / management dropdown -->
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
-                            type="button" data-bs-toggle="dropdown" aria-expanded="false" id="userMenuBtn">
-                        <i class="bi bi-person-circle fs-5"></i>
-                        <span id="activeUserLabel" th:text="${selectedUser}">Victor</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="min-width:220px;">
-                        <li><h6 class="dropdown-header">Active User</h6></li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2" href="#"
-                               onclick="setActiveUser('Victor'); return false;">
-                                <i class="bi bi-person"></i> Victor
-                                <i class="bi bi-check ms-auto text-success" id="check-Victor"
-                                   th:style="${selectedUser == 'Victor'} ? '' : 'display:none'"></i>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2" href="#"
-                               onclick="setActiveUser('Andre'); return false;">
-                                <i class="bi bi-person"></i> Andre
-                                <i class="bi bi-check ms-auto text-success" id="check-Andre"
-                                   th:style="${selectedUser == 'Andre'} ? '' : 'display:none'"></i>
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 text-warning" href="#"
-                               onclick="rebuildDecksAction(); return false;">
-                                <i class="bi bi-arrow-clockwise"></i> Rebuild Decks
-                                <small class="text-muted ms-auto">(fix images)</small>
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 text-danger" href="#"
-                               onclick="showRemoveConfirm(); return false;">
-                                <i class="bi bi-trash3"></i> Remove User Data
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-
-                <a th:href="@{/import/history}" class="btn btn-outline-light">
-                    <i class="bi bi-clock-history"></i> View History
-                </a>
-            </div>
+            <a th:href="@{/import/history}" class="btn btn-outline-light">
+                <i class="bi bi-clock-history"></i> View History
+            </a>
         </div>
 
-        <!-- Remove User Data Confirmation Modal -->
-        <div class="modal fade" id="removeUserModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content" style="background:#16213e;border:1px solid #2a2a4a;color:#f1f1f1;">
-                    <div class="modal-header border-secondary">
-                        <h5 class="modal-title">
-                            <i class="bi bi-exclamation-triangle-fill text-danger"></i> Remove User Data
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>This will permanently delete <strong>all</strong> data for
-                            <strong id="removeUserName" class="text-danger">Victor</strong>:</p>
-                        <ul>
-                            <li>All imported cards</li>
-                            <li>All decks</li>
-                            <li>All import history</li>
-                        </ul>
-                        <p class="text-warning mb-0">
-                            <i class="bi bi-exclamation-circle"></i> This action cannot be undone.
-                        </p>
-                    </div>
-                    <div class="modal-footer border-secondary">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-danger" id="confirmRemoveBtn"
-                                onclick="confirmRemoveUser()">
-                            <i class="bi bi-trash3"></i> Delete All Data
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
+        <!-- Import Form -->
+        <div class="row mb-4">
             <div class="col-md-8">
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0">Import Options</h5></div>
                     <div class="card-body">
-                        <form th:action="@{/import}" method="post" enctype="multipart/form-data">
+                        <form id="importForm" enctype="multipart/form-data">
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="form-label">User</label>
-                                    <select class="form-select" name="user" required>
+                                    <select class="form-select" name="user" id="importUserSelect" required>
                                         <option value="">-- Select User --</option>
-                                        <option value="Andre"  th:selected="${selectedUser == 'Andre'}">Andre</option>
-                                        <option value="Victor" th:selected="${selectedUser == 'Victor'}">Victor</option>
+                                        <option value="Andre">Andre</option>
+                                        <option value="Victor">Victor</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">File Format</label>
                                     <select class="form-select" name="format" required>
                                         <option value="">-- Select format --</option>
-                                        <option value="inventory"        th:selected="${selectedFormat == 'inventory'}">Card Market Inventory (CSV)</option>
-                                        <option value="dragonshield_web" th:selected="${selectedFormat == 'dragonshield_web'}">Dragonshield Web</option>
-                                        <option value="dragonshield_app" th:selected="${selectedFormat == 'dragonshield_app'}">Dragonshield App</option>
+                                        <option value="inventory">Card Market Inventory (CSV)</option>
+                                        <option value="dragonshield_web">Dragonshield Web</option>
+                                        <option value="dragonshield_app">Dragonshield App</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
@@ -164,8 +64,14 @@
                                     <input type="file" class="form-control" name="file" accept=".csv" required>
                                 </div>
                             </div>
-                            <div class="mt-3">
-                                <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Upload</button>
+                            <div class="mt-3 d-flex align-items-center gap-3">
+                                <button type="submit" class="btn btn-primary" id="importSubmitBtn">
+                                    <i class="bi bi-upload"></i> Upload
+                                </button>
+                                <div id="importSpinner" class="d-none d-flex align-items-center gap-2 text-secondary">
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                    Uploading…
+                                </div>
                             </div>
                         </form>
                     </div>
@@ -173,116 +79,21 @@
             </div>
         </div>
 
-        <div th:if="${result != null}" class="mt-4">
-            <!-- Summary stats -->
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card stats-card">
-                        <div class="stats-value" th:text="${result.cardsCount}">0</div>
-                        <div class="stats-label">Cards</div>
+        <!-- Job Status Panel -->
+        <div id="jobStatusPanel" class="row">
+            <div class="col-12">
+                <div class="card" id="jobStatusCard">
+                    <div class="card-header d-flex align-items-center gap-2">
+                        <span id="jobStatusIcon"><span class="spinner-border spinner-border-sm text-warning"></span></span>
+                        <h5 class="mb-0" id="jobStatusTitle">Import läuft…</h5>
+                        <span class="ms-auto text-muted small" id="jobStatusUser"></span>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card stats-card">
-                        <div class="stats-value" th:text="${result.newCardsCount}">0</div>
-                        <div class="stats-label">Unique Cards</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card stats-card">
-                        <div class="stats-value" style="color:#28a745;" th:text="${result.addedCardsCount}">0</div>
-                        <div class="stats-label">New</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card stats-card">
-                        <div class="stats-value" th:text="${result.removedCardsCount}">0</div>
-                        <div class="stats-label">Removed</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Errors -->
-            <div th:if="${result.errors != null and not #lists.isEmpty(result.errors)}" class="card mb-4">
-                <div class="card-header"><h5 class="mb-0">Errors</h5></div>
-                <div class="card-body" style="max-height:300px;overflow-y:auto;">
-                    <ul class="list-unstyled">
-                        <li th:each="error : ${result.errors}" class="error-item mb-2">
-                            <i class="bi bi-exclamation-circle"></i> <span th:text="${error}"></span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- New Cards — image grid grouped by set -->
-            <div class="row" th:if="${result.newCards != null and not #lists.isEmpty(result.newCards)}">
-                <div class="col-12">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">
-                                <i class="bi bi-plus-circle" style="color:#28a745;"></i>
-                                New Cards (<span th:text="${result.newCards.size()}">0</span>)
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="card-grid">
-                                <th:block th:each="cardData, iterStat : ${result.newCards}">
-                                    <!-- Set section header when set code changes -->
-                                    <div th:if="${iterStat.first or result.newCards.get(iterStat.index - 1).card.setCode != cardData.card.setCode}"
-                                         class="set-section">
-                                        <img th:src="${'https://svgs.scryfall.io/sets/' + cardData.card.setCode + '.svg'}"
-                                             class="set-icon" alt="" onerror="this.style.display='none'">
-                                        <span th:text="${cardData.card.setCode}">SET</span>
-                                    </div>
-                                    <!-- Card tile -->
-                                    <div class="card-tile"
-                                         th:data-img="${cardData.card.imageFront}"
-                                         th:data-thumb="${cardData.card.thumbnailFront}">
-                                        <div style="position:relative;">
-                                            <span class="badge badge-qty"  th:if="${cardData.quantity > 0}"     th:text="${cardData.quantity}">1</span>
-                                            <span class="badge badge-foil" th:if="${cardData.foilQuantity > 0}" th:text="'F' + ${cardData.foilQuantity}">F1</span>
-                                            <img th:src="${cardData.card.thumbnailFront}" class="card-thumb"
-                                                 th:alt="${cardData.card.name}"
-                                                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
-                                        </div>
-                                        <small th:text="${cardData.card.name}" style="font-size:0.62rem;color:#aaa;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" th:title="${cardData.card.name}">Name</small>
-                                    </div>
-                                </th:block>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Removed Cards -->
-            <div class="row" th:if="${result.removedCards != null and not #lists.isEmpty(result.removedCards)}">
-                <div class="col-12">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">
-                                <i class="bi bi-dash-circle" style="color:var(--accent-color);"></i>
-                                Removed Cards (<span th:text="${result.removedCards.size()}">0</span>)
-                            </h5>
-                        </div>
-                        <div class="card-body" style="max-height:400px;overflow-y:auto;">
-                            <ul class="list-unstyled mb-0">
-                                <th:block th:each="card, iterStat : ${result.removedCards}">
-                                    <li th:if="${iterStat.first or result.removedCards.get(iterStat.index - 1).setCode != card.setCode}"
-                                        class="mt-2 mb-1 small fw-bold d-flex align-items-center gap-1"
-                                        style="list-style:none;color:#aaa;">
-                                        <img th:src="${'https://svgs.scryfall.io/sets/' + card.setCode + '.svg'}"
-                                             style="width:14px;height:14px;filter:invert(70%);" alt="" onerror="this.style.display='none'">
-                                        <span th:text="${card.setCode}">SET</span>
-                                    </li>
-                                    <li class="removed-card mb-1">
-                                        <strong th:text="${card.name}">Card Name</strong>
-                                        #<span th:text="${card.collectorNumber}">1</span>
-                                        <span th:if="${card.foil}" class="badge bg-warning text-dark">Foil</span>
-                                        <span class="badge bg-secondary" th:text="'x' + ${card.quantity}">x1</span>
-                                    </li>
-                                </th:block>
-                            </ul>
-                        </div>
+                    <div class="card-body" id="jobStatusBody">
+                        <p class="text-muted mb-0">
+                            <i class="bi bi-info-circle"></i>
+                            Der Import läuft im Hintergrund. Du erhältst eine Benachrichtigung im
+                            <i class="bi bi-person-circle"></i> User-Menü wenn er abgeschlossen ist.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -291,80 +102,160 @@
 
     <footer class="text-center py-3 mt-4"><p>MTG Collection Manager</p></footer>
 
-    <!-- Hover card preview -->
-    <div id="card-preview"><img src="" alt="Card Preview"></div>
-
     <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
-    <script th:inline="javascript">
-        // ── Card hover preview ────────────────────────────────────────────────
-        const preview = document.getElementById('card-preview');
-        const previewImg = preview.querySelector('img');
-        document.querySelectorAll('.card-tile[data-img]').forEach(tile => {
-            const img = tile.dataset.img || tile.dataset.thumb;
-            if (!img) return;
-            tile.addEventListener('mouseenter', e => {
-                previewImg.src = img;
-                preview.style.display = 'block';
-                movePreview(e);
-            });
-            tile.addEventListener('mousemove', movePreview);
-            tile.addEventListener('mouseleave', () => { preview.style.display = 'none'; });
-        });
-        function movePreview(e) {
-            const offset = 16;
-            let x = e.clientX + offset, y = e.clientY + offset;
-            if (x + 240 > window.innerWidth)  x = e.clientX - 240 - offset;
-            if (y + 320 > window.innerHeight) y = e.clientY - 320 - offset;
-            preview.style.left = x + 'px';
-            preview.style.top  = y + 'px';
-        }
-
-        // ── User management dropdown ──────────────────────────────────────────
-        let activeUser = /*[[${selectedUser}]]*/ 'Victor';
-
-        function setActiveUser(user) {
-            activeUser = user;
-            document.getElementById('activeUserLabel').textContent = user;
-            document.querySelectorAll('[id^="check-"]').forEach(el => el.style.display = 'none');
-            const chk = document.getElementById('check-' + user);
-            if (chk) chk.style.display = '';
-            // Sync the import form select
-            const formSelect = document.querySelector('select[name="user"]');
-            if (formSelect) formSelect.value = user;
-        }
-
-        function showRemoveConfirm() {
-            document.getElementById('removeUserName').textContent = activeUser;
-            new bootstrap.Modal(document.getElementById('removeUserModal')).show();
-        }
-
-        function confirmRemoveUser() {
-            const modalEl = document.getElementById('removeUserModal');
-            bootstrap.Modal.getInstance(modalEl).hide();
-            const btn = document.getElementById('confirmRemoveBtn');
-            btn.disabled = true;
-            showNavToast('warning', 'Deleting…', 'Removing all data for ' + activeUser);
-            fetch('/api/user/' + encodeURIComponent(activeUser) + '/reset', { method: 'POST' })
-                .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
-                .then(data => showNavToast('success', 'Done', data.message))
-                .catch(err => showNavToast('danger', 'Error', String(err)))
-                .finally(() => { btn.disabled = false; });
-        }
-
-        function rebuildDecksAction() {
-            showNavToast('info', 'Rebuilding…', 'Re-enriching deck images for ' + activeUser);
-            fetch('/api/user/' + encodeURIComponent(activeUser) + '/rebuild-decks', { method: 'POST' })
-                .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
-                .then(data => showNavToast('success', 'Done', data.message))
-                .catch(err => showNavToast('danger', 'Error', String(err)));
-        }
-
-        // Sync checkmark on load
+    <script>
+        // ── Set user select from localStorage on page load ────────────────────
         document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('[id^="check-"]').forEach(el => el.style.display = 'none');
-            const chk = document.getElementById('check-' + activeUser);
-            if (chk) chk.style.display = '';
+            const user = localStorage.getItem('navActiveUser') || 'Victor';
+            const sel  = document.getElementById('importUserSelect');
+            if (sel) sel.value = user;
+
+            // If there's a running or recent job for this page session, restore it
+            restoreJobStatus();
         });
+
+        // ── Intercept form submit ─────────────────────────────────────────────
+        document.getElementById('importForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const form     = e.target;
+            const submitBtn = document.getElementById('importSubmitBtn');
+            const spinner   = document.getElementById('importSpinner');
+
+            submitBtn.disabled = true;
+            spinner.classList.remove('d-none');
+
+            // Immediate feedback so the user knows the upload has been accepted
+            showNavToast('info', 'Import gestartet',
+                'Die Datei wird verarbeitet. Du erhältst eine Benachrichtigung ' +
+                'im <i class="bi bi-person-circle"></i> User-Menü wenn der Import abgeschlossen ist.');
+
+            const formData = new FormData(form);
+
+            try {
+                const resp = await fetch('/api/import/start', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({ error: 'Upload fehlgeschlagen' }));
+                    showNavToast('danger', 'Upload fehlgeschlagen', err.error || 'Unbekannter Fehler');
+                    return;
+                }
+
+                const data = await resp.json();
+                const jobId = data.jobId;
+                const user  = data.user;
+
+                // Store for navbar polling
+                localStorage.setItem('navImportJob', JSON.stringify({ jobId, user }));
+
+                // Show status panel and start local polling
+                showJobRunning(user);
+                startLocalPoll(jobId, user);
+
+                // Reset form
+                form.reset();
+                document.getElementById('importUserSelect').value =
+                    localStorage.getItem('navActiveUser') || 'Victor';
+
+            } catch (err) {
+                showNavToast('danger', 'Upload fehlgeschlagen', String(err));
+            } finally {
+                submitBtn.disabled = false;
+                spinner.classList.add('d-none');
+            }
+        });
+
+        // ── Job status panel helpers ──────────────────────────────────────────
+        let localPollTimer = null;
+
+        function showJobRunning(user) {
+            document.getElementById('jobStatusPanel').style.display = '';
+            document.getElementById('jobStatusIcon').innerHTML =
+                '<span class="spinner-border spinner-border-sm text-warning"></span>';
+            document.getElementById('jobStatusTitle').textContent = 'Import läuft…';
+            document.getElementById('jobStatusUser').textContent  = user;
+            document.getElementById('jobStatusBody').innerHTML    =
+                '<p class="text-muted mb-0">' +
+                '<i class="bi bi-info-circle"></i> ' +
+                'Der Import läuft im Hintergrund. Du erhältst eine Benachrichtigung im ' +
+                '<i class="bi bi-person-circle"></i> User-Menü wenn er abgeschlossen ist.</p>';
+        }
+
+        function showJobDone(user, data) {
+            document.getElementById('jobStatusPanel').style.display = '';
+            document.getElementById('jobStatusIcon').innerHTML =
+                '<i class="bi bi-check-circle-fill text-success fs-5"></i>';
+            document.getElementById('jobStatusTitle').textContent = 'Import abgeschlossen';
+            document.getElementById('jobStatusUser').textContent  = user;
+            document.getElementById('jobStatusBody').innerHTML    =
+                '<div class="row text-center g-3">' +
+                stat(data.cardsCount,    'Karten gesamt') +
+                stat(data.newCardsCount, 'Neue Karten',  '#28a745') +
+                stat(data.addedCount,    'Hinzugefügt',  '#28a745') +
+                stat(data.removedCount,  'Entfernt',     '#e94560') +
+                '</div>' +
+                '<div class="mt-3"><a href="/import/history" class="btn btn-sm btn-outline-light">' +
+                '<i class="bi bi-clock-history"></i> Import-Verlauf anzeigen</a></div>';
+        }
+
+        function showJobError(user, message) {
+            document.getElementById('jobStatusPanel').style.display = '';
+            document.getElementById('jobStatusIcon').innerHTML =
+                '<i class="bi bi-x-circle-fill text-danger fs-5"></i>';
+            document.getElementById('jobStatusTitle').textContent = 'Import fehlgeschlagen';
+            document.getElementById('jobStatusUser').textContent  = user;
+            document.getElementById('jobStatusBody').innerHTML    =
+                '<p class="text-danger mb-0"><i class="bi bi-exclamation-triangle"></i> ' +
+                (message || 'Unbekannter Fehler') + '</p>';
+        }
+
+        function stat(value, label, color) {
+            return '<div class="col-6 col-md-3">' +
+                '<div style="font-size:1.8rem;font-weight:bold;color:' + (color || '#e94560') + '">' + value + '</div>' +
+                '<div style="color:#888;font-size:0.85rem">' + label + '</div>' +
+                '</div>';
+        }
+
+        function startLocalPoll(jobId, user) {
+            if (localPollTimer) clearInterval(localPollTimer);
+            localPollTimer = setInterval(async () => {
+                try {
+                    const resp = await fetch('/api/import/status/' + jobId);
+                    if (!resp.ok) return;
+                    const data = await resp.json();
+                    if (data.state === 'DONE') {
+                        clearInterval(localPollTimer);
+                        showJobDone(user, data);
+                    } else if (data.state === 'ERROR') {
+                        clearInterval(localPollTimer);
+                        showJobError(user, data.errorMessage);
+                    }
+                } catch (_) { /* ignore */ }
+            }, 3000);
+        }
+
+        function restoreJobStatus() {
+            try {
+                const raw = localStorage.getItem('navImportJob');
+                if (!raw) return;
+                const { jobId, user } = JSON.parse(raw);
+                if (!jobId) return;
+                fetch('/api/import/status/' + jobId).then(r => r.ok ? r.json() : null).then(data => {
+                    if (!data) return;
+                    if (data.state === 'RUNNING') {
+                        showJobRunning(user);
+                        startLocalPoll(jobId, user);
+                    } else if (data.state === 'DONE') {
+                        showJobDone(user, data);
+                    } else if (data.state === 'ERROR') {
+                        showJobError(user, data.errorMessage);
+                    }
+                });
+            } catch (_) { /* ignore */ }
+        }
     </script>
 </body>
 </html>

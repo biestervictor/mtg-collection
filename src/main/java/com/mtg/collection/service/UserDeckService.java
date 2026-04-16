@@ -44,6 +44,8 @@ public class UserDeckService {
      */
     public void buildAndSaveDecks(String user, List<UserCard> cards) {
         Map<String, UserDeck> deckMap = new LinkedHashMap<>();
+        // key: deckName -> board -> cardKey -> DeckCard  (for deduplication)
+        Map<String, Map<Board, Map<String, DeckCard>>> boardCardMaps = new LinkedHashMap<>();
 
         for (UserCard card : cards) {
             String folder = card.getFolderName();
@@ -64,18 +66,31 @@ public class UserDeckService {
 
             if (pf.commander) deck.setCommander(true);
 
-            DeckCard dc = new DeckCard(
-                    card.getName(),
-                    card.getSetCode(),
-                    card.getCollectorNumber(),
-                    card.getQuantity(),
-                    card.isFoil()
-            );
+            // Deduplicate: merge rows with same set+number+foil by summing quantity
+            String cardKey = card.getSetCode().toLowerCase() + "_"
+                    + card.getCollectorNumber() + "_"
+                    + card.isFoil();
+            Map<String, DeckCard> cardMap = boardCardMaps
+                    .computeIfAbsent(pf.deckName, k -> new EnumMap<>(Board.class))
+                    .computeIfAbsent(pf.board, k -> new LinkedHashMap<>());
 
-            switch (pf.board) {
-                case MAINBOARD  -> deck.getMainboard().add(dc);
-                case SIDEBOARD  -> deck.getSideboard().add(dc);
-                case EXTRABOARD -> deck.getExtraboard().add(dc);
+            if (cardMap.containsKey(cardKey)) {
+                DeckCard existing = cardMap.get(cardKey);
+                existing.setQuantity(existing.getQuantity() + card.getQuantity());
+            } else {
+                DeckCard dc = new DeckCard(
+                        card.getName(),
+                        card.getSetCode(),
+                        card.getCollectorNumber(),
+                        card.getQuantity(),
+                        card.isFoil()
+                );
+                cardMap.put(cardKey, dc);
+                switch (pf.board) {
+                    case MAINBOARD  -> deck.getMainboard().add(dc);
+                    case SIDEBOARD  -> deck.getSideboard().add(dc);
+                    case EXTRABOARD -> deck.getExtraboard().add(dc);
+                }
             }
         }
 

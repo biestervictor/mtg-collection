@@ -12,12 +12,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.mongodb.core.MongoTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
 
+import org.springframework.data.mongodb.core.query.Query;
+
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,15 +30,16 @@ class StatisticsServiceTest {
     @Mock private ImportHistoryRepository importHistoryRepository;
     @Mock private ScryfallService scryfallService;
     @Mock private ScryfallCardRepository scryfallCardRepository;
+    @Mock private MongoTemplate mongoTemplate;
 
     private StatisticsService statisticsService;
 
     @BeforeEach
     void setUp() {
         statisticsService = new StatisticsService(userCardRepository, importHistoryRepository,
-                scryfallService, scryfallCardRepository);
+                scryfallService, scryfallCardRepository, mongoTemplate);
         // By default, Scryfall lookups return no extra data → effective price = UserCard.price
-        lenient().when(scryfallCardRepository.findBySetCode(anyString())).thenReturn(Collections.emptyList());
+        lenient().when(scryfallCardRepository.findBySetCodeIn(any())).thenReturn(Collections.emptyList());
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -143,10 +147,12 @@ class StatisticsServiceTest {
 
     @Test
     void testGetStatisticsForAllUsers() {
-        when(userCardRepository.findAll()).thenReturn(List.of(
-                new UserCard("Andre",  "Card", "SET", "1", 1, false),
-                new UserCard("Victor", "Card", "SET", "1", 1, false)
-        ));
+        when(mongoTemplate.findDistinct(any(Query.class), eq("user"), eq(UserCard.class), eq(String.class)))
+                .thenReturn(List.of("Andre", "Victor"));
+        when(userCardRepository.findByUser("Andre")).thenReturn(List.of(
+                new UserCard("Andre", "Card", "SET", "1", 1, false)));
+        when(userCardRepository.findByUser("Victor")).thenReturn(List.of(
+                new UserCard("Victor", "Card", "SET", "1", 1, false)));
         when(importHistoryRepository.findByUserOrderByImportedAtDesc("Andre")).thenReturn(Collections.emptyList());
         when(importHistoryRepository.findByUserOrderByImportedAtDesc("Victor")).thenReturn(Collections.emptyList());
         when(scryfallService.getAllSets(false)).thenReturn(Collections.emptyList());

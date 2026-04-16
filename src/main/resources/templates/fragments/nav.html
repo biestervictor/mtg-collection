@@ -11,18 +11,26 @@
                 margin-right: 8px;
                 vertical-align: middle;
             }
-            .env-badge-prod {
-                background: #e74c3c;
-                color: #fff;
-            }
-            .env-badge-dev {
-                background: #27ae60;
-                color: #fff;
-            }
+            .env-badge-prod { background: #e74c3c; color: #fff; }
+            .env-badge-dev  { background: #27ae60; color: #fff; }
             .version-info {
                 font-size: 0.7em;
                 color: #888;
                 white-space: nowrap;
+            }
+            /* Notification badge on the user menu button */
+            #navImportBadge {
+                position: absolute;
+                top: 0; right: 0;
+                min-width: 16px; height: 16px;
+                font-size: 0.65em; line-height: 16px;
+                padding: 0 4px;
+                border-radius: 8px;
+                background: #e94560;
+                color: #fff;
+                text-align: center;
+                pointer-events: none;
+                display: none;
             }
         </style>
     </th:block>
@@ -40,39 +48,108 @@
                     <li class="nav-item">
                         <a class="nav-link" th:classappend="${currentUri == '/' ? 'active' : ''}" th:href="@{/}">Home</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/import}">Import</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/show}">Show</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/compare}">Compare</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/statistics}">Statistics</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/deck-suggest}">Deck Suggest</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/my-decks}">My Decks</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/import}">Import</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/show}">Show</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/compare}">Compare</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/statistics}">Statistics</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/deck-suggest}">Deck Suggest</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/my-decks}">My Decks</a></li>
                 </ul>
-                <ul class="navbar-nav align-items-center gap-2">
-                    <li class="nav-item">
-                        <button type="button" class="btn btn-sm btn-outline-warning"
-                                id="updatePricesBtn" onclick="triggerPriceUpdate()">
-                            <i class="bi bi-arrow-repeat"></i> Update Prices
+                <ul class="navbar-nav align-items-center">
+                    <!-- User menu dropdown -->
+                    <li class="nav-item dropdown" style="position:relative;">
+                        <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
+                                type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                                aria-expanded="false" id="navUserMenuBtn">
+                            <i class="bi bi-person-circle"></i>
+                            <span id="navActiveUserLabel">Victor</span>
                         </button>
-                    </li>
-                    <li class="nav-item">
-                        <form class="d-flex" th:action="@{/search}" method="get">
-                            <input class="form-control form-control-sm me-2"
-                                   style="background-color:#fff;border-color:#ccc;color:#333;"
-                                   type="search" name="q" placeholder="Card search..." aria-label="Search">
-                            <button class="btn btn-sm btn-outline-light" type="submit"><i class="bi bi-search"></i></button>
-                        </form>
+                        <span id="navImportBadge" style="display:none;"></span>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="min-width:260px;">
+                            <li><h6 class="dropdown-header">Active User</h6></li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2" href="#"
+                                   onclick="setNavUser('Victor'); return false;">
+                                    <i class="bi bi-person"></i> Victor
+                                    <i class="bi bi-check ms-auto text-success" id="nav-check-Victor"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2" href="#"
+                                   onclick="setNavUser('Andre'); return false;">
+                                    <i class="bi bi-person"></i> Andre
+                                    <i class="bi bi-check ms-auto text-success" id="nav-check-Andre"></i>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <!-- Import notification entry — shown when import is running or has a result -->
+                            <li id="navImportRunningLi" style="display:none">
+                                <span class="dropdown-item d-flex align-items-center gap-2 text-warning">
+                                    <span class="spinner-border spinner-border-sm flex-shrink-0"></span>
+                                    <span id="navImportRunningLabel">Import läuft…</span>
+                                </span>
+                            </li>
+                            <li id="navImportResultLi" style="display:none">
+                                <a class="dropdown-item d-flex align-items-center gap-2" href="#"
+                                   onclick="showNavImportResult(); return false;">
+                                    <i class="bi bi-check-circle-fill text-success flex-shrink-0"></i>
+                                    <span>
+                                        <span id="navImportResultLabel">Import abgeschlossen</span><br>
+                                        <small id="navImportResultSummary" class="text-muted"></small>
+                                    </span>
+                                </a>
+                            </li>
+                            <li id="navImportErrorLi" style="display:none">
+                                <a class="dropdown-item d-flex align-items-center gap-2 text-danger" href="#"
+                                   onclick="showNavImportResult(); return false;">
+                                    <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                                    <span>
+                                        <span>Import fehlgeschlagen</span><br>
+                                        <small id="navImportErrorMsg" class="text-muted"></small>
+                                    </span>
+                                </a>
+                            </li>
+                            <li id="navImportDivider" style="display:none"><hr class="dropdown-divider"></li>
+                            <!-- Card search — stopPropagation keeps dropdown open while typing -->
+                            <li onclick="event.stopPropagation()">
+                                <form class="px-3 py-1 d-flex gap-1" th:action="@{/search}" method="get">
+                                    <input class="form-control form-control-sm"
+                                           style="background-color:#2a2a4a;border-color:#444;color:#f1f1f1;"
+                                           type="search" name="q" id="navSearchInput"
+                                           placeholder="Card search…" aria-label="Search">
+                                    <button class="btn btn-sm btn-outline-light flex-shrink-0" type="submit">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </form>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2" th:href="@{/import/history}">
+                                    <i class="bi bi-clock-history"></i> Import History
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2" href="#"
+                                   onclick="triggerPriceUpdate(); return false;">
+                                    <i class="bi bi-arrow-repeat"></i> Update Prices
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2 text-warning" href="#"
+                                   onclick="rebuildNavDecks(); return false;">
+                                    <i class="bi bi-arrow-clockwise"></i> Rebuild Decks
+                                    <small class="text-muted ms-auto">(fix images)</small>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2 text-danger" href="#"
+                                   onclick="showRemoveNavConfirm(); return false;">
+                                    <i class="bi bi-trash3"></i> Remove User Data
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                 </ul>
             </div>
@@ -85,14 +162,252 @@
         </div>
     </nav>
 
-    <!-- Reusable price-update JS + toast container; include in pages that use this fragment's button -->
+    <!-- Reusable price-update JS + toast container + user menu + import notification logic -->
     <th:block th:fragment="price-update-utils">
         <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:11000"></div>
+
+        <!-- Remove User Data confirmation modal -->
+        <div class="modal fade" id="navRemoveUserModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="background:#16213e;border:1px solid #2a2a4a;color:#f1f1f1;">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle-fill text-danger"></i> Remove User Data
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>This will permanently delete <strong>all</strong> data for
+                            <strong id="navRemoveUserName" class="text-danger">Victor</strong>:</p>
+                        <ul>
+                            <li>All imported cards</li>
+                            <li>All decks</li>
+                            <li>All import history</li>
+                        </ul>
+                        <p class="text-warning mb-0">
+                            <i class="bi bi-exclamation-circle"></i> This action cannot be undone.
+                        </p>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" id="navConfirmRemoveBtn"
+                                onclick="confirmRemoveNavUser()">
+                            <i class="bi bi-trash3"></i> Delete All Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import result detail modal -->
+        <div class="modal fade" id="navImportResultModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="background:#16213e;border:1px solid #2a2a4a;color:#f1f1f1;">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title" id="navImportResultModalTitle">
+                            <i class="bi bi-check-circle-fill text-success"></i> Import abgeschlossen
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="navImportResultModalBody">
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <a href="/import/history" class="btn btn-outline-light btn-sm">
+                            <i class="bi bi-clock-history"></i> Import-Verlauf
+                        </a>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <script>
+            // ── Nav user menu ─────────────────────────────────────────────────
+            function initNavUserMenu() {
+                const user = localStorage.getItem('navActiveUser') || 'Victor';
+                _applyNavUser(user);
+                _restoreImportNotification();
+                _startNavImportPollingIfNeeded();
+            }
+
+            function setNavUser(user) {
+                localStorage.setItem('navActiveUser', user);
+                _applyNavUser(user);
+                const btn = document.getElementById('navUserMenuBtn');
+                if (btn) { const dd = bootstrap.Dropdown.getInstance(btn); if (dd) dd.hide(); }
+            }
+
+            function _applyNavUser(user) {
+                const label = document.getElementById('navActiveUserLabel');
+                if (label) label.textContent = user;
+                ['Victor', 'Andre'].forEach(u => {
+                    const chk = document.getElementById('nav-check-' + u);
+                    if (chk) chk.style.display = (u === user) ? '' : 'none';
+                });
+                document.querySelectorAll('select[name="user"]').forEach(sel => {
+                    if (sel.querySelector('option[value="' + user + '"]')) sel.value = user;
+                });
+            }
+
+            // ── Import notification ───────────────────────────────────────────
+            let _navPollTimer = null;
+
+            function _startNavImportPollingIfNeeded() {
+                try {
+                    const raw = localStorage.getItem('navImportJob');
+                    if (!raw) return;
+                    const { jobId, user } = JSON.parse(raw);
+                    if (!jobId) return;
+                    _showNavImportRunning(user);
+                    _startNavPoll(jobId, user);
+                } catch (_) {}
+            }
+
+            function _startNavPoll(jobId, user) {
+                if (_navPollTimer) clearInterval(_navPollTimer);
+                _navPollTimer = setInterval(async () => {
+                    try {
+                        const resp = await fetch('/api/import/status/' + jobId);
+                        if (!resp.ok) return;
+                        const data = await resp.json();
+                        if (data.state === 'DONE') {
+                            clearInterval(_navPollTimer);
+                            localStorage.removeItem('navImportJob');
+                            _onNavImportDone(user, data);
+                        } else if (data.state === 'ERROR') {
+                            clearInterval(_navPollTimer);
+                            localStorage.removeItem('navImportJob');
+                            _onNavImportError(user, data.errorMessage);
+                        }
+                    } catch (_) {}
+                }, 3000);
+            }
+
+            function _showNavImportRunning(user) {
+                _setImportDivider(true);
+                _hide('navImportResultLi');
+                _hide('navImportErrorLi');
+                _show('navImportRunningLi');
+                const lbl = document.getElementById('navImportRunningLabel');
+                if (lbl) lbl.textContent = 'Import läuft für ' + user + '…';
+                _hide('navImportBadge');
+            }
+
+            function _onNavImportDone(user, data) {
+                // Persist result for badge across page navigations
+                localStorage.setItem('navImportResult', JSON.stringify({
+                    state: 'DONE', user,
+                    cardsCount: data.cardsCount,
+                    addedCount: data.addedCount,
+                    removedCount: data.removedCount,
+                    newCardsCount: data.newCardsCount,
+                    ts: Date.now()
+                }));
+                _applyImportResult();
+                showNavToast('success', 'Import abgeschlossen',
+                    user + ': ' + data.cardsCount + ' Karten · +' + data.addedCount + ' neu · -' + data.removedCount + ' entfernt');
+            }
+
+            function _onNavImportError(user, message) {
+                localStorage.setItem('navImportResult', JSON.stringify({
+                    state: 'ERROR', user, errorMessage: message, ts: Date.now()
+                }));
+                _applyImportResult();
+                showNavToast('danger', 'Import fehlgeschlagen', message || 'Unbekannter Fehler');
+            }
+
+            function _restoreImportNotification() {
+                try {
+                    const raw = localStorage.getItem('navImportResult');
+                    if (!raw) return;
+                    const parsed = JSON.parse(raw);
+                    // Auto-expire after 15 minutes
+                    if (parsed.ts && (Date.now() - parsed.ts) > 15 * 60 * 1000) {
+                        localStorage.removeItem('navImportResult');
+                        return;
+                    }
+                    _applyImportResult();
+                } catch (_) {}
+            }
+
+            function _applyImportResult() {
+                try {
+                    const r = JSON.parse(localStorage.getItem('navImportResult'));
+                    if (!r) return;
+                    _hide('navImportRunningLi');
+                    _setImportDivider(true);
+                    if (r.state === 'DONE') {
+                        _show('navImportResultLi');
+                        _hide('navImportErrorLi');
+                        const lbl = document.getElementById('navImportResultLabel');
+                        if (lbl) lbl.textContent = 'Import: ' + r.user;
+                        const sum = document.getElementById('navImportResultSummary');
+                        if (sum) sum.textContent = r.cardsCount + ' Karten · +' + r.addedCount + ' · -' + r.removedCount;
+                        _showBadge();
+                    } else if (r.state === 'ERROR') {
+                        _show('navImportErrorLi');
+                        _hide('navImportResultLi');
+                        const msg = document.getElementById('navImportErrorMsg');
+                        if (msg) msg.textContent = (r.errorMessage || '').substring(0, 60);
+                        _showBadge();
+                    }
+                } catch (_) {}
+            }
+
+            function showNavImportResult() {
+                const r = (() => { try { return JSON.parse(localStorage.getItem('navImportResult')); } catch(_){return null;} })();
+                if (!r) return;
+
+                const titleEl = document.getElementById('navImportResultModalTitle');
+                const bodyEl  = document.getElementById('navImportResultModalBody');
+
+                if (r.state === 'DONE') {
+                    titleEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> Import abgeschlossen';
+                    bodyEl.innerHTML =
+                        '<p class="text-muted mb-3">Benutzer: <strong>' + r.user + '</strong></p>' +
+                        '<div class="row text-center g-3">' +
+                        _statBox(r.cardsCount,    'Karten gesamt',   '#e94560') +
+                        _statBox(r.newCardsCount,  'Neue Karten',     '#28a745') +
+                        _statBox(r.addedCount,     'Hinzugefügt',     '#28a745') +
+                        _statBox(r.removedCount,   'Entfernt',        '#aaa') +
+                        '</div>';
+                } else {
+                    titleEl.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i> Import fehlgeschlagen';
+                    bodyEl.innerHTML =
+                        '<p class="text-muted mb-2">Benutzer: <strong>' + r.user + '</strong></p>' +
+                        '<p class="text-danger"><i class="bi bi-exclamation-triangle"></i> ' + (r.errorMessage || 'Unbekannter Fehler') + '</p>';
+                }
+
+                // Clear notification
+                localStorage.removeItem('navImportResult');
+                _hideBadge();
+                _hide('navImportResultLi');
+                _hide('navImportErrorLi');
+                _setImportDivider(false);
+
+                const btn = document.getElementById('navUserMenuBtn');
+                if (btn) { const dd = bootstrap.Dropdown.getInstance(btn); if (dd) dd.hide(); }
+
+                new bootstrap.Modal(document.getElementById('navImportResultModal')).show();
+            }
+
+            function _statBox(value, label, color) {
+                return '<div class="col-6"><div style="font-size:1.8rem;font-weight:bold;color:' + color + '">'
+                    + value + '</div><div style="color:#888;font-size:0.85rem">' + label + '</div></div>';
+            }
+
+            function _showBadge() { _show('navImportBadge'); }
+            function _hideBadge() { _hide('navImportBadge'); }
+            function _setImportDivider(v) {
+                const el = document.getElementById('navImportDivider');
+                if (el) el.style.display = v ? '' : 'none';
+            }
+            function _show(id) { const el = document.getElementById(id); if (el) el.style.display = ''; }
+            function _hide(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+
+            // ── Price update ──────────────────────────────────────────────────
             function triggerPriceUpdate() {
-                const btn = document.getElementById('updatePricesBtn');
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Updating…';
+                showNavToast('info', 'Updating prices…', 'Please wait');
                 fetch('/api/prices/update', { method: 'POST' })
                     .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
                     .then(data => {
@@ -100,12 +415,42 @@
                             .map(([u, n]) => u + ': ' + n + ' card' + (n !== 1 ? 's' : ''));
                         showNavToast('success', 'Prices updated', 'Total: ' + data.totalUpdated + ' — ' + parts.join(', '));
                     })
-                    .catch(err => showNavToast('danger', 'Update failed', String(err)))
-                    .finally(() => {
-                        btn.disabled = false;
-                        btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Update Prices';
-                    });
+                    .catch(err => showNavToast('danger', 'Update failed', String(err)));
             }
+
+            // ── Remove user data ──────────────────────────────────────────────
+            function showRemoveNavConfirm() {
+                const user = localStorage.getItem('navActiveUser') || 'Victor';
+                const nameEl = document.getElementById('navRemoveUserName');
+                if (nameEl) nameEl.textContent = user;
+                new bootstrap.Modal(document.getElementById('navRemoveUserModal')).show();
+            }
+
+            function confirmRemoveNavUser() {
+                const user = localStorage.getItem('navActiveUser') || 'Victor';
+                const modalEl = document.getElementById('navRemoveUserModal');
+                bootstrap.Modal.getInstance(modalEl).hide();
+                const btn = document.getElementById('navConfirmRemoveBtn');
+                if (btn) btn.disabled = true;
+                showNavToast('warning', 'Deleting…', 'Removing all data for ' + user);
+                fetch('/api/user/' + encodeURIComponent(user) + '/reset', { method: 'POST' })
+                    .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+                    .then(data => showNavToast('success', 'Done', data.message))
+                    .catch(err => showNavToast('danger', 'Error', String(err)))
+                    .finally(() => { if (btn) btn.disabled = false; });
+            }
+
+            // ── Rebuild decks ─────────────────────────────────────────────────
+            function rebuildNavDecks() {
+                const user = localStorage.getItem('navActiveUser') || 'Victor';
+                showNavToast('info', 'Rebuilding…', 'Re-enriching deck images for ' + user);
+                fetch('/api/user/' + encodeURIComponent(user) + '/rebuild-decks', { method: 'POST' })
+                    .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+                    .then(data => showNavToast('success', 'Done', data.message))
+                    .catch(err => showNavToast('danger', 'Error', String(err)));
+            }
+
+            // ── Toast helper ──────────────────────────────────────────────────
             function showNavToast(type, title, message) {
                 const container = document.getElementById('toastContainer');
                 const id = 'toast-' + Date.now();
@@ -117,9 +462,11 @@
                         </div>
                     </div>`);
                 const el = document.getElementById(id);
-                new bootstrap.Toast(el, { delay: 6000 }).show();
+                new bootstrap.Toast(el, { delay: 8000 }).show();
                 el.addEventListener('hidden.bs.toast', () => el.remove());
             }
+
+            document.addEventListener('DOMContentLoaded', initNavUserMenu);
         </script>
     </th:block>
 </th:block>

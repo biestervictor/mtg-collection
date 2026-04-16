@@ -6,6 +6,8 @@ import com.mtg.collection.model.ImportHistory;
 import com.mtg.collection.model.ImportHistory.ImportedCardInfo;
 import com.mtg.collection.repository.ImportHistoryRepository;
 import com.mtg.collection.service.CollectionService;
+import com.mtg.collection.service.ImportJobService;
+import com.mtg.collection.service.ImportJobStatus;
 import com.mtg.collection.service.InventoryImportService;
 import com.mtg.collection.service.UserDeckService;
 import org.springframework.http.ResponseEntity;
@@ -20,19 +22,22 @@ import java.util.stream.Collectors;
 @Controller
 public class ImportController {
 
-    private final CollectionService collectionService;
-    private final InventoryImportService inventoryImportService;
+    private final CollectionService       collectionService;
+    private final InventoryImportService  inventoryImportService;
     private final ImportHistoryRepository importHistoryRepository;
-    private final UserDeckService userDeckService;
+    private final UserDeckService         userDeckService;
+    private final ImportJobService        importJobService;
 
     public ImportController(CollectionService collectionService,
-                           InventoryImportService inventoryImportService,
-                           ImportHistoryRepository importHistoryRepository,
-                           UserDeckService userDeckService) {
-        this.collectionService = collectionService;
+                            InventoryImportService inventoryImportService,
+                            ImportHistoryRepository importHistoryRepository,
+                            UserDeckService userDeckService,
+                            ImportJobService importJobService) {
+        this.collectionService      = collectionService;
         this.inventoryImportService = inventoryImportService;
         this.importHistoryRepository = importHistoryRepository;
-        this.userDeckService = userDeckService;
+        this.userDeckService        = userDeckService;
+        this.importJobService       = importJobService;
     }
 
     @GetMapping("/import")
@@ -117,6 +122,47 @@ public class ImportController {
         model.addAttribute("history", history);
         model.addAttribute("selectedUser", user);
         return "import-history";
+    }
+
+    // ── REST: Async import ────────────────────────────────────────────────────
+
+    @PostMapping("/api/import/start")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> startImportAsync(
+            @RequestParam("file")   MultipartFile file,
+            @RequestParam("user")   String user,
+            @RequestParam("format") String format) {
+        try {
+            byte[] bytes = file.getBytes();
+            String jobId = importJobService.submitJob(user, bytes, file.getOriginalFilename(), format);
+            Map<String, Object> resp = new LinkedHashMap<>();
+            resp.put("jobId", jobId);
+            resp.put("user",  user);
+            return ResponseEntity.ok(resp);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Upload failed"));
+        }
+    }
+
+    @GetMapping("/api/import/status/{jobId}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> importJobStatus(@PathVariable String jobId) {
+        return importJobService.getStatus(jobId)
+                .map(s -> {
+                    Map<String, Object> resp = new LinkedHashMap<>();
+                    resp.put("jobId",        s.getJobId());
+                    resp.put("user",         s.getUser());
+                    resp.put("state",        s.getState().name());
+                    resp.put("cardsCount",   s.getCardsCount());
+                    resp.put("addedCount",   s.getAddedCount());
+                    resp.put("removedCount", s.getRemovedCount());
+                    resp.put("newCardsCount",s.getNewCardsCount());
+                    resp.put("errorMessage", s.getErrorMessage());
+                    if (s.getFinishedAt() != null) resp.put("finishedAt", s.getFinishedAt().toString());
+                    return ResponseEntity.ok(resp);
+                })
+                .orElseGet(() -> ResponseEntity.notFound().<Map<String, Object>>build());
     }
 
     // ── REST: User data management ────────────────────────────────────────────

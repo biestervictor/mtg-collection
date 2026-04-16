@@ -7,44 +7,55 @@ import com.mtg.collection.model.UserCard;
 import com.mtg.collection.repository.ImportHistoryRepository;
 import com.mtg.collection.repository.ScryfallCardRepository;
 import com.mtg.collection.repository.UserCardRepository;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class StatisticsService {
 
+    /**
+     * Scryfall set_type values that should not appear in the Set Completion section.
+     * Token sets, memorabilia, and mini-game sets are excluded because "completing"
+     * them is not a meaningful goal for a physical collection.
+     */
+    private static final Set<String> EXCLUDED_COMPLETION_SET_TYPES =
+            Set.of("token", "memorabilia", "minigame");
+
     private final UserCardRepository userCardRepository;
     private final ImportHistoryRepository importHistoryRepository;
     private final ScryfallService scryfallService;
     private final ScryfallCardRepository scryfallCardRepository;
+    private final MongoTemplate mongoTemplate;
 
     public StatisticsService(UserCardRepository userCardRepository,
                           ImportHistoryRepository importHistoryRepository,
                           ScryfallService scryfallService,
-                          ScryfallCardRepository scryfallCardRepository) {
+                          ScryfallCardRepository scryfallCardRepository,
+                          MongoTemplate mongoTemplate) {
         this.userCardRepository = userCardRepository;
         this.importHistoryRepository = importHistoryRepository;
         this.scryfallService = scryfallService;
         this.scryfallCardRepository = scryfallCardRepository;
+        this.mongoTemplate = mongoTemplate;
+    }
+
+    /** Returns a distinct, sorted list of all users who have cards in the collection. */
+    public List<String> getDistinctUsers() {
+        return mongoTemplate.findDistinct(new Query(), "user", UserCard.class, String.class)
+                .stream().sorted().collect(Collectors.toList());
     }
 
     public Map<String, UserStatistics> getStatisticsForAllUsers() {
-        List<String> users = userCardRepository.findAll().stream()
-                .map(UserCard::getUser)
-                .distinct()
-                .sorted()
-                .collect(Collectors.toList());
-
+        List<String> users = getDistinctUsers();
         Map<String, UserStatistics> statsMap = new LinkedHashMap<>();
-        
         for (String user : users) {
             statsMap.put(user, getStatisticsForUser(user));
         }
-        
         return statsMap;
     }
 
@@ -52,7 +63,7 @@ public class StatisticsService {
         List<UserCard> userCards = userCardRepository.findByUser(user);
         List<com.mtg.collection.model.ImportHistory> imports = importHistoryRepository.findByUserOrderByImportedAtDesc(user);
 
-        // Enrich: for cards with price=0, fall back to ScryfallCard price
+        // Batch-load all Scryfall cards for the user's sets in ONE query
         Map<String, ScryfallCard> sfMap = buildScryfallMap(userCards);
 
         UserStatistics stats = new UserStatistics();
@@ -130,6 +141,10 @@ public class StatisticsService {
         
         List<SetValue> topSetsByValue = setValues.entrySet().stream()
                 .filter(e -> e.getValue() > 0)   // hide sets where all prices are 0
+                .filter(e -> {                   // hide token/memorabilia/minigame sets
+                    ScryfallSet set = setMap.get(e.getKey().toLowerCase());
+                    return set == null || set.getSetType() == null || !EXCLUDED_COMPLETION_SET_TYPES.contains(set.getSetType());
+                })
                 .map(e -> {
                     ScryfallSet set = setMap.get(e.getKey().toLowerCase());
                     int totalCardsInSet = set != null ? set.getCardCount() : 0;
@@ -154,6 +169,10 @@ public class StatisticsService {
             String setCode       = entry.getKey();
             int    uniqueOwned   = entry.getValue();
             ScryfallSet s        = setMap.get(setCode.toLowerCase());
+
+            // Skip token sets, memorabilia, minigame sets
+            if (s != null && s.getSetType() != null && EXCLUDED_COMPLETION_SET_TYPES.contains(s.getSetType())) continue;
+
             int totalCardsInSet  = s != null ? s.getCardCount() : 0;
             if (totalCardsInSet > 0) {
                 double percentage = (uniqueOwned * 100.0) / totalCardsInSet;
@@ -189,21 +208,15 @@ public class StatisticsService {
         stats.setNearComplete60(nearComplete60.stream().limit(30).collect(Collectors.toList()));
         stats.setNearComplete50(nearComplete50.stream().limit(30).collect(Collectors.toList()));
         
-        calculateDailyChanges(user, stats);
+        // Pass already-loaded userCards to avoid a second DB query
+        calculateDailyChanges(userCards, stats);
         
         return stats;
     }
 
-    private void calculateDailyChanges(String user, UserStatistics stats) {
-        List<UserCard> userCards = userCardRepository.findByUser(user);
-        
+    private void calculateDailyChanges(List<UserCard> userCards, UserStatistics stats) {
         LocalDate today = LocalDate.now();
         LocalDate yesterday = today.minusDays(1);
-        
-        double todayValue = userCards.stream()
-                .filter(c -> c.getPriceUpdatedAt() != null && c.getPriceUpdatedAt().equals(today))
-                .mapToDouble(c -> c.getPrice() * c.getQuantity())
-                .sum();
         
         double yesterdayValue = userCards.stream()
                 .filter(c -> c.getPriceUpdatedAt() != null && c.getPriceUpdatedAt().equals(yesterday))
@@ -259,8 +272,8 @@ public class StatisticsService {
     // ── Price enrichment helpers ──────────────────────────────────────────────
 
     /**
-     * Builds a map from "setCode_collectorNumber" → ScryfallCard for all set codes
-     * present in the given user cards. Used to fill in prices when UserCard.price == 0.
+     * Batch-loads all ScryfallCards for the given user cards' set codes in a SINGLE
+     * MongoDB query (using $in), replacing the previous N-queries-per-set approach.
      */
     private Map<String, ScryfallCard> buildScryfallMap(List<UserCard> userCards) {
         Set<String> setCodes = userCards.stream()
@@ -268,10 +281,9 @@ public class StatisticsService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         Map<String, ScryfallCard> sfMap = new HashMap<>();
-        for (String sc : setCodes) {
-            for (ScryfallCard sf : scryfallCardRepository.findBySetCode(sc)) {
-                sfMap.put(sf.getSetCode() + "_" + sf.getCollectorNumber(), sf);
-            }
+        // Single batch query instead of one query per set code
+        for (ScryfallCard sf : scryfallCardRepository.findBySetCodeIn(setCodes)) {
+            sfMap.put(sf.getSetCode() + "_" + sf.getCollectorNumber(), sf);
         }
         return sfMap;
     }

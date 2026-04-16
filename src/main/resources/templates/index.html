@@ -51,28 +51,6 @@
     <div th:replace="~{fragments/nav :: main-nav}"></div>
 
     <main class="container py-4">
-        <div class="card mb-4">
-            <div class="card-body">
-                <form th:action="@{/search}" method="get">
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">User</label>
-                            <select class="form-select" name="user">
-                                <option value="Victor" selected>Victor</option>
-                                <option value="Andre">Andre</option>
-                            </select>
-                        </div>
-                        <div class="col-md-7">
-                            <label class="form-label">Search</label>
-                            <input type="text" class="form-control" name="q" placeholder="Card name or number (#)">
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Search</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
         
         <div class="text-center py-5">
             <h1 class="display-4 mb-4">

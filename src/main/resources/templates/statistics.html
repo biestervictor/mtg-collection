@@ -596,45 +596,6 @@
         // Apply initial visibility (hide rows >10) after page load
         document.addEventListener('DOMContentLoaded', applyExpensiveVisibility);
 
-        // ── Price Update ──────────────────────────────────────────────────────
-        function triggerPriceUpdate() {
-            const btn = document.getElementById('updatePricesBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Updating…';
-
-            fetch('/api/prices/update', { method: 'POST' })
-                .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
-                .then(data => {
-                    showPriceToast('success', 'Prices updated', buildPerUserText(data));
-                    setTimeout(() => location.reload(), 2000);
-                })
-                .catch(err => showPriceToast('danger', 'Update failed', String(err)))
-                .finally(() => {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Update Prices';
-                });
-        }
-
-        function buildPerUserText(data) {
-            const parts = Object.entries(data.perUser || {})
-                .map(([u, n]) => u + ': ' + n + ' card' + (n !== 1 ? 's' : ''));
-            return 'Total: ' + data.totalUpdated + ' — ' + parts.join(', ');
-        }
-
-        function showPriceToast(type, title, message) {
-            const container = document.getElementById('toastContainer');
-            const id = 'toast-' + Date.now();
-            container.insertAdjacentHTML('beforeend', `
-                <div id="${id}" class="toast align-items-center text-bg-${type} border-0" role="alert" aria-live="assertive">
-                    <div class="d-flex">
-                        <div class="toast-body"><strong>${title}</strong><br>${message}</div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>`);
-            const el = document.getElementById(id);
-            new bootstrap.Toast(el, { delay: 6000 }).show();
-            el.addEventListener('hidden.bs.toast', () => el.remove());
-        }
     </script>
 
     <!-- Hover card preview -->

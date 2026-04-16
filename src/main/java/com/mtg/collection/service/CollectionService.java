@@ -188,20 +188,30 @@ public class CollectionService {
     private List<UserCard> parseCsvFile(MultipartFile file, String format) throws Exception {
         List<UserCard> cards = new ArrayList<>();
 
-        try (Reader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+        BufferedReader bufferedReader = new BufferedReader(
+                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
 
-            CSVFormat csvFormat = CSVFormat.DEFAULT;
-            if ("dragonshield_web".equals(format)) {
-                csvFormat = CSVFormat.DEFAULT.builder().setSkipHeaderRecord(true).build();
+        CSVFormat csvFormat = CSVFormat.DEFAULT;
+        if ("dragonshield_web".equals(format)) {
+            // DragonShield web exports may start with an Excel "sep=," artifact line
+            // before the real header.  Peek at the first line and skip it when present.
+            bufferedReader.mark(512);
+            String firstLine = bufferedReader.readLine();
+            if (firstLine == null || !firstLine.trim().startsWith("sep=")) {
+                bufferedReader.reset(); // not a sep-directive — put it back
             }
+            // The next line is now the real CSV header; use auto-header detection.
+            csvFormat = CSVFormat.DEFAULT.builder()
+                    .setHeader()
+                    .setSkipHeaderRecord(true)
+                    .build();
+        }
 
-            try (CSVParser csvParser = new CSVParser(reader, csvFormat)) {
-                for (CSVRecord record : csvParser) {
-                    UserCard card = mapRecordToCard(record, format);
-                    if (card != null) {
-                        cards.add(card);
-                    }
+        try (CSVParser csvParser = new CSVParser(bufferedReader, csvFormat)) {
+            for (CSVRecord record : csvParser) {
+                UserCard card = mapRecordToCard(record, format);
+                if (card != null) {
+                    cards.add(card);
                 }
             }
         }

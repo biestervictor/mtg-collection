@@ -125,6 +125,11 @@
             submitBtn.disabled = true;
             spinner.classList.remove('d-none');
 
+            // Immediate feedback so the user knows the upload has been accepted
+            showNavToast('info', 'Import gestartet',
+                'Die Datei wird verarbeitet. Du erhältst eine Benachrichtigung ' +
+                'im <i class="bi bi-person-circle"></i> User-Menü wenn der Import abgeschlossen ist.');
+
             const formData = new FormData(form);
 
             try {

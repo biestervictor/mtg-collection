@@ -64,7 +64,7 @@
                             <i class="bi bi-person-circle"></i>
                             <span id="navActiveUserLabel">Victor</span>
                         </button>
-                        <span id="navImportBadge">1</span>
+                        <span id="navImportBadge" style="display:none;"></span>
                         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="min-width:260px;">
                             <li><h6 class="dropdown-header">Active User</h6></li>
                             <li>
@@ -121,6 +121,12 @@
                                         <i class="bi bi-search"></i>
                                     </button>
                                 </form>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2" th:href="@{/import/history}">
+                                    <i class="bi bi-clock-history"></i> Import History
+                                </a>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
@@ -314,7 +320,12 @@
                 try {
                     const raw = localStorage.getItem('navImportResult');
                     if (!raw) return;
-                    JSON.parse(raw); // validate JSON
+                    const parsed = JSON.parse(raw);
+                    // Auto-expire after 15 minutes
+                    if (parsed.ts && (Date.now() - parsed.ts) > 15 * 60 * 1000) {
+                        localStorage.removeItem('navImportResult');
+                        return;
+                    }
                     _applyImportResult();
                 } catch (_) {}
             }

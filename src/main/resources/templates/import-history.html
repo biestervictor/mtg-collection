@@ -18,7 +18,6 @@
         .btn-primary { background-color: var(--accent-color); border-color: var(--accent-color); }
         .form-control, .form-select { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
         footer { background-color: var(--primary-color); color: #888; }
-        .added-card { border-left: 3px solid #28a745; padding-left: 10px; }
         .removed-card { border-left: 3px solid var(--accent-color); padding-left: 10px; }
         .badge-added { background-color: #28a745; }
         .badge-removed { background-color: var(--accent-color); }
@@ -27,39 +26,27 @@
         .history-expanded { display: none; }
         .history-expanded.show { display: table-row; }
         .empty-state { text-align: center; padding: 3rem; color: #888; }
+
+        /* ── Card grid (added cards per set) ─────────────────────────────── */
+        .set-section { margin-bottom: 1rem; }
+        .set-section-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 0.85rem; font-weight: bold; color: #aaa; }
+        .set-icon { width: 16px; height: 16px; filter: invert(0.6); vertical-align: middle; }
+        .card-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+        .card-tile { width: 70px; cursor: pointer; transition: transform 0.2s; position: relative; }
+        .card-tile:hover { transform: scale(1.08); z-index: 10; }
+        .card-thumb { width: 70px; height: 98px; object-fit: cover; border-radius: 4px; display: block; }
+        .card-tile-badge { position: absolute; top: 2px; font-size: 0.6em; padding: 1px 4px; border-radius: 3px; }
+        .card-tile-foil { left: 2px; background: gold; color: #222; }
+        .card-tile-qty { right: 2px; background: rgba(0,0,0,0.7); color: #fff; }
+        .card-tile-name { font-size: 0.6rem; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+
+        /* ── Hover card preview ───────────────────────────────────────────── */
+        #card-preview { display: none; position: fixed; z-index: 9999; width: 250px; pointer-events: none; }
+        #card-preview img { width: 100%; border-radius: 8px; box-shadow: 0 4px 24px rgba(0,0,0,0.8); }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" th:href="@{/}"><i class="bi bi-collection"></i> MTG Collection Manager</a>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" th:href="@{/}">Home</a></li>
-                    <li class="nav-item"><a class="nav-link active" th:href="@{/import}">Import</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/show}">Show</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/compare}">Compare</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/statistics}">Statistics</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/deck-suggest}">Deck Suggest</a></li>
-                </ul>
-                <ul class="navbar-nav align-items-center gap-2">
-                    <li class="nav-item">
-                        <button type="button" class="btn btn-sm btn-outline-warning"
-                                id="updatePricesBtn" onclick="triggerPriceUpdate()">
-                            <i class="bi bi-arrow-repeat"></i> Update Prices
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <form class="d-flex" th:action="@{/search}" method="get">
-                            <input class="form-control form-control-sm me-2" style="background-color: #ffffff; border-color: #ccc; color: #333;" type="search" name="q" placeholder="Card search..." aria-label="Search">
-                            <button class="btn btn-sm btn-outline-light" type="submit"><i class="bi bi-search"></i></button>
-                        </form>
-                    </li>
-                </ul>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <nav class="navbar navbar-expand-lg navbar-dark" th:replace="~{fragments/nav :: main-nav}"></nav>
 
     <main class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -134,37 +121,66 @@
                         </tr>
                         <tr th:id="${'details-' + entry.id}" class="history-expanded">
                             <td colspan="8" class="p-4">
-                                <div class="row">
-                                    <div class="col-md-6" th:if="${entry.addedCards != null and not #lists.isEmpty(entry.addedCards)}">
-                                        <h5><i class="bi bi-plus-circle text-success"></i> Added Cards</h5>
-                                        <ul class="list-unstyled">
-                                            <li th:each="card : ${entry.addedCards}" class="added-card mb-2">
-                                                <strong th:text="${card.name}">Card Name</strong>
-                                                <span th:text="${card.setCode}">SET</span> #<span th:text="${card.collectorNumber}">1</span>
-                                                <span th:if="${card.foil}" class="badge bg-warning text-dark">Foil</span>
-                                                <span class="badge bg-secondary" th:text="'x' + ${card.quantity}">x1</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-6" th:if="${entry.removedCards != null and not #lists.isEmpty(entry.removedCards)}">
-                                        <h5><i class="bi bi-dash-circle" style="color: var(--accent-color);"></i> Removed Cards</h5>
-                                        <ul class="list-unstyled">
-                                            <li th:each="card : ${entry.removedCards}" class="removed-card mb-2">
-                                                <strong th:text="${card.name}">Card Name</strong>
-                                                <span th:text="${card.setCode}">SET</span> #<span th:text="${card.collectorNumber}">1</span>
-                                                <span th:if="${card.foil}" class="badge bg-warning text-dark">Foil</span>
-                                                <span class="badge bg-secondary" th:text="'x' + ${card.quantity}">x1</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-6" th:if="${entry.addedCards == null or #lists.isEmpty(entry.addedCards)}">
-                                        <h5><i class="bi bi-plus-circle text-success"></i> Added Cards</h5>
-                                        <p class="text-muted">No cards added</p>
-                                    </div>
-                                    <div class="col-md-6" th:if="${entry.removedCards == null or #lists.isEmpty(entry.removedCards)}">
-                                        <h5><i class="bi bi-dash-circle" style="color: var(--accent-color);"></i> Removed Cards</h5>
-                                        <p class="text-muted">No cards removed</p>
-                                    </div>
+                                <!-- ── Added cards grid ─────────────────────────────────────── -->
+                                <div th:if="${entry.addedCards != null and not #lists.isEmpty(entry.addedCards)}" class="mb-4">
+                                    <h5 class="mb-3"><i class="bi bi-plus-circle text-success"></i>
+                                        Added Cards
+                                        <span class="badge bg-success ms-1" th:text="${entry.addedCards.size()}"></span>
+                                    </h5>
+                                    <th:block th:each="setEntry : ${entry.addedCardsBySet}">
+                                        <div class="set-section">
+                                            <div class="set-section-header">
+                                                <img th:src="'https://svgs.scryfall.io/sets/' + ${setEntry.key.toLowerCase()} + '.svg'"
+                                                     class="set-icon"
+                                                     onerror="this.style.display='none'"
+                                                     th:alt="${setEntry.key}">
+                                                <span th:text="${setEntry.key.toUpperCase()}">SET</span>
+                                                <span class="text-muted" th:text="'(' + ${setEntry.value.size()} + ')'"></span>
+                                            </div>
+                                            <div class="card-grid">
+                                                <div th:each="card : ${setEntry.value}"
+                                                     class="card-tile"
+                                                     th:data-img-large="'https://api.scryfall.com/cards/' + ${card.setCode.toLowerCase()} + '/' + ${card.collectorNumber} + '?format=image&version=normal'"
+                                                     th:title="${card.name}"
+                                                     onmouseenter="showCardPreview(this)"
+                                                     onmouseleave="hideCardPreview()">
+                                                    <span th:if="${card.foil}" class="card-tile-badge card-tile-foil">F</span>
+                                                    <span class="card-tile-badge card-tile-qty" th:text="'×' + ${card.quantity}">×1</span>
+                                                    <img class="card-thumb"
+                                                         th:src="'https://api.scryfall.com/cards/' + ${card.setCode.toLowerCase()} + '/' + ${card.collectorNumber} + '?format=image&version=small'"
+                                                         th:alt="${card.name}"
+                                                         loading="lazy"
+                                                         onerror="this.style.opacity='0.3'">
+                                                    <div class="card-tile-name" th:text="${card.name}"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </th:block>
+                                </div>
+                                <div th:if="${entry.addedCards == null or #lists.isEmpty(entry.addedCards)}" class="mb-3">
+                                    <h5><i class="bi bi-plus-circle text-success"></i> Added Cards</h5>
+                                    <p class="text-muted">No cards added</p>
+                                </div>
+
+                                <!-- ── Removed cards list ──────────────────────────────────── -->
+                                <div th:if="${entry.removedCards != null and not #lists.isEmpty(entry.removedCards)}">
+                                    <h5 class="mb-2"><i class="bi bi-dash-circle" style="color: var(--accent-color);"></i>
+                                        Removed Cards
+                                        <span class="badge ms-1" style="background:var(--accent-color)" th:text="${entry.removedCards.size()}"></span>
+                                    </h5>
+                                    <ul class="list-unstyled">
+                                        <li th:each="card : ${entry.removedCards}" class="removed-card mb-1">
+                                            <strong th:text="${card.name}">Card Name</strong>
+                                            <span class="text-muted ms-1" th:text="${card.setCode.toUpperCase()}">SET</span>
+                                            <span class="text-muted">#<span th:text="${card.collectorNumber}">1</span></span>
+                                            <span th:if="${card.foil}" class="badge bg-warning text-dark ms-1">Foil</span>
+                                            <span class="badge bg-secondary ms-1" th:text="'×' + ${card.quantity}">×1</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div th:if="${entry.removedCards == null or #lists.isEmpty(entry.removedCards)}">
+                                    <h5><i class="bi bi-dash-circle" style="color: var(--accent-color);"></i> Removed Cards</h5>
+                                    <p class="text-muted">No cards removed</p>
                                 </div>
                             </td>
                         </tr>
@@ -173,6 +189,9 @@
             </table>
         </div>
     </main>
+
+    <!-- Hover card preview -->
+    <div id="card-preview"><img src="" alt="Card preview"></div>
 
     <footer class="text-center py-3 mt-4"><p>MTG Collection Manager</p></footer>
     <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
@@ -184,6 +203,31 @@
             } else {
                 row.classList.add('show');
             }
+        }
+
+        // ── Hover card preview ────────────────────────────────────────────────
+        function showCardPreview(el) {
+            const preview = document.getElementById('card-preview');
+            const img     = preview.querySelector('img');
+            img.src = el.dataset.imgLarge || '';
+            preview.style.display = 'block';
+            document.addEventListener('mousemove', _updatePreviewPos);
+        }
+
+        function hideCardPreview() {
+            document.getElementById('card-preview').style.display = 'none';
+            document.removeEventListener('mousemove', _updatePreviewPos);
+        }
+
+        function _updatePreviewPos(e) {
+            const preview = document.getElementById('card-preview');
+            let x = e.clientX + 24;
+            let y = e.clientY - 120;
+            if (x + 250 > window.innerWidth)  x = e.clientX - 274;
+            if (y < 0)                         y = 0;
+            if (y + 350 > window.innerHeight)  y = window.innerHeight - 350;
+            preview.style.left = x + 'px';
+            preview.style.top  = y + 'px';
         }
     </script>
     <div th:replace="~{fragments/nav :: price-update-utils}"></div>

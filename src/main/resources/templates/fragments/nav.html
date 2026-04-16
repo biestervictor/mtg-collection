@@ -19,10 +19,9 @@
                 white-space: nowrap;
             }
             /* Notification badge on the user menu button */
-            .nav-user-wrapper { position: relative; display: inline-block; }
             #navImportBadge {
                 position: absolute;
-                top: -4px; right: -4px;
+                top: 0; right: 0;
                 min-width: 16px; height: 16px;
                 font-size: 0.65em; line-height: 16px;
                 padding: 0 4px;
@@ -58,16 +57,14 @@
                 </ul>
                 <ul class="navbar-nav align-items-center">
                     <!-- User menu dropdown -->
-                    <li class="nav-item dropdown">
-                        <div class="nav-user-wrapper">
-                            <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
-                                    type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"
-                                    aria-expanded="false" id="navUserMenuBtn">
-                                <i class="bi bi-person-circle"></i>
-                                <span id="navActiveUserLabel">Victor</span>
-                            </button>
-                            <span id="navImportBadge">1</span>
-                        </div>
+                    <li class="nav-item dropdown" style="position:relative;">
+                        <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
+                                type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                                aria-expanded="false" id="navUserMenuBtn">
+                            <i class="bi bi-person-circle"></i>
+                            <span id="navActiveUserLabel">Victor</span>
+                        </button>
+                        <span id="navImportBadge">1</span>
                         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="min-width:260px;">
                             <li><h6 class="dropdown-header">Active User</h6></li>
                             <li>

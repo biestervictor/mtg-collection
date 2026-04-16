@@ -141,6 +141,10 @@ public class StatisticsService {
         
         List<SetValue> topSetsByValue = setValues.entrySet().stream()
                 .filter(e -> e.getValue() > 0)   // hide sets where all prices are 0
+                .filter(e -> {                   // hide token/memorabilia/minigame sets
+                    ScryfallSet set = setMap.get(e.getKey().toLowerCase());
+                    return set == null || set.getSetType() == null || !EXCLUDED_COMPLETION_SET_TYPES.contains(set.getSetType());
+                })
                 .map(e -> {
                     ScryfallSet set = setMap.get(e.getKey().toLowerCase());
                     int totalCardsInSet = set != null ? set.getCardCount() : 0;

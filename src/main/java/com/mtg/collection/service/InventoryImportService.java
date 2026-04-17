@@ -196,7 +196,8 @@ public class InventoryImportService {
 
                 UserCard card = parseInventoryLine(line, lineNum);
                 if (card != null) {
-                    String key = card.getSetCode() + "_" + card.getCollectorNumber() + "_" + card.isFoil();
+                    String folder = card.getFolderName() != null ? card.getFolderName() : "";
+                    String key = folder + "_" + card.getSetCode() + "_" + card.getCollectorNumber() + "_" + card.isFoil();
                     if (cardMap.containsKey(key)) {
                         UserCard existing = cardMap.get(key);
                         existing.setQuantity(existing.getQuantity() + card.getQuantity());

@@ -301,6 +301,8 @@
                     addedCount: data.addedCount,
                     removedCount: data.removedCount,
                     newCardsCount: data.newCardsCount,
+                    duplicatesRemoved: data.duplicatesRemoved || [],
+                    unknownSetCodes:   data.unknownSetCodes   || [],
                     ts: Date.now()
                 }));
                 _applyImportResult();
@@ -363,7 +365,7 @@
 
                 if (r.state === 'DONE') {
                     titleEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> Import abgeschlossen';
-                    bodyEl.innerHTML =
+                    let body =
                         '<p class="text-muted mb-3">Benutzer: <strong>' + r.user + '</strong></p>' +
                         '<div class="row text-center g-3">' +
                         _statBox(r.cardsCount,    'Karten gesamt',   '#e94560') +
@@ -371,6 +373,33 @@
                         _statBox(r.addedCount,     'Hinzugefügt',     '#28a745') +
                         _statBox(r.removedCount,   'Entfernt',        '#aaa') +
                         '</div>';
+
+                    // Duplicates warning
+                    if (r.duplicatesRemoved && r.duplicatesRemoved.length > 0) {
+                        body += '<div class="alert alert-warning mt-3 mb-0 p-2">' +
+                            '<strong>&#9888; ' + r.duplicatesRemoved.length + ' exakte Duplikat-Zeile(n) entfernt</strong>' +
+                            '<ul class="mb-0 mt-1 small">';
+                        r.duplicatesRemoved.forEach(d => {
+                            body += '<li>' + _escHtml(d.cardName) + ' (' + _escHtml(d.setCode.toUpperCase()) +
+                                (d.foil ? ', Foil' : '') + ')' +
+                                (d.folder ? ' — ' + _escHtml(d.folder) : '') +
+                                ' &times;' + d.occurrences + ' entfernt</li>';
+                        });
+                        body += '</ul></div>';
+                    }
+
+                    // Unknown set codes warning
+                    if (r.unknownSetCodes && r.unknownSetCodes.length > 0) {
+                        body += '<div class="alert alert-warning mt-2 mb-0 p-2">' +
+                            '<strong>&#9888; ' + r.unknownSetCodes.length + ' unbekannte Set-Code(s)</strong>' +
+                            '<ul class="mb-0 mt-1 small">';
+                        r.unknownSetCodes.forEach(s => {
+                            body += '<li>' + _escHtml(s.toUpperCase()) + ' — kein Scryfall-Eintrag gefunden</li>';
+                        });
+                        body += '</ul></div>';
+                    }
+
+                    bodyEl.innerHTML = body;
                 } else {
                     titleEl.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i> Import fehlgeschlagen';
                     bodyEl.innerHTML =
@@ -389,6 +418,10 @@
                 if (btn) { const dd = bootstrap.Dropdown.getInstance(btn); if (dd) dd.hide(); }
 
                 new bootstrap.Modal(document.getElementById('navImportResultModal')).show();
+            }
+
+            function _escHtml(s) {
+                return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
             }
 
             function _statBox(value, label, color) {

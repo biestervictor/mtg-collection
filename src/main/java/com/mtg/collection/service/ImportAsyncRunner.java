@@ -44,7 +44,9 @@ public class ImportAsyncRunner {
                     result.getCardsCount(),
                     result.getAddedCardsCount(),
                     result.getRemovedCardsCount(),
-                    result.getNewCardsCount()
+                    result.getNewCardsCount(),
+                    result.getDuplicatesRemoved(),
+                    result.getUnknownSetCodes()
             );
             log.info("Async import job {} done: {} cards, +{} added, -{} removed",
                     jobId, result.getCardsCount(),

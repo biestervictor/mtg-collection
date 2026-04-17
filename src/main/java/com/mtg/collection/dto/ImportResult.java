@@ -1,19 +1,50 @@
 package com.mtg.collection.dto;
 
 import com.mtg.collection.model.ImportHistory.ImportedCardInfo;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ImportResult {
-    
+
+    // ── Inner class: info about one set of removed exact-duplicate lines ────
+    public static class DuplicateInfo {
+        private final String folder;
+        private final String cardName;
+        private final String setCode;
+        private final String collectorNumber;
+        private final boolean foil;
+        private final int occurrences; // number of extra copies removed (total appearances - 1)
+
+        public DuplicateInfo(String folder, String cardName, String setCode,
+                             String collectorNumber, boolean foil, int occurrences) {
+            this.folder          = folder;
+            this.cardName        = cardName;
+            this.setCode         = setCode;
+            this.collectorNumber = collectorNumber;
+            this.foil            = foil;
+            this.occurrences     = occurrences;
+        }
+
+        public String  getFolder()          { return folder; }
+        public String  getCardName()        { return cardName; }
+        public String  getSetCode()         { return setCode; }
+        public String  getCollectorNumber() { return collectorNumber; }
+        public boolean isFoil()             { return foil; }
+        public int     getOccurrences()     { return occurrences; }
+    }
+
+    // ── Fields ───────────────────────────────────────────────────────────────
     private int cardsCount;
     private int newCardsCount;
     private int addedCardsCount;
     private int removedCardsCount;
-    private List<CardWithUserData> newCards;
-    private List<ImportedCardInfo> addedCards;
-    private List<ImportedCardInfo> removedCards;
-    private List<String> errors;
-    
+    private List<CardWithUserData>   newCards;
+    private List<ImportedCardInfo>   addedCards;
+    private List<ImportedCardInfo>   removedCards;
+    private List<String>             errors;
+    private List<DuplicateInfo>      duplicatesRemoved = new ArrayList<>();
+    private List<String>             unknownSetCodes   = new ArrayList<>();
+
     public ImportResult() {}
 
     public int getCardsCount() { return cardsCount; }
@@ -32,4 +63,8 @@ public class ImportResult {
     public void setRemovedCards(List<ImportedCardInfo> removedCards) { this.removedCards = removedCards; }
     public List<String> getErrors() { return errors; }
     public void setErrors(List<String> errors) { this.errors = errors; }
+    public List<DuplicateInfo> getDuplicatesRemoved() { return duplicatesRemoved; }
+    public void setDuplicatesRemoved(List<DuplicateInfo> duplicatesRemoved) { this.duplicatesRemoved = duplicatesRemoved; }
+    public List<String> getUnknownSetCodes() { return unknownSetCodes; }
+    public void setUnknownSetCodes(List<String> unknownSetCodes) { this.unknownSetCodes = unknownSetCodes; }
 }

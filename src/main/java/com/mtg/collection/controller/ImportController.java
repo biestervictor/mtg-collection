@@ -159,6 +159,8 @@ public class ImportController {
                     resp.put("removedCount", s.getRemovedCount());
                     resp.put("newCardsCount",s.getNewCardsCount());
                     resp.put("errorMessage", s.getErrorMessage());
+                    resp.put("duplicatesRemoved", s.getDuplicatesRemoved());
+                    resp.put("unknownSetCodes",   s.getUnknownSetCodes());
                     if (s.getFinishedAt() != null) resp.put("finishedAt", s.getFinishedAt().toString());
                     return ResponseEntity.ok(resp);
                 })

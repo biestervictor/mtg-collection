@@ -178,6 +178,16 @@ public class InventoryImportService {
             history.setUniqueCardsCount(importedCards.size());
             history.setAddedCards(addedCards);
             history.setRemovedCards(removedCards);
+
+            // Persist duplicate-row warnings
+            List<ImportHistory.DuplicateRowInfo> histDuplicates = parseResult.duplicates.stream()
+                    .map(d -> new ImportHistory.DuplicateRowInfo(
+                            d.getFolder(), d.getCardName(), d.getSetCode(),
+                            d.getCollectorNumber(), d.isFoil(), d.getOccurrences()))
+                    .collect(Collectors.toList());
+            history.setDuplicatesRemoved(histDuplicates);
+            history.setUnknownSetCodes(new ArrayList<>(unknownSetCodes));
+
             importHistoryRepository.save(history);
 
         } catch (Exception e) {

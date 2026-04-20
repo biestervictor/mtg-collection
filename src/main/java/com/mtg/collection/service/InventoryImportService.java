@@ -2,6 +2,7 @@ package com.mtg.collection.service;
 
 import com.mtg.collection.dto.CardWithUserData;
 import com.mtg.collection.dto.ImportResult;
+import com.mtg.collection.dto.ImportResult.DuplicateInfo;
 import com.mtg.collection.model.ImportHistory;
 import com.mtg.collection.model.ImportHistory.ImportedCardInfo;
 import com.mtg.collection.model.ScryfallCard;
@@ -45,6 +46,17 @@ public class InventoryImportService {
         this.userDeckService = userDeckService;
     }
 
+    // ── Inner class returned by parseInventoryFile ────────────────────────────
+    static class ParseResult {
+        final List<UserCard>     cards;
+        final List<DuplicateInfo> duplicates;
+
+        ParseResult(List<UserCard> cards, List<DuplicateInfo> duplicates) {
+            this.cards      = cards;
+            this.duplicates = duplicates;
+        }
+    }
+
     public ImportResult importInventory(String user, MultipartFile file) {
         ImportResult result = new ImportResult();
         List<String> errors = new ArrayList<>();
@@ -52,12 +64,16 @@ public class InventoryImportService {
         Set<String> importedSetCodes = new HashSet<>();
 
         try {
-            List<UserCard> importedCards = parseInventoryFile(file);
+            ParseResult parseResult = parseInventoryFile(file);
+            List<UserCard> importedCards = parseResult.cards;
+            result.setDuplicatesRemoved(parseResult.duplicates);
+
             int cardsCount = importedCards.stream().mapToInt(UserCard::getQuantity).sum();
             result.setCardsCount(cardsCount);
 
-            log.info("Parsed {} cards from inventory file", importedCards.size());
-            
+            log.info("Parsed {} cards from inventory file ({} exact duplicates removed)",
+                    importedCards.size(), parseResult.duplicates.size());
+
             long foilCount = importedCards.stream().filter(UserCard::isFoil).count();
             long normalCount = importedCards.stream().filter(c -> !c.isFoil()).count();
             log.info("Foil cards: {}, Normal cards: {}", foilCount, normalCount);
@@ -89,7 +105,7 @@ public class InventoryImportService {
             List<ImportedCardInfo> removedCards = removedKeys.stream()
                     .map(key -> {
                         UserCard uc = currentCardMap.get(key);
-                        return new ImportedCardInfo(uc.getName(), uc.getSetCode(), 
+                        return new ImportedCardInfo(uc.getName(), uc.getSetCode(),
                                 uc.getCollectorNumber(), uc.getQuantity(), uc.isFoil());
                     })
                     .collect(Collectors.toList());
@@ -97,7 +113,7 @@ public class InventoryImportService {
             List<ImportedCardInfo> addedCards = addedKeys.stream()
                     .map(key -> {
                         UserCard uc = importedCardMap.get(key);
-                        return new ImportedCardInfo(uc.getName(), uc.getSetCode(), 
+                        return new ImportedCardInfo(uc.getName(), uc.getSetCode(),
                                 uc.getCollectorNumber(), uc.getQuantity(), uc.isFoil());
                     })
                     .collect(Collectors.toList());
@@ -114,14 +130,19 @@ public class InventoryImportService {
 
             importedCards.forEach(card -> importedSetCodes.add(card.getSetCode()));
 
-            for (String setCode : importedSetCodes) {
-                scryfallService.getCardsBySet(setCode, null);
-            }
-
+            // Fetch Scryfall data and detect unknown set codes
+            List<String> unknownSetCodes = new ArrayList<>();
             List<ScryfallCard> sfCards = new ArrayList<>();
             for (String setCode : importedSetCodes) {
-                sfCards.addAll(scryfallCardRepository.findBySetCode(setCode));
+                scryfallService.getCardsBySet(setCode, null);
+                List<ScryfallCard> fetched = scryfallCardRepository.findBySetCode(setCode);
+                if (fetched.isEmpty()) {
+                    unknownSetCodes.add(setCode);
+                    log.warn("Unknown set code (no Scryfall data): {}", setCode);
+                }
+                sfCards.addAll(fetched);
             }
+            result.setUnknownSetCodes(unknownSetCodes);
 
             Map<String, ScryfallCard> cardMap = sfCards.stream()
                     .collect(Collectors.toMap(
@@ -157,6 +178,16 @@ public class InventoryImportService {
             history.setUniqueCardsCount(importedCards.size());
             history.setAddedCards(addedCards);
             history.setRemovedCards(removedCards);
+
+            // Persist duplicate-row warnings
+            List<ImportHistory.DuplicateRowInfo> histDuplicates = parseResult.duplicates.stream()
+                    .map(d -> new ImportHistory.DuplicateRowInfo(
+                            d.getFolder(), d.getCardName(), d.getSetCode(),
+                            d.getCollectorNumber(), d.isFoil(), d.getOccurrences()))
+                    .collect(Collectors.toList());
+            history.setDuplicatesRemoved(histDuplicates);
+            history.setUnknownSetCodes(new ArrayList<>(unknownSetCodes));
+
             importHistoryRepository.save(history);
 
         } catch (Exception e) {
@@ -168,9 +199,12 @@ public class InventoryImportService {
         return result;
     }
 
-    private List<UserCard> parseInventoryFile(MultipartFile file) throws IOException, CsvValidationException {
-        List<UserCard> cards = new ArrayList<>();
-        Map<String, UserCard> cardMap = new LinkedHashMap<>();
+    ParseResult parseInventoryFile(MultipartFile file) throws IOException, CsvValidationException {
+        Map<String, UserCard>     cardMap         = new LinkedHashMap<>();
+        // Raw-line duplicate tracking
+        Set<String>               seenRawLines    = new LinkedHashSet<>();
+        Map<String, Integer>      duplicateCounts = new LinkedHashMap<>();
+        Map<String, UserCard>     firstCards      = new LinkedHashMap<>();
 
         try (CSVReader reader = new CSVReader(
                 new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
@@ -194,12 +228,25 @@ public class InventoryImportService {
                     continue;
                 }
 
+                // ── Exact-duplicate detection ────────────────────────────────
+                String rawKey = buildRawKey(line);
+                if (seenRawLines.contains(rawKey)) {
+                    duplicateCounts.merge(rawKey, 1, Integer::sum);
+                    log.debug("Exact duplicate line {} skipped (rawKey={})", lineNum, rawKey);
+                    continue;
+                }
+                seenRawLines.add(rawKey);
+
+                // ── Normal parse + folder-aware dedup ────────────────────────
                 UserCard card = parseInventoryLine(line, lineNum);
                 if (card != null) {
-                    String key = card.getSetCode() + "_" + card.getCollectorNumber() + "_" + card.isFoil();
+                    firstCards.put(rawKey, card);
+                    String key = (card.getFolderName() != null ? card.getFolderName() : "")
+                            + "_" + card.getSetCode()
+                            + "_" + card.getCollectorNumber()
+                            + "_" + card.isFoil();
                     if (cardMap.containsKey(key)) {
-                        UserCard existing = cardMap.get(key);
-                        existing.setQuantity(existing.getQuantity() + card.getQuantity());
+                        cardMap.get(key).setQuantity(cardMap.get(key).getQuantity() + card.getQuantity());
                     } else {
                         cardMap.put(key, card);
                     }
@@ -207,8 +254,34 @@ public class InventoryImportService {
             }
         }
 
-        cards.addAll(cardMap.values());
-        return cards;
+        // Build DuplicateInfo list
+        List<DuplicateInfo> duplicates = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : duplicateCounts.entrySet()) {
+            UserCard fc = firstCards.get(entry.getKey());
+            if (fc != null) {
+                duplicates.add(new DuplicateInfo(
+                        fc.getFolderName() != null ? fc.getFolderName() : "",
+                        fc.getName(),
+                        fc.getSetCode(),
+                        fc.getCollectorNumber(),
+                        fc.isFoil(),
+                        entry.getValue()
+                ));
+            }
+        }
+
+        if (!duplicates.isEmpty()) {
+            log.info("{} distinct exact-duplicate row(s) removed from import CSV", duplicates.size());
+        }
+
+        return new ParseResult(new ArrayList<>(cardMap.values()), duplicates);
+    }
+
+    /** Normalises a raw CSV fields array into a stable string key for exact-duplicate detection. */
+    private static String buildRawKey(String[] fields) {
+        return Arrays.stream(fields)
+                .map(s -> s == null ? "" : s.trim())
+                .collect(Collectors.joining("\t"));
     }
 
     private UserCard parseInventoryLine(String[] fields, int lineNum) {

@@ -18,5 +18,9 @@ public interface ScryfallCardRepository extends MongoRepository<ScryfallCard, St
     /** Batch-fetch all printings whose name is in the given list. */
     List<ScryfallCard> findByNameIn(List<String> names);
 
+    /** Find all entries by exact set code + collector number (both lowercase).
+     *  Returns a List so callers can handle duplicates gracefully. */
+    List<ScryfallCard> findBySetCodeAndCollectorNumber(String setCode, String collectorNumber);
+
     void deleteBySetCode(String setCode);
 }

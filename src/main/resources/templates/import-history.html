@@ -47,6 +47,7 @@
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark" th:replace="~{fragments/nav :: main-nav}"></nav>
+    <div th:replace="~{fragments/nav :: price-update-utils}"></div>
 
     <main class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -91,6 +92,7 @@
                         <th>Unique</th>
                         <th>Added</th>
                         <th>Removed</th>
+                        <th>Warnings</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -113,6 +115,13 @@
                                 <span th:unless="${entry.removedCards != null and entry.removedCards.size() > 0}">0</span>
                             </td>
                             <td>
+                                <th:block th:with="warnCount=${(entry.duplicatesRemoved != null ? entry.duplicatesRemoved.size() : 0) + (entry.unknownSetCodes != null ? entry.unknownSetCodes.size() : 0)}">
+                                    <span th:if="${warnCount > 0}" class="badge bg-warning text-dark"
+                                          th:text="${warnCount}">0</span>
+                                    <span th:unless="${warnCount > 0}" class="text-muted">—</span>
+                                </th:block>
+                            </td>
+                            <td>
                                 <button type="button" class="btn btn-sm btn-outline-light" 
                                         th:data-entry-id="${entry.id}" onclick="event.stopPropagation(); toggleDetails(this.getAttribute('data-entry-id'))">
                                     <i class="bi bi-chevron-down"></i> Details
@@ -120,7 +129,7 @@
                             </td>
                         </tr>
                         <tr th:id="${'details-' + entry.id}" class="history-expanded">
-                            <td colspan="8" class="p-4">
+                            <td colspan="9" class="p-4">
                                 <!-- ── Added cards grid ─────────────────────────────────────── -->
                                 <div th:if="${entry.addedCards != null and not #lists.isEmpty(entry.addedCards)}" class="mb-4">
                                     <h5 class="mb-3"><i class="bi bi-plus-circle text-success"></i>
@@ -182,6 +191,42 @@
                                     <h5><i class="bi bi-dash-circle" style="color: var(--accent-color);"></i> Removed Cards</h5>
                                     <p class="text-muted">No cards removed</p>
                                 </div>
+
+                                <!-- ── Duplicate-row warnings ──────────────────────────────── -->
+                                <div th:if="${entry.duplicatesRemoved != null and not #lists.isEmpty(entry.duplicatesRemoved)}" class="mt-3">
+                                    <h5 class="mb-2">
+                                        <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                                        Exakte Duplikate entfernt
+                                        <span class="badge bg-warning text-dark ms-1" th:text="${entry.duplicatesRemoved.size()}"></span>
+                                    </h5>
+                                    <ul class="list-unstyled">
+                                        <li th:each="dup : ${entry.duplicatesRemoved}" class="mb-1"
+                                            style="border-left:3px solid #ffc107;padding-left:10px;">
+                                            <strong th:text="${dup.cardName}">Name</strong>
+                                            <span class="text-muted ms-1" th:text="${dup.setCode != null ? dup.setCode.toUpperCase() : ''}">SET</span>
+                                            <span th:if="${dup.foil}" class="badge bg-warning text-dark ms-1">Foil</span>
+                                            <span class="badge bg-secondary ms-1" th:text="'×' + ${dup.occurrences} + ' entfernt'"></span>
+                                            <span th:if="${dup.folder != null and !dup.folder.isEmpty()}"
+                                                  class="text-muted ms-2 small" th:text="${'— ' + dup.folder}"></span>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <!-- ── Unknown set code warnings ──────────────────────────── -->
+                                <div th:if="${entry.unknownSetCodes != null and not #lists.isEmpty(entry.unknownSetCodes)}" class="mt-3">
+                                    <h5 class="mb-2">
+                                        <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                                        Unbekannte Set-Codes
+                                        <span class="badge bg-warning text-dark ms-1" th:text="${entry.unknownSetCodes.size()}"></span>
+                                    </h5>
+                                    <ul class="list-unstyled">
+                                        <li th:each="sc : ${entry.unknownSetCodes}" class="mb-1"
+                                            style="border-left:3px solid #ffc107;padding-left:10px;">
+                                            <span class="badge bg-secondary" th:text="${sc != null ? sc.toUpperCase() : sc}">SET</span>
+                                            <span class="text-muted ms-1 small">— kein Scryfall-Eintrag gefunden</span>
+                                        </li>
+                                    </ul>
+                                </div>
                             </td>
                         </tr>
                     </th:block>
@@ -230,6 +275,5 @@
             preview.style.top  = y + 'px';
         }
     </script>
-    <div th:replace="~{fragments/nav :: price-update-utils}"></div>
 </body>
 </html>

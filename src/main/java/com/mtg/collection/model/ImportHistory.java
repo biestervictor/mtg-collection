@@ -18,8 +18,10 @@ public class ImportHistory {
     private int uniqueCardsCount;
     private int addedCardsCount;
     private int removedCardsCount;
-    private List<ImportedCardInfo> addedCards;
-    private List<ImportedCardInfo> removedCards;
+    private List<ImportedCardInfo>  addedCards;
+    private List<ImportedCardInfo>  removedCards;
+    private List<DuplicateRowInfo>  duplicatesRemoved = new ArrayList<>();
+    private List<String>            unknownSetCodes   = new ArrayList<>();
     
     public ImportHistory() {
         this.importedAt = LocalDateTime.now();
@@ -45,6 +47,10 @@ public class ImportHistory {
     public void setAddedCards(List<ImportedCardInfo> addedCards) { this.addedCards = addedCards; }
     public List<ImportedCardInfo> getRemovedCards() { return removedCards; }
     public void setRemovedCards(List<ImportedCardInfo> removedCards) { this.removedCards = removedCards; }
+    public List<DuplicateRowInfo> getDuplicatesRemoved() { return duplicatesRemoved; }
+    public void setDuplicatesRemoved(List<DuplicateRowInfo> duplicatesRemoved) { this.duplicatesRemoved = duplicatesRemoved; }
+    public List<String> getUnknownSetCodes() { return unknownSetCodes; }
+    public void setUnknownSetCodes(List<String> unknownSetCodes) { this.unknownSetCodes = unknownSetCodes; }
 
     /**
      * Returns addedCards grouped by setCode (sorted by setCode, then by collector number).
@@ -64,6 +70,41 @@ public class ImportHistory {
                         LinkedHashMap::new,
                         Collectors.toList()
                 ));
+    }
+
+    // ── Inner class: persisted info about one removed exact-duplicate row ────
+    public static class DuplicateRowInfo {
+        private String  folder;
+        private String  cardName;
+        private String  setCode;
+        private String  collectorNumber;
+        private boolean foil;
+        private int     occurrences; // extra copies removed (total appearances - 1)
+
+        public DuplicateRowInfo() {}
+
+        public DuplicateRowInfo(String folder, String cardName, String setCode,
+                                String collectorNumber, boolean foil, int occurrences) {
+            this.folder          = folder;
+            this.cardName        = cardName;
+            this.setCode         = setCode;
+            this.collectorNumber = collectorNumber;
+            this.foil            = foil;
+            this.occurrences     = occurrences;
+        }
+
+        public String  getFolder()          { return folder; }
+        public void    setFolder(String v)  { this.folder = v; }
+        public String  getCardName()        { return cardName; }
+        public void    setCardName(String v){ this.cardName = v; }
+        public String  getSetCode()         { return setCode; }
+        public void    setSetCode(String v) { this.setCode = v; }
+        public String  getCollectorNumber() { return collectorNumber; }
+        public void    setCollectorNumber(String v) { this.collectorNumber = v; }
+        public boolean isFoil()             { return foil; }
+        public void    setFoil(boolean v)   { this.foil = v; }
+        public int     getOccurrences()     { return occurrences; }
+        public void    setOccurrences(int v){ this.occurrences = v; }
     }
 
     public static class ImportedCardInfo {

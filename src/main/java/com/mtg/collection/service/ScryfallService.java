@@ -343,6 +343,50 @@ return sets;
         cardRepository.deleteAll();
         log.info("Cleared all Scryfall card cache");
     }
+
+    /**
+     * Fetches fresh data for a single card from the Scryfall API by set code +
+     * collector number, updates (or inserts) the record in MongoDB, and returns the
+     * updated ScryfallCard.  Returns null if the card cannot be found.
+     */
+    public ScryfallCard refreshSingleCard(String setCode, String collectorNumber) {
+        String lower = setCode.toLowerCase();
+        String url = SCRYFALL_API + "/cards/" + lower + "/" + collectorNumber;
+        try {
+            String responseBody = restTemplate.getForObject(URI.create(url), String.class);
+            if (responseBody == null) return null;
+            JsonNode cardNode = objectMapper.readTree(responseBody);
+            if (cardNode.has("object") && "error".equals(cardNode.get("object").asText())) {
+                log.warn("Scryfall returned error for {}/{}: {}", lower, collectorNumber,
+                        cardNode.has("details") ? cardNode.get("details").asText() : "unknown");
+                return null;
+            }
+            ScryfallCard fresh = mapCardFromJson(cardNode, lower);
+            // Upsert with deduplication: if duplicate documents exist (e.g. from prior
+            // imports with mixed setCode casing) keep the first, delete the rest, then update.
+            List<ScryfallCard> existing = cardRepository.findBySetCodeAndCollectorNumber(lower, collectorNumber);
+            ScryfallCard toSave;
+            if (existing.isEmpty()) {
+                toSave = fresh;
+            } else {
+                toSave = existing.get(0);
+                toSave.setPriceRegular(fresh.getPriceRegular());
+                toSave.setPriceFoil(fresh.getPriceFoil());
+                toSave.setPurchaseLink(fresh.getPurchaseLink());
+                toSave.setThumbnailFront(fresh.getThumbnailFront());
+                toSave.setImageFront(fresh.getImageFront());
+                if (existing.size() > 1) {
+                    log.warn("Deduplicating {} entries for {}/{} in Scryfall cache",
+                            existing.size(), lower, collectorNumber);
+                    cardRepository.deleteAll(existing.subList(1, existing.size()));
+                }
+            }
+            return cardRepository.save(toSave);
+        } catch (Exception e) {
+            log.error("Failed to refresh card {}/{} from Scryfall", lower, collectorNumber, e);
+            return null;
+        }
+    }
     
     private Double parseDouble(String value) {
         try {

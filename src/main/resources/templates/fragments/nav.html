@@ -1,40 +1,4 @@
 <th:block xmlns:th="http://www.thymeleaf.org">
-    <th:block th:fragment="nav-styles">
-        <style>
-            .env-badge {
-                display: inline-block;
-                padding: 2px 10px;
-                border-radius: 4px;
-                font-size: 0.75em;
-                font-weight: bold;
-                letter-spacing: 0.5px;
-                margin-right: 8px;
-                vertical-align: middle;
-            }
-            .env-badge-prod { background: #e74c3c; color: #fff; }
-            .env-badge-dev  { background: #27ae60; color: #fff; }
-            .version-info {
-                font-size: 0.7em;
-                color: #888;
-                white-space: nowrap;
-            }
-            /* Notification badge on the user menu button */
-            #navImportBadge {
-                position: absolute;
-                top: 0; right: 0;
-                min-width: 16px; height: 16px;
-                font-size: 0.65em; line-height: 16px;
-                padding: 0 4px;
-                border-radius: 8px;
-                background: #e94560;
-                color: #fff;
-                text-align: center;
-                pointer-events: none;
-                display: none;
-            }
-        </style>
-    </th:block>
-
     <nav th:fragment="main-nav" class="navbar navbar-expand-lg navbar-dark" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;">
         <div class="container-fluid">
             <a class="navbar-brand" th:href="@{/}">
@@ -54,17 +18,19 @@
                     <li class="nav-item"><a class="nav-link" th:href="@{/statistics}">Statistics</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/deck-suggest}">Deck Suggest</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/my-decks}">My Decks</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/sell-suggestions}">Verkauf</a></li>
                 </ul>
                 <ul class="navbar-nav align-items-center">
                     <!-- User menu dropdown -->
-                    <li class="nav-item dropdown" style="position:relative;">
+                    <li class="nav-item dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
+                                style="position:relative; overflow:visible;"
                                 type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"
                                 aria-expanded="false" id="navUserMenuBtn">
                             <i class="bi bi-person-circle"></i>
                             <span id="navActiveUserLabel">Victor</span>
+                            <span id="navImportBadge" style="display:none;"></span>
                         </button>
-                        <span id="navImportBadge" style="display:none;"></span>
                         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="min-width:260px;">
                             <li><h6 class="dropdown-header">Active User</h6></li>
                             <li>
@@ -164,6 +130,13 @@
 
     <!-- Reusable price-update JS + toast container + user menu + import notification logic -->
     <th:block th:fragment="price-update-utils">
+        <style>
+            .env-badge { display:inline-block; padding:2px 10px; border-radius:4px; font-size:0.75em; font-weight:bold; letter-spacing:0.5px; margin-right:8px; vertical-align:middle; }
+            .env-badge-prod { background:#e74c3c; color:#fff; }
+            .env-badge-dev  { background:#27ae60; color:#fff; }
+            .version-info { font-size:0.7em; color:#888; white-space:nowrap; }
+            #navImportBadge { position:absolute; top:-8px; right:-8px; min-width:18px; height:18px; font-size:0.65em; line-height:18px; padding:0 5px; border-radius:9px; background:#e94560; color:#fff; text-align:center; font-weight:bold; pointer-events:none; display:none; }
+        </style>
         <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:11000"></div>
 
         <!-- Remove User Data confirmation modal -->
@@ -301,6 +274,8 @@
                     addedCount: data.addedCount,
                     removedCount: data.removedCount,
                     newCardsCount: data.newCardsCount,
+                    duplicatesRemoved: data.duplicatesRemoved || [],
+                    unknownSetCodes:   data.unknownSetCodes   || [],
                     ts: Date.now()
                 }));
                 _applyImportResult();
@@ -363,7 +338,7 @@
 
                 if (r.state === 'DONE') {
                     titleEl.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> Import abgeschlossen';
-                    bodyEl.innerHTML =
+                    let body =
                         '<p class="text-muted mb-3">Benutzer: <strong>' + r.user + '</strong></p>' +
                         '<div class="row text-center g-3">' +
                         _statBox(r.cardsCount,    'Karten gesamt',   '#e94560') +
@@ -371,6 +346,33 @@
                         _statBox(r.addedCount,     'Hinzugefügt',     '#28a745') +
                         _statBox(r.removedCount,   'Entfernt',        '#aaa') +
                         '</div>';
+
+                    // Duplicates warning
+                    if (r.duplicatesRemoved && r.duplicatesRemoved.length > 0) {
+                        body += '<div class="alert alert-warning mt-3 mb-0 p-2">' +
+                            '<strong>&#9888; ' + r.duplicatesRemoved.length + ' exakte Duplikat-Zeile(n) entfernt</strong>' +
+                            '<ul class="mb-0 mt-1 small">';
+                        r.duplicatesRemoved.forEach(d => {
+                            body += '<li>' + _escHtml(d.cardName) + ' (' + _escHtml(d.setCode.toUpperCase()) +
+                                (d.foil ? ', Foil' : '') + ')' +
+                                (d.folder ? ' — ' + _escHtml(d.folder) : '') +
+                                ' &times;' + d.occurrences + ' entfernt</li>';
+                        });
+                        body += '</ul></div>';
+                    }
+
+                    // Unknown set codes warning
+                    if (r.unknownSetCodes && r.unknownSetCodes.length > 0) {
+                        body += '<div class="alert alert-warning mt-2 mb-0 p-2">' +
+                            '<strong>&#9888; ' + r.unknownSetCodes.length + ' unbekannte Set-Code(s)</strong>' +
+                            '<ul class="mb-0 mt-1 small">';
+                        r.unknownSetCodes.forEach(s => {
+                            body += '<li>' + _escHtml(s.toUpperCase()) + ' — kein Scryfall-Eintrag gefunden</li>';
+                        });
+                        body += '</ul></div>';
+                    }
+
+                    bodyEl.innerHTML = body;
                 } else {
                     titleEl.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i> Import fehlgeschlagen';
                     bodyEl.innerHTML =
@@ -391,13 +393,23 @@
                 new bootstrap.Modal(document.getElementById('navImportResultModal')).show();
             }
 
+            function _escHtml(s) {
+                return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            }
+
             function _statBox(value, label, color) {
                 return '<div class="col-6"><div style="font-size:1.8rem;font-weight:bold;color:' + color + '">'
                     + value + '</div><div style="color:#888;font-size:0.85rem">' + label + '</div></div>';
             }
 
-            function _showBadge() { _show('navImportBadge'); }
-            function _hideBadge() { _hide('navImportBadge'); }
+            function _showBadge() {
+                const el = document.getElementById('navImportBadge');
+                if (el) { el.textContent = '1'; el.style.display = ''; }
+            }
+            function _hideBadge() {
+                const el = document.getElementById('navImportBadge');
+                if (el) { el.textContent = ''; el.style.display = 'none'; }
+            }
             function _setImportDivider(v) {
                 const el = document.getElementById('navImportDivider');
                 if (el) el.style.display = v ? '' : 'none';

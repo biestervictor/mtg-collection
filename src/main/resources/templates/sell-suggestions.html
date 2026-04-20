@@ -207,7 +207,10 @@
                                     </a>
                                     <button type="button"
                                             class="btn btn-sm btn-outline-secondary"
-                                            th:onclick="'refreshCardPrice(this,\'' + ${s.userCard.setCode.toLowerCase()} + '\',\'' + ${s.userCard.collectorNumber} + '\',' + ${s.userCard.foil} + ')'"
+                                            th:data-setcode="${s.userCard.setCode.toLowerCase()}"
+                                            th:data-collnumber="${s.userCard.collectorNumber}"
+                                            th:data-foil="${s.userCard.foil}"
+                                            onclick="refreshCardPriceFromBtn(this)"
                                             title="Preis von Scryfall aktualisieren">
                                         <i class="bi bi-arrow-repeat"></i>
                                     </button>
@@ -316,6 +319,13 @@
         }
 
         // ── Per-card price refresh ────────────────────────────────────────────
+        function refreshCardPriceFromBtn(btn) {
+            const setCode         = btn.dataset.setcode;
+            const collectorNumber = btn.dataset.collnumber;
+            const isFoil          = btn.dataset.foil === 'true';
+            refreshCardPrice(btn, setCode, collectorNumber, isFoil);
+        }
+
         function refreshCardPrice(btn, setCode, collectorNumber, isFoil) {
             const row  = btn.closest('tr');
             const icon = btn.querySelector('i');

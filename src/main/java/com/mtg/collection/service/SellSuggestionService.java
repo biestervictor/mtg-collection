@@ -125,7 +125,8 @@ public class SellSuggestionService {
                 .collect(Collectors.toSet());
         Map<String, ScryfallCard> sfMap = new HashMap<>();
         scryfallCardRepository.findBySetCodeIn(setCodes)
-                .forEach(sf -> sfMap.put(sf.getSetCode().toLowerCase() + "_" + sf.getCollectorNumber(), sf));
+                // putIfAbsent: first entry wins if duplicate documents exist in the cache
+                .forEach(sf -> sfMap.putIfAbsent(sf.getSetCode().toLowerCase() + "_" + sf.getCollectorNumber(), sf));
 
         // 5. Build suggestions, filter by price >= MIN_PRICE, sort by totalValue desc
         List<SellSuggestion> result = new ArrayList<>();

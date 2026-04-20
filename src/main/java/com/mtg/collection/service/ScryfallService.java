@@ -362,18 +362,25 @@ return sets;
                 return null;
             }
             ScryfallCard fresh = mapCardFromJson(cardNode, lower);
-            // Upsert: update existing record or insert a new one
-            ScryfallCard toSave = cardRepository
-                    .findBySetCodeAndCollectorNumber(lower, collectorNumber)
-                    .map(existing -> {
-                        existing.setPriceRegular(fresh.getPriceRegular());
-                        existing.setPriceFoil(fresh.getPriceFoil());
-                        existing.setPurchaseLink(fresh.getPurchaseLink());
-                        existing.setThumbnailFront(fresh.getThumbnailFront());
-                        existing.setImageFront(fresh.getImageFront());
-                        return existing;
-                    })
-                    .orElse(fresh);
+            // Upsert with deduplication: if duplicate documents exist (e.g. from prior
+            // imports with mixed setCode casing) keep the first, delete the rest, then update.
+            List<ScryfallCard> existing = cardRepository.findBySetCodeAndCollectorNumber(lower, collectorNumber);
+            ScryfallCard toSave;
+            if (existing.isEmpty()) {
+                toSave = fresh;
+            } else {
+                toSave = existing.get(0);
+                toSave.setPriceRegular(fresh.getPriceRegular());
+                toSave.setPriceFoil(fresh.getPriceFoil());
+                toSave.setPurchaseLink(fresh.getPurchaseLink());
+                toSave.setThumbnailFront(fresh.getThumbnailFront());
+                toSave.setImageFront(fresh.getImageFront());
+                if (existing.size() > 1) {
+                    log.warn("Deduplicating {} entries for {}/{} in Scryfall cache",
+                            existing.size(), lower, collectorNumber);
+                    cardRepository.deleteAll(existing.subList(1, existing.size()));
+                }
+            }
             return cardRepository.save(toSave);
         } catch (Exception e) {
             log.error("Failed to refresh card {}/{} from Scryfall", lower, collectorNumber, e);

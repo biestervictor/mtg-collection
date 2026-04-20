@@ -343,6 +343,43 @@ return sets;
         cardRepository.deleteAll();
         log.info("Cleared all Scryfall card cache");
     }
+
+    /**
+     * Fetches fresh data for a single card from the Scryfall API by set code +
+     * collector number, updates (or inserts) the record in MongoDB, and returns the
+     * updated ScryfallCard.  Returns null if the card cannot be found.
+     */
+    public ScryfallCard refreshSingleCard(String setCode, String collectorNumber) {
+        String lower = setCode.toLowerCase();
+        String url = SCRYFALL_API + "/cards/" + lower + "/" + collectorNumber;
+        try {
+            String responseBody = restTemplate.getForObject(URI.create(url), String.class);
+            if (responseBody == null) return null;
+            JsonNode cardNode = objectMapper.readTree(responseBody);
+            if (cardNode.has("object") && "error".equals(cardNode.get("object").asText())) {
+                log.warn("Scryfall returned error for {}/{}: {}", lower, collectorNumber,
+                        cardNode.has("details") ? cardNode.get("details").asText() : "unknown");
+                return null;
+            }
+            ScryfallCard fresh = mapCardFromJson(cardNode, lower);
+            // Upsert: update existing record or insert a new one
+            ScryfallCard toSave = cardRepository
+                    .findBySetCodeAndCollectorNumber(lower, collectorNumber)
+                    .map(existing -> {
+                        existing.setPriceRegular(fresh.getPriceRegular());
+                        existing.setPriceFoil(fresh.getPriceFoil());
+                        existing.setPurchaseLink(fresh.getPurchaseLink());
+                        existing.setThumbnailFront(fresh.getThumbnailFront());
+                        existing.setImageFront(fresh.getImageFront());
+                        return existing;
+                    })
+                    .orElse(fresh);
+            return cardRepository.save(toSave);
+        } catch (Exception e) {
+            log.error("Failed to refresh card {}/{} from Scryfall", lower, collectorNumber, e);
+            return null;
+        }
+    }
     
     private Double parseDouble(String value) {
         try {

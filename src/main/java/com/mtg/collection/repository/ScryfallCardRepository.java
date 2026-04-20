@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ScryfallCardRepository extends MongoRepository<ScryfallCard, String> {
@@ -17,6 +18,9 @@ public interface ScryfallCardRepository extends MongoRepository<ScryfallCard, St
 
     /** Batch-fetch all printings whose name is in the given list. */
     List<ScryfallCard> findByNameIn(List<String> names);
+
+    /** Find a single card by exact set code + collector number (both lowercase). */
+    Optional<ScryfallCard> findBySetCodeAndCollectorNumber(String setCode, String collectorNumber);
 
     void deleteBySetCode(String setCode);
 }

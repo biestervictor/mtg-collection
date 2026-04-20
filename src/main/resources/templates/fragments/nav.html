@@ -1,40 +1,4 @@
 <th:block xmlns:th="http://www.thymeleaf.org">
-    <th:block th:fragment="nav-styles">
-        <style>
-            .env-badge {
-                display: inline-block;
-                padding: 2px 10px;
-                border-radius: 4px;
-                font-size: 0.75em;
-                font-weight: bold;
-                letter-spacing: 0.5px;
-                margin-right: 8px;
-                vertical-align: middle;
-            }
-            .env-badge-prod { background: #e74c3c; color: #fff; }
-            .env-badge-dev  { background: #27ae60; color: #fff; }
-            .version-info {
-                font-size: 0.7em;
-                color: #888;
-                white-space: nowrap;
-            }
-            /* Notification badge on the user menu button */
-            #navImportBadge {
-                position: absolute;
-                top: 0; right: 0;
-                min-width: 16px; height: 16px;
-                font-size: 0.65em; line-height: 16px;
-                padding: 0 4px;
-                border-radius: 8px;
-                background: #e94560;
-                color: #fff;
-                text-align: center;
-                pointer-events: none;
-                display: none;
-            }
-        </style>
-    </th:block>
-
     <nav th:fragment="main-nav" class="navbar navbar-expand-lg navbar-dark" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;">
         <div class="container-fluid">
             <a class="navbar-brand" th:href="@{/}">
@@ -58,14 +22,15 @@
                 </ul>
                 <ul class="navbar-nav align-items-center">
                     <!-- User menu dropdown -->
-                    <li class="nav-item dropdown" style="position:relative;">
+                    <li class="nav-item dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
+                                style="position:relative; overflow:visible;"
                                 type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"
                                 aria-expanded="false" id="navUserMenuBtn">
                             <i class="bi bi-person-circle"></i>
                             <span id="navActiveUserLabel">Victor</span>
+                            <span id="navImportBadge" style="display:none;"></span>
                         </button>
-                        <span id="navImportBadge" style="display:none;"></span>
                         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="min-width:260px;">
                             <li><h6 class="dropdown-header">Active User</h6></li>
                             <li>
@@ -165,6 +130,13 @@
 
     <!-- Reusable price-update JS + toast container + user menu + import notification logic -->
     <th:block th:fragment="price-update-utils">
+        <style>
+            .env-badge { display:inline-block; padding:2px 10px; border-radius:4px; font-size:0.75em; font-weight:bold; letter-spacing:0.5px; margin-right:8px; vertical-align:middle; }
+            .env-badge-prod { background:#e74c3c; color:#fff; }
+            .env-badge-dev  { background:#27ae60; color:#fff; }
+            .version-info { font-size:0.7em; color:#888; white-space:nowrap; }
+            #navImportBadge { position:absolute; top:-8px; right:-8px; min-width:18px; height:18px; font-size:0.65em; line-height:18px; padding:0 5px; border-radius:9px; background:#e94560; color:#fff; text-align:center; font-weight:bold; pointer-events:none; display:none; }
+        </style>
         <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:11000"></div>
 
         <!-- Remove User Data confirmation modal -->

@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 public class SellSuggestionService {
 
     private static final Logger log = LoggerFactory.getLogger(SellSuggestionService.class);
-    private static final double MIN_PRICE = 1.0;
+    private static final double MIN_PRICE = 0.5;
 
     private final UserCardRepository    userCardRepository;
     private final UserDeckRepository    userDeckRepository;
@@ -79,7 +79,18 @@ public class SellSuggestionService {
                     + "?format=image&version=normal";
         }
 
-        /** Cardmarket purchase link if available via ScryfallCard. */
+        /** Cardmarket link forced to German locale with sellerCountry=7. */
+        public String getCardmarketLink() {
+            if (scryfallCard == null) return null;
+            String link = scryfallCard.getPurchaseLink();
+            if (link == null || link.isEmpty()) return null;
+            // Replace English locale with German
+            link = link.replace("cardmarket.com/en/", "cardmarket.com/de/");
+            // Append seller country filter (7 = Germany)
+            return link.contains("?") ? link + "&sellerCountry=7" : link + "?sellerCountry=7";
+        }
+
+        /** @deprecated Use {@link #getCardmarketLink()} for the localised link. */
         public String getPurchaseLink() {
             return scryfallCard != null ? scryfallCard.getPurchaseLink() : null;
         }
@@ -106,20 +117,19 @@ public class SellSuggestionService {
 
         if (notInDecks.isEmpty()) return Collections.emptyList();
 
-        // 4. Batch-load Scryfall data for relevant set codes
+        // 4. Batch-load Scryfall data in one query; normalise to lowercase throughout
+        //    to avoid case mismatches between DragonShield (uppercase) and Scryfall cache (lowercase).
         Set<String> setCodes = notInDecks.stream()
-                .map(UserCard::getSetCode)
+                .map(c -> c.getSetCode().toLowerCase())
                 .collect(Collectors.toSet());
         Map<String, ScryfallCard> sfMap = new HashMap<>();
-        for (String sc : setCodes) {
-            scryfallCardRepository.findBySetCode(sc)
-                    .forEach(sf -> sfMap.put(sf.getSetCode() + "_" + sf.getCollectorNumber(), sf));
-        }
+        scryfallCardRepository.findBySetCodeIn(setCodes)
+                .forEach(sf -> sfMap.put(sf.getSetCode().toLowerCase() + "_" + sf.getCollectorNumber(), sf));
 
         // 5. Build suggestions, filter by price >= MIN_PRICE, sort by totalValue desc
         List<SellSuggestion> result = new ArrayList<>();
         for (UserCard card : notInDecks) {
-            ScryfallCard sf = sfMap.get(card.getSetCode() + "_" + card.getCollectorNumber());
+            ScryfallCard sf = sfMap.get(card.getSetCode().toLowerCase() + "_" + card.getCollectorNumber());
             double price = resolvePrice(card, sf);
             if (price < MIN_PRICE) continue;
             int sellableQty = card.getQuantity() - 1;

@@ -32,9 +32,21 @@
         /* table */
         .table-dark td, .table-dark th { vertical-align: middle; }
 
-        /* price column */
+        /* price columns */
         .price-col   { color: #28a745; font-weight: 600; }
         .revenue-col { color: var(--accent-color); font-weight: 700; }
+
+        /* filter card */
+        .filter-card { background-color: var(--secondary-color); border: 1px solid #2a2a4a; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+        .form-range::-webkit-slider-thumb { background: var(--accent-color); }
+        .form-range::-moz-range-thumb     { background: var(--accent-color); }
+        .form-range::-webkit-slider-runnable-track { background: #2a2a4a; }
+        .form-range::-moz-range-track              { background: #2a2a4a; }
+        .form-check-input:checked { background-color: var(--accent-color); border-color: var(--accent-color); }
+
+        /* refresh button spin */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { display: inline-block; animation: spin 0.8s linear infinite; }
     </style>
 </head>
 <body>
@@ -56,31 +68,57 @@
         </div>
 
         <!-- Summary stats -->
-        <div class="row g-3 mb-4">
+        <div class="row g-3 mb-3">
             <div class="col-6 col-md-3">
                 <div class="card text-center p-3">
-                    <div class="stat-value" th:text="${#lists.size(suggestions)}">0</div>
+                    <div class="stat-value" id="stat-count" th:text="${#lists.size(suggestions)}">0</div>
                     <div class="stat-label">Karten zum Verkauf</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="card text-center p-3">
-                    <div class="stat-value"
+                    <div class="stat-value" id="stat-revenue"
                          th:text="${#numbers.formatDecimal(totalRevenue, 1, 'COMMA', 2, 'POINT') + ' €'}">0,00 €</div>
                     <div class="stat-label">Möglicher Erlös</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="card text-center p-3">
-                    <div class="stat-value"
+                    <div class="stat-value" id="stat-copies"
                          th:text="${#aggregates.sum(suggestions.![sellableQty])}">0</div>
                     <div class="stat-label">Zu verkaufende Kopien</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="card text-center p-3">
-                    <div class="stat-value" style="color:#888;">≥ 1,00 €</div>
+                    <div class="stat-value" id="stat-minprice" style="color:#888;">0,50 €</div>
                     <div class="stat-label">Mindestpreis Filter</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-card">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-7">
+                    <label class="form-label mb-1">
+                        Mindestpreis: <strong id="sliderLabel">0,50 €</strong>
+                    </label>
+                    <input type="range" class="form-range" id="priceSlider"
+                           min="0.5" max="10" step="0.5" value="0.5"
+                           oninput="applyFilters()">
+                    <div class="d-flex justify-content-between" style="font-size:.75rem;color:#888;">
+                        <span>0,50 €</span><span>10,00 €+</span>
+                    </div>
+                </div>
+                <div class="col-md-5 d-flex align-items-center gap-3 pt-2">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="hideSldCheck"
+                               onchange="applyFilters()">
+                        <label class="form-check-label" for="hideSldCheck">
+                            Secret Lair (SLD) ausblenden
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -89,25 +127,26 @@
         <div class="alert alert-secondary mb-4 py-2" style="background:#1a1a3e;border-color:#2a2a5a;">
             <i class="bi bi-info-circle"></i>
             Nur Karten die <strong>nicht in einem Deck</strong> vorhanden sind, eine Gesamtmenge von
-            <strong>&gt; 1</strong> haben und mindestens <strong>1,00 € wert</strong> sind.
+            <strong>&gt; 1</strong> haben und mindestens <strong>0,50 € wert</strong> sind.
             Verkaufsanzahl = Gesamtmenge − 1 (eine Kopie behalten).
         </div>
 
-        <!-- Empty state -->
+        <!-- Empty state (server-side: no suggestions at all) -->
         <div th:if="${#lists.isEmpty(suggestions)}" class="card text-center py-5">
             <i class="bi bi-check2-circle" style="font-size:4rem;color:#28a745;"></i>
             <h4 class="mt-3">Keine Verkaufsvorschläge</h4>
-            <p class="text-muted">Alle doppelten Karten sind in Decks oder unter 1,00 €.</p>
+            <p class="text-muted">Alle doppelten Karten sind in Decks oder unter 0,50 €.</p>
         </div>
 
         <!-- Suggestions table -->
         <div th:if="${not #lists.isEmpty(suggestions)}" class="card">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <h5 class="mb-0"><i class="bi bi-table"></i> Vorschläge</h5>
-                <small class="text-muted" th:text="${#lists.size(suggestions) + ' Karten'}"></small>
+                <small class="text-muted" id="tableCountLabel"
+                       th:text="${#lists.size(suggestions) + ' Karten'}"></small>
             </div>
             <div class="table-responsive">
-                <table class="table table-dark table-hover mb-0">
+                <table class="table table-dark table-hover mb-0" id="suggestionsTable">
                     <thead>
                         <tr>
                             <th style="width:60px;"></th>
@@ -117,11 +156,15 @@
                             <th>Verkaufen</th>
                             <th>Preis/Stk.</th>
                             <th>Erlös</th>
-                            <th></th>
+                            <th style="width:90px;"></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr th:each="s : ${suggestions}"
+                            th:data-price="${s.pricePerCopy}"
+                            th:data-setcode="${s.userCard.setCode.toUpperCase()}"
+                            th:data-sellableqty="${s.sellableQty}"
+                            th:data-totalvalue="${s.totalValue}"
                             th:data-img-large="${s.imageUrl}"
                             onmouseenter="showCardPreview(this)"
                             onmouseleave="hideCardPreview()">
@@ -142,8 +185,8 @@
                                      style="width:16px;height:16px;filter:invert(.6);vertical-align:middle;margin-right:4px;"
                                      onerror="this.style.display='none'"
                                      th:alt="${s.userCard.setCode}">
-                                <span class="text-muted" th:text="${s.userCard.setCode.toUpperCase()}">SET</span>
-                                <span class="text-muted ms-1" th:text="'#' + ${s.userCard.collectorNumber}"></span>
+                                <span style="color:#fff;" th:text="${s.userCard.setCode.toUpperCase()}">SET</span>
+                                <span style="color:#fff;" th:text="'#' + ${s.userCard.collectorNumber}"></span>
                             </td>
                             <td th:text="${s.userCard.quantity}">1</td>
                             <td>
@@ -154,26 +197,40 @@
                             <td class="revenue-col"
                                 th:text="${#numbers.formatDecimal(s.totalValue, 1, 'COMMA', 2, 'POINT') + ' €'}">0,00 €</td>
                             <td>
-                                <a th:if="${s.purchaseLink != null}"
-                                   th:href="${s.purchaseLink}"
-                                   target="_blank"
-                                   class="btn btn-sm btn-outline-light"
-                                   title="Auf CardMarket ansehen">
-                                    <i class="bi bi-cart2"></i>
-                                </a>
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <a th:if="${s.cardmarketLink != null}"
+                                       th:href="${s.cardmarketLink}"
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-light"
+                                       title="Auf CardMarket (DE) kaufen">
+                                        <i class="bi bi-cart2"></i>
+                                    </a>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary"
+                                            th:onclick="'refreshCardPrice(this,\'' + ${s.userCard.setCode.toLowerCase()} + '\',\'' + ${s.userCard.collectorNumber} + '\',' + ${s.userCard.foil} + ')'"
+                                            title="Preis von Scryfall aktualisieren">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr class="table-secondary" style="background:#1a1a2e;">
                             <td colspan="6" class="text-end fw-bold text-muted">Gesamterlös</td>
-                            <td class="revenue-col"
+                            <td class="revenue-col" id="stat-foot-revenue"
                                 th:text="${#numbers.formatDecimal(totalRevenue, 1, 'COMMA', 2, 'POINT') + ' €'}">0,00 €</td>
                             <td></td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
+        </div>
+
+        <!-- Client-side empty state (all filtered out) -->
+        <div id="filteredEmptyState" class="card text-center py-4" style="display:none;">
+            <i class="bi bi-funnel" style="font-size:3rem;color:#888;"></i>
+            <p class="mt-2 text-muted">Alle Karten durch Filter ausgeblendet.</p>
         </div>
 
     </main>
@@ -187,26 +244,117 @@
         // ── Hover card preview ────────────────────────────────────────────────
         function showCardPreview(el) {
             const preview = document.getElementById('card-preview');
-            const img     = preview.querySelector('img');
-            img.src = el.dataset.imgLarge || '';
+            preview.querySelector('img').src = el.dataset.imgLarge || '';
             preview.style.display = 'block';
             document.addEventListener('mousemove', _updatePreviewPos);
         }
-
         function hideCardPreview() {
             document.getElementById('card-preview').style.display = 'none';
             document.removeEventListener('mousemove', _updatePreviewPos);
         }
-
         function _updatePreviewPos(e) {
-            const preview = document.getElementById('card-preview');
+            const p = document.getElementById('card-preview');
             let x = e.clientX + 24, y = e.clientY - 120;
             if (x + 250 > window.innerWidth)  x = e.clientX - 274;
             if (y < 0)                         y = 0;
             if (y + 350 > window.innerHeight)  y = window.innerHeight - 350;
-            preview.style.left = x + 'px';
-            preview.style.top  = y + 'px';
+            p.style.left = x + 'px'; p.style.top = y + 'px';
         }
+
+        // ── Formatting helper ─────────────────────────────────────────────────
+        function formatEuro(value) {
+            return value.toFixed(2).replace('.', ',') + ' €';
+        }
+
+        // ── Filter logic ──────────────────────────────────────────────────────
+        function applyFilters() {
+            const slider   = document.getElementById('priceSlider');
+            const hideSld  = document.getElementById('hideSldCheck').checked;
+            const minPrice = parseFloat(slider.value);
+            const atMax    = minPrice >= 10;
+
+            // Update slider label
+            const lbl = document.getElementById('sliderLabel');
+            lbl.textContent = atMax ? '10,00 €+' : minPrice.toFixed(2).replace('.', ',') + ' €';
+            document.getElementById('stat-minprice').textContent = lbl.textContent;
+
+            const rows = document.querySelectorAll('#suggestionsTable tbody tr');
+            let count = 0, revenue = 0.0, copies = 0;
+
+            rows.forEach(row => {
+                const price    = parseFloat(row.dataset.price    || 0);
+                const setCode  = row.dataset.setcode || '';
+                const qty      = parseInt(row.dataset.sellableqty || 0);
+                const rowRev   = parseFloat(row.dataset.totalvalue || 0);
+
+                const priceOk  = atMax ? price >= 10 : price >= minPrice;
+                const sldOk    = !(hideSld && setCode === 'SLD');
+                const visible  = priceOk && sldOk;
+
+                row.style.display = visible ? '' : 'none';
+                if (visible) { count++; revenue += rowRev; copies += qty; }
+            });
+
+            // Update stat boxes
+            document.getElementById('stat-count').textContent   = count;
+            document.getElementById('stat-revenue').textContent = formatEuro(revenue);
+            document.getElementById('stat-copies').textContent  = copies;
+
+            // Update tfoot and header count
+            const footRev = document.getElementById('stat-foot-revenue');
+            if (footRev) footRev.textContent = formatEuro(revenue);
+            const lbl2 = document.getElementById('tableCountLabel');
+            if (lbl2) lbl2.textContent = count + ' Karten';
+
+            // Show/hide client-side empty state
+            const empty = document.getElementById('filteredEmptyState');
+            const tbl   = document.getElementById('suggestionsTable');
+            if (empty && tbl) {
+                empty.style.display = (count === 0) ? '' : 'none';
+                tbl.style.display   = (count === 0) ? 'none' : '';
+            }
+        }
+
+        // ── Per-card price refresh ────────────────────────────────────────────
+        function refreshCardPrice(btn, setCode, collectorNumber, isFoil) {
+            const row  = btn.closest('tr');
+            const icon = btn.querySelector('i');
+            btn.disabled = true;
+            icon.className = 'bi spin bi-arrow-repeat';
+
+            fetch('/api/prices/refresh-card?setCode=' + encodeURIComponent(setCode)
+                    + '&collectorNumber=' + encodeURIComponent(collectorNumber), { method: 'POST' })
+                .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+                .then(data => {
+                    if (data.error) { showNavToast('danger', 'Fehler', data.error); return; }
+                    const raw = isFoil
+                        ? (data.priceFoil   ?? data.priceRegular ?? 0)
+                        : (data.priceRegular ?? data.priceFoil   ?? 0);
+                    const price   = raw || 0;
+                    const qty     = parseInt(row.dataset.sellableqty || 0);
+                    const newRev  = price * qty;
+
+                    // Update row data
+                    row.dataset.price      = price;
+                    row.dataset.totalvalue = newRev;
+
+                    // Update visible cells
+                    const priceCell = row.querySelector('.price-col');
+                    const revCell   = row.querySelector('.revenue-col');
+                    if (priceCell) priceCell.textContent = formatEuro(price);
+                    if (revCell)   revCell.textContent   = formatEuro(newRev);
+
+                    // Re-apply filters so stats and visibility stay consistent
+                    applyFilters();
+                    showNavToast('success', 'Preis aktualisiert',
+                        setCode.toUpperCase() + ' #' + collectorNumber + ': ' + formatEuro(price));
+                })
+                .catch(err => showNavToast('danger', 'Fehler beim Aktualisieren', String(err)))
+                .finally(() => { btn.disabled = false; icon.className = 'bi bi-arrow-repeat'; });
+        }
+
+        // Init on load
+        document.addEventListener('DOMContentLoaded', applyFilters);
     </script>
 </body>
 </html>

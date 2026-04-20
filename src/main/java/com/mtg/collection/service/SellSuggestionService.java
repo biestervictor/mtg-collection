@@ -90,6 +90,13 @@ public class SellSuggestionService {
             return link.contains("?") ? link + "&sellerCountry=7" : link + "?sellerCountry=7";
         }
 
+        /** Rarity of the card: "common", "uncommon", "rare", "mythic", or "unknown" if not in cache. */
+        public String getRarity() {
+            if (scryfallCard == null) return "unknown";
+            String r = scryfallCard.getRarity();
+            return r != null ? r : "unknown";
+        }
+
         /** @deprecated Use {@link #getCardmarketLink()} for the localised link. */
         @Deprecated
         public String getPurchaseLink() {

@@ -44,6 +44,21 @@
         .form-range::-moz-range-track              { background: #2a2a4a; }
         .form-check-input:checked { background-color: var(--accent-color); border-color: var(--accent-color); }
 
+        /* rarity badge colours */
+        .rarity-common   { background: #aaa;    color:#000; font-size:.6em; }
+        .rarity-uncommon { background: #7ba7bc; color:#000; font-size:.6em; }
+        .rarity-rare     { background: #c8a84b; color:#000; font-size:.6em; }
+        .rarity-mythic   { background: #bf4f2b; color:#fff; font-size:.6em; }
+
+        /* rarity toggle buttons */
+        .btn-rarity-c, .btn-rarity-u, .btn-rarity-r, .btn-rarity-m {
+            border: 1px solid #555; color: #888; background: transparent; padding: 2px 9px; font-size:.8rem;
+        }
+        .btn-check:checked + .btn-rarity-c { background:#aaa;    color:#000; border-color:#aaa;    }
+        .btn-check:checked + .btn-rarity-u { background:#7ba7bc; color:#000; border-color:#7ba7bc; }
+        .btn-check:checked + .btn-rarity-r { background:#c8a84b; color:#000; border-color:#c8a84b; }
+        .btn-check:checked + .btn-rarity-m { background:#bf4f2b; color:#fff; border-color:#bf4f2b; }
+
         /* refresh button spin */
         @keyframes spin { to { transform: rotate(360deg); } }
         .spin { display: inline-block; animation: spin 0.8s linear infinite; }
@@ -121,6 +136,32 @@
                     </div>
                 </div>
             </div>
+            <!-- Rarity filter -->
+            <div class="row g-2 align-items-center mt-1">
+                <div class="col-auto">
+                    <span style="font-size:.85rem;color:#888;">Seltenheit:</span>
+                </div>
+                <div class="col-auto">
+                    <div class="btn-group" role="group" aria-label="Rarity filter">
+                        <input type="checkbox" class="btn-check" id="r-common"   autocomplete="off" checked onchange="applyFilters()">
+                        <label class="btn btn-rarity-c" for="r-common">Common</label>
+
+                        <input type="checkbox" class="btn-check" id="r-uncommon" autocomplete="off" checked onchange="applyFilters()">
+                        <label class="btn btn-rarity-u" for="r-uncommon">Uncommon</label>
+
+                        <input type="checkbox" class="btn-check" id="r-rare"     autocomplete="off" onchange="applyFilters()">
+                        <label class="btn btn-rarity-r" for="r-rare">Rare</label>
+
+                        <input type="checkbox" class="btn-check" id="r-mythic"   autocomplete="off" onchange="applyFilters()">
+                        <label class="btn btn-rarity-m" for="r-mythic">Mythic</label>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            style="font-size:.75rem;padding:2px 8px;"
+                            onclick="selectAllRarities()">Alle</button>
+                </div>
+            </div>
         </div>
 
         <!-- Explanation callout -->
@@ -165,6 +206,7 @@
                             th:data-setcode="${s.userCard.setCode.toUpperCase()}"
                             th:data-sellableqty="${s.sellableQty}"
                             th:data-totalvalue="${s.totalValue}"
+                            th:data-rarity="${s.rarity}"
                             th:data-img-large="${s.imageUrl}"
                             onmouseenter="showCardPreview(this)"
                             onmouseleave="hideCardPreview()">
@@ -179,6 +221,9 @@
                                 <strong th:text="${s.userCard.name}">Name</strong>
                                 <span th:if="${s.userCard.foil}"
                                       class="badge bg-warning text-dark ms-1" style="font-size:.65em;">Foil</span>
+                                <span class="badge ms-1"
+                                      th:classappend="'rarity-' + ${s.rarity}"
+                                      th:text="${#strings.toUpperCase(#strings.substring(s.rarity, 0, 1))}">R</span>
                             </td>
                             <td>
                                 <img th:src="'https://svgs.scryfall.io/sets/' + ${s.userCard.setCode.toLowerCase()} + '.svg'"
@@ -276,6 +321,11 @@
             const minPrice = parseFloat(slider.value);
             const atMax    = minPrice >= 10;
 
+            const showCommon   = document.getElementById('r-common').checked;
+            const showUncommon = document.getElementById('r-uncommon').checked;
+            const showRare     = document.getElementById('r-rare').checked;
+            const showMythic   = document.getElementById('r-mythic').checked;
+
             // Update slider label
             const lbl = document.getElementById('sliderLabel');
             lbl.textContent = atMax ? '10,00 €+' : minPrice.toFixed(2).replace('.', ',') + ' €';
@@ -289,10 +339,16 @@
                 const setCode  = row.dataset.setcode || '';
                 const qty      = parseInt(row.dataset.sellableqty || 0);
                 const rowRev   = parseFloat(row.dataset.totalvalue || 0);
+                const rarity   = row.dataset.rarity || 'unknown';
 
                 const priceOk  = atMax ? price >= 10 : price >= minPrice;
                 const sldOk    = !(hideSld && setCode === 'SLD');
-                const visible  = priceOk && sldOk;
+                const rarityOk = (rarity === 'common'   && showCommon)   ||
+                                 (rarity === 'uncommon' && showUncommon) ||
+                                 (rarity === 'rare'     && showRare)     ||
+                                 (rarity === 'mythic'   && showMythic)   ||
+                                 !['common','uncommon','rare','mythic'].includes(rarity);
+                const visible  = priceOk && sldOk && rarityOk;
 
                 row.style.display = visible ? '' : 'none';
                 if (visible) { count++; revenue += rowRev; copies += qty; }
@@ -316,6 +372,13 @@
                 empty.style.display = (count === 0) ? '' : 'none';
                 tbl.style.display   = (count === 0) ? 'none' : '';
             }
+        }
+
+        function selectAllRarities() {
+            ['r-common','r-uncommon','r-rare','r-mythic'].forEach(id => {
+                document.getElementById(id).checked = true;
+            });
+            applyFilters();
         }
 
         // ── Per-card price refresh ────────────────────────────────────────────

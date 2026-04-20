@@ -91,6 +91,7 @@ public class SellSuggestionService {
         }
 
         /** @deprecated Use {@link #getCardmarketLink()} for the localised link. */
+        @Deprecated
         public String getPurchaseLink() {
             return scryfallCard != null ? scryfallCard.getPurchaseLink() : null;
         }
@@ -137,9 +138,9 @@ public class SellSuggestionService {
         }
 
         result.sort(Comparator.comparingDouble(SellSuggestion::getTotalValue).reversed());
-        log.info("Sell suggestions for {}: {} cards, total potential revenue: {:.2f} €",
+        log.info("Sell suggestions for {}: {} cards, total potential revenue: {} €",
                 user, result.size(),
-                result.stream().mapToDouble(SellSuggestion::getTotalValue).sum());
+                String.format("%.2f", result.stream().mapToDouble(SellSuggestion::getTotalValue).sum()));
         return result;
     }
 

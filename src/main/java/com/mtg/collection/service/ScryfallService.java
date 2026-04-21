@@ -13,6 +13,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -290,6 +291,22 @@ return sets;
         }
 
         return card;
+    }
+
+    /**
+     * Refreshes Scryfall prices for a specific subset of set codes.
+     * Useful for targeted updates (e.g. only sets the user owns cards from).
+     */
+    public void updatePricesForSets(Collection<String> setCodes) {
+        log.info("Updating Scryfall prices for {} sets", setCodes.size());
+        for (String setCode : setCodes) {
+            try {
+                updatePricesForSet(setCode);
+            } catch (Exception e) {
+                log.error("Failed to update prices for set: {}", setCode, e);
+            }
+        }
+        log.info("Targeted price update completed for {} sets", setCodes.size());
     }
 
     public void updatePricesOnly() {

@@ -1,6 +1,7 @@
 package com.mtg.collection.controller;
 
 import com.mtg.collection.model.ScryfallCard;
+import com.mtg.collection.service.PriceHistoryService;
 import com.mtg.collection.service.PriceUpdateService;
 import com.mtg.collection.service.ScryfallService;
 import org.springframework.http.ResponseEntity;
@@ -14,31 +15,37 @@ import java.util.Map;
 @RestController
 public class PriceController {
 
-    private final PriceUpdateService priceUpdateService;
-    private final ScryfallService    scryfallService;
+    private final PriceUpdateService  priceUpdateService;
+    private final ScryfallService     scryfallService;
+    private final PriceHistoryService priceHistoryService;
 
-    public PriceController(PriceUpdateService priceUpdateService, ScryfallService scryfallService) {
-        this.priceUpdateService = priceUpdateService;
-        this.scryfallService    = scryfallService;
+    public PriceController(PriceUpdateService  priceUpdateService,
+                           ScryfallService     scryfallService,
+                           PriceHistoryService priceHistoryService) {
+        this.priceUpdateService  = priceUpdateService;
+        this.scryfallService     = scryfallService;
+        this.priceHistoryService = priceHistoryService;
     }
 
     /**
-     * Manually triggers the price-propagation from the Scryfall cache to all
-     * users' UserCard records.  Returns a JSON summary of how many cards were
-     * actually updated per user.
+     * Manually triggers a full price update:
+     * <ol>
+     *   <li>Fetches fresh prices from Scryfall for all sets the users own cards from.</li>
+     *   <li>Propagates the updated prices to all users' UserCard records.</li>
+     *   <li>Takes a price-history snapshot for the PriceWatch page.</li>
+     * </ol>
      *
      * Example response:
-     * { "totalUpdated": 42, "perUser": { "Andre": 20, "Victor": 22 } }
+     * { "totalUpdated": 42, "perUser": { "Andre": 20, "Victor": 22 }, "snapped": 135 }
      */
     @PostMapping("/api/prices/update")
     public ResponseEntity<Map<String, Object>> triggerPriceUpdate() {
-        Map<String, Integer> perUser = priceUpdateService.runUpdateForAllUsers();
-        int total = perUser.values().stream().mapToInt(Integer::intValue).sum();
+        Map<String, Object> result = priceUpdateService.runFullUpdate();
 
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("totalUpdated", total);
-        response.put("perUser", perUser);
-        return ResponseEntity.ok(response);
+        int snapped = priceHistoryService.snapshotOwnedCardPrices();
+        result.put("snapped", snapped);
+
+        return ResponseEntity.ok(result);
     }
 
     /**

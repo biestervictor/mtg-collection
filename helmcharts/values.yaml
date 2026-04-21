@@ -9,7 +9,7 @@ imagePullSecret: ChangeIt
 
 image:
   repository: ghcr.io/biestervictor/mtg-collection
-  tag: "dev-0.1.49"
+  tag: "dev-0.1.50"
 
 mtgcollection:
   name: mtg-collection

@@ -84,7 +84,7 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <div>
             <h2 class="mb-0"><i class="bi bi-graph-up-arrow text-success"></i> PriceWatch</h2>
-            <small class="text-muted">
+            <small style="color:#9a9ab8">
                 Kursentwicklung deiner Sammlung ·
                 <span th:if="${lastSnapshotDate != null}">
                     Letzter Snapshot:
@@ -175,6 +175,7 @@
                                     th:data-setcode="${c.setCode}"
                                     th:data-cn="${c.collectorNumber}"
                                     th:data-cardname="${c.cardName}"
+                                    th:data-setname="${c.setName}"
                                     th:data-thumb="${c.thumbnailUrl}"
                                     th:data-abs="${c.absoluteChange}"
                                     th:data-pct="${c.percentChange}"
@@ -192,7 +193,7 @@
                                     </td>
                                     <td>
                                         <div th:text="${c.cardName}" class="fw-semibold" style="font-size:.9em"></div>
-                                        <small class="text-muted" th:text="${c.setCode.toUpperCase()}"></small>
+                                        <small class="set-code-badge" th:text="${c.setCode.toUpperCase()}"></small>
                                     </td>
                                     <td class="text-end" style="font-size:.85em"
                                         th:text="${c.quantity}"></td>
@@ -253,6 +254,7 @@
                                     th:data-setcode="${c.setCode}"
                                     th:data-cn="${c.collectorNumber}"
                                     th:data-cardname="${c.cardName}"
+                                    th:data-setname="${c.setName}"
                                     th:data-thumb="${c.thumbnailUrl}"
                                     th:data-abs="${c.absoluteChange}"
                                     th:data-pct="${c.percentChange}"
@@ -270,7 +272,7 @@
                                     </td>
                                     <td>
                                         <div th:text="${c.cardName}" class="fw-semibold" style="font-size:.9em"></div>
-                                        <small class="text-muted" th:text="${c.setCode.toUpperCase()}"></small>
+                                        <small class="set-code-badge" th:text="${c.setCode.toUpperCase()}"></small>
                                     </td>
                                     <td class="text-end" style="font-size:.85em"
                                         th:text="${c.quantity}"></td>
@@ -621,16 +623,21 @@
         const setCode  = row.dataset.setcode;
         const cn       = row.dataset.cn;
         const cardName = row.dataset.cardname;
+        const setName  = row.dataset.setname || '';
         const thumb    = row.dataset.thumb;
 
         document.getElementById('cardDetailTitle').textContent = cardName;
         document.getElementById('modalCardSet').textContent    = (setCode || '').toUpperCase() + ' · #' + cn;
 
-        // Cardmarket search link
+        // Cardmarket direct link: /Singles/{expansion-slug}/{card-slug}
+        // Special chars removed, spaces → hyphens (matches CM URL convention)
         const cmLink = document.getElementById('cmLink');
         if (cmLink) {
-            cmLink.href = 'https://www.cardmarket.com/en/Magic/Products/Search?searchString='
-                        + encodeURIComponent(cardName);
+            const slug = s => s.replace(/[''',:.!?()/&]/g, '').replace(/\s+/g, '-').replace(/-{2,}/g, '-');
+            const expansion = setName ? slug(setName) : setCode.toUpperCase();
+            cmLink.href = 'https://www.cardmarket.com/en/Magic/Products/Singles/'
+                        + encodeURIComponent(expansion) + '/'
+                        + encodeURIComponent(slug(cardName));
         }
 
         const imgEl = document.getElementById('modalCardImg');

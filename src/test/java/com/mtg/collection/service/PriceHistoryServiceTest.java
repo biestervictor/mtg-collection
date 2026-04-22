@@ -8,6 +8,7 @@ import com.mtg.collection.repository.PriceHistoryRepository;
 import com.mtg.collection.repository.ScryfallCardRepository;
 import com.mtg.collection.repository.ScryfallSetRepository;
 import com.mtg.collection.repository.UserCardRepository;
+import com.mtg.collection.repository.UserDeckRepository;
 import com.mtg.collection.service.PriceHistoryService.PriceChange;
 import com.mtg.collection.service.PriceHistoryService.SetSummary;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +32,7 @@ class PriceHistoryServiceTest {
     @Mock private UserCardRepository     userCardRepository;
     @Mock private ScryfallCardRepository scryfallCardRepository;
     @Mock private ScryfallSetRepository  scryfallSetRepository;
+    @Mock private UserDeckRepository     userDeckRepository;
 
     private PriceHistoryService service;
 
@@ -38,7 +40,13 @@ class PriceHistoryServiceTest {
     void setUp() {
         service = new PriceHistoryService(
                 priceHistoryRepository, userCardRepository,
-                scryfallCardRepository, scryfallSetRepository);
+                scryfallCardRepository, scryfallSetRepository,
+                userDeckRepository);
+
+        // Lenient defaults so tests that don't care about these calls don't NPE
+        lenient().when(userCardRepository.findAll()).thenReturn(Collections.emptyList());
+        lenient().when(userDeckRepository.findAll()).thenReturn(Collections.emptyList());
+        lenient().when(scryfallCardRepository.findBySetCodeIn(anyCollection())).thenReturn(Collections.emptyList());
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

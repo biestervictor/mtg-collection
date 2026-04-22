@@ -4,10 +4,12 @@ import com.mtg.collection.model.PriceHistory;
 import com.mtg.collection.model.ScryfallCard;
 import com.mtg.collection.model.ScryfallSet;
 import com.mtg.collection.model.UserCard;
+import com.mtg.collection.model.UserDeck;
 import com.mtg.collection.repository.PriceHistoryRepository;
 import com.mtg.collection.repository.ScryfallCardRepository;
 import com.mtg.collection.repository.ScryfallSetRepository;
 import com.mtg.collection.repository.UserCardRepository;
+import com.mtg.collection.repository.UserDeckRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -32,15 +34,18 @@ public class PriceHistoryService {
     private final UserCardRepository     userCardRepository;
     private final ScryfallCardRepository scryfallCardRepository;
     private final ScryfallSetRepository  scryfallSetRepository;
+    private final UserDeckRepository     userDeckRepository;
 
     public PriceHistoryService(PriceHistoryRepository priceHistoryRepository,
                                UserCardRepository     userCardRepository,
                                ScryfallCardRepository scryfallCardRepository,
-                               ScryfallSetRepository  scryfallSetRepository) {
+                               ScryfallSetRepository  scryfallSetRepository,
+                               UserDeckRepository     userDeckRepository) {
         this.priceHistoryRepository = priceHistoryRepository;
         this.userCardRepository     = userCardRepository;
         this.scryfallCardRepository = scryfallCardRepository;
         this.scryfallSetRepository  = scryfallSetRepository;
+        this.userDeckRepository     = userDeckRepository;
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -156,7 +161,7 @@ public class PriceHistoryService {
             bySet.computeIfAbsent(lat.getSetCode(), k -> new ArrayList<>())
                  .add(new PriceChange(lat.getCardName(), lat.getSetCode(),
                          lat.getCollectorNumber(), lat.getThumbnailUrl(),
-                         oldP, newP, abs, pct));
+                         oldP, newP, abs, pct, 0, "", false));
         }
 
         List<SetSummary> summaries = new ArrayList<>();
@@ -221,6 +226,31 @@ public class PriceHistoryService {
         Map<String, PriceHistory> latestMap = buildMap(priceHistoryRepository.findByDate(dates.get(0)));
         Map<String, PriceHistory> prevMap   = buildMap(priceHistoryRepository.findByDate(dates.get(1)));
 
+        // Quantity per setCode_cn (sum across all users)
+        Map<String, Integer> qtyByKey = new HashMap<>();
+        for (UserCard uc : userCardRepository.findAll()) {
+            String k = uc.getSetCode().toLowerCase() + "_" + uc.getCollectorNumber();
+            qtyByKey.merge(k, uc.getQuantity(), Integer::sum);
+        }
+
+        // In-deck keys: setCode_cn combinations used in any deck (all users, all boards)
+        Set<String> inDeckKeys = new HashSet<>();
+        for (UserDeck deck : userDeckRepository.findAll()) {
+            deck.getMainboard() .forEach(c -> inDeckKeys.add(c.getSetCode().toLowerCase() + "_" + c.getCollectorNumber()));
+            deck.getSideboard() .forEach(c -> inDeckKeys.add(c.getSetCode().toLowerCase() + "_" + c.getCollectorNumber()));
+            deck.getExtraboard().forEach(c -> inDeckKeys.add(c.getSetCode().toLowerCase() + "_" + c.getCollectorNumber()));
+        }
+
+        // Rarity map: setCode_cn → rarity (from Scryfall data)
+        Set<String> setCodes = latestMap.values().stream()
+                .map(PriceHistory::getSetCode)
+                .collect(Collectors.toSet());
+        Map<String, String> rarityByKey = new HashMap<>();
+        for (ScryfallCard sc : scryfallCardRepository.findBySetCodeIn(setCodes)) {
+            rarityByKey.put(sc.getSetCode().toLowerCase() + "_" + sc.getCollectorNumber(),
+                    sc.getRarity() != null ? sc.getRarity() : "");
+        }
+
         // Default sort: absolute change (more meaningful than % for portfolio relevance).
         // A card jumping €0.10→€0.20 (+100%) matters less than €5→€8 (+€3).
         Comparator<PriceChange> order = winners
@@ -240,9 +270,14 @@ public class PriceHistoryService {
                     double pct  = abs / oldP * 100.0;
                     if (winners && abs <= 0.0) return null;
                     if (!winners && abs >= 0.0) return null;
+
+                    int     qty      = qtyByKey.getOrDefault(key, 0);
+                    String  rarity   = rarityByKey.getOrDefault(key, "");
+                    boolean tradable = !inDeckKeys.contains(key) && qty > 1;
+
                     return new PriceChange(lat.getCardName(), lat.getSetCode(),
                             lat.getCollectorNumber(), lat.getThumbnailUrl(),
-                            oldP, newP, abs, pct);
+                            oldP, newP, abs, pct, qty, rarity, tradable);
                 })
                 .filter(Objects::nonNull)
                 .sorted(order)
@@ -278,19 +313,23 @@ public class PriceHistoryService {
     // ── Inner DTOs ────────────────────────────────────────────────────────────
 
     public static class PriceChange {
-        private final String cardName;
-        private final String setCode;
-        private final String collectorNumber;
-        private final String thumbnailUrl;
-        private final double oldPrice;
-        private final double newPrice;
-        private final double absoluteChange;
-        private final double percentChange;
+        private final String  cardName;
+        private final String  setCode;
+        private final String  collectorNumber;
+        private final String  thumbnailUrl;
+        private final double  oldPrice;
+        private final double  newPrice;
+        private final double  absoluteChange;
+        private final double  percentChange;
+        private final int     quantity;
+        private final String  rarity;
+        private final boolean tradable;
 
         public PriceChange(String cardName, String setCode, String collectorNumber,
                            String thumbnailUrl,
                            double oldPrice, double newPrice,
-                           double absoluteChange, double percentChange) {
+                           double absoluteChange, double percentChange,
+                           int quantity, String rarity, boolean tradable) {
             this.cardName        = cardName;
             this.setCode         = setCode;
             this.collectorNumber = collectorNumber;
@@ -299,16 +338,22 @@ public class PriceHistoryService {
             this.newPrice        = newPrice;
             this.absoluteChange  = absoluteChange;
             this.percentChange   = percentChange;
+            this.quantity        = quantity;
+            this.rarity          = rarity;
+            this.tradable        = tradable;
         }
 
-        public String getCardName()        { return cardName; }
-        public String getSetCode()         { return setCode; }
-        public String getCollectorNumber() { return collectorNumber; }
-        public String getThumbnailUrl()    { return thumbnailUrl; }
-        public double getOldPrice()        { return oldPrice; }
-        public double getNewPrice()        { return newPrice; }
-        public double getAbsoluteChange()  { return absoluteChange; }
-        public double getPercentChange()   { return percentChange; }
+        public String  getCardName()        { return cardName; }
+        public String  getSetCode()         { return setCode; }
+        public String  getCollectorNumber() { return collectorNumber; }
+        public String  getThumbnailUrl()    { return thumbnailUrl; }
+        public double  getOldPrice()        { return oldPrice; }
+        public double  getNewPrice()        { return newPrice; }
+        public double  getAbsoluteChange()  { return absoluteChange; }
+        public double  getPercentChange()   { return percentChange; }
+        public int     getQuantity()        { return quantity; }
+        public String  getRarity()          { return rarity; }
+        public boolean isTradable()         { return tradable; }
     }
 
     public static class SetSummary {

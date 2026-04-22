@@ -30,9 +30,21 @@
         .table-watch tbody tr { cursor: pointer; }
         .table-watch tbody tr:hover { background-color: rgba(233,69,96,0.08) !important; }
 
+        /* previous price — muted but visible on dark background */
+        .text-prev-price { color: #8888aa !important; }
+
         /* sort toggle */
         .btn-sort { border: 1px solid #3a3a5a; color: #888; background: transparent; padding: 2px 10px; font-size: .78rem; border-radius: 4px; }
         .btn-sort.active { background: #2a2a4a; color: #f1f1f1; border-color: #555; }
+
+        /* rarity / filter toggle */
+        .btn-filter { border: 1px solid #3a3a5a; color: #888; background: transparent; padding: 2px 9px; font-size: .78rem; border-radius: 4px; cursor: pointer; }
+        .btn-filter.active { color: #f1f1f1; border-color: #666; }
+        .btn-filter.active.f-C { background: #2d4a2d; border-color: #4a7a4a; }
+        .btn-filter.active.f-U { background: #2d3d5a; border-color: #4a5a8a; }
+        .btn-filter.active.f-R { background: #5a3a1a; border-color: #8a6030; }
+        .btn-filter.active.f-M { background: #5a1a2d; border-color: #8a304a; }
+        .btn-filter.active.f-T { background: #1a3a4a; border-color: #306070; }
 
         /* expand button */
         .btn-expand { border: 1px solid #2a2a4a; color: #888; background: transparent; font-size: .78rem;
@@ -106,6 +118,25 @@
     <div th:if="${not #lists.isEmpty(winners) or not #lists.isEmpty(losers)}"
          class="row g-3 mb-4">
 
+        <!-- ── Filter bar (shared for winners + losers) ── -->
+        <div class="col-12">
+            <div class="d-flex align-items-center gap-2 flex-wrap py-2 px-1"
+                 style="background:#12122a; border-radius:6px; border:1px solid #2a2a4a;">
+                <span style="color:#888;font-size:.78rem;padding-left:4px">Filter:</span>
+                <button class="btn-filter f-C" id="filter-C" onclick="toggleFilter('C')">Common</button>
+                <button class="btn-filter f-U" id="filter-U" onclick="toggleFilter('U')">Uncommon</button>
+                <button class="btn-filter f-R" id="filter-R" onclick="toggleFilter('R')">Rare</button>
+                <button class="btn-filter f-M" id="filter-M" onclick="toggleFilter('M')">Mythic</button>
+                <div class="vr" style="opacity:.3;height:18px;align-self:center"></div>
+                <button class="btn-filter f-T" id="filter-T" onclick="toggleFilter('T')">
+                    <i class="bi bi-tag"></i> Tradable
+                </button>
+                <span id="filter-hint" style="color:#555;font-size:.73rem;margin-left:4px">
+                    Kein Filter aktiv — alle Karten sichtbar
+                </span>
+            </div>
+        </div>
+
         <!-- ── Winners ── -->
         <div class="col-lg-6">
             <div class="card h-100">
@@ -132,6 +163,7 @@
                                 <tr>
                                     <th style="width:44px"></th>
                                     <th>Karte</th>
+                                    <th class="text-end">Qty</th>
                                     <th class="text-end">Vorher</th>
                                     <th class="text-end">Jetzt</th>
                                     <th class="text-end" id="th-winners-abs">+/− €</th>
@@ -146,6 +178,9 @@
                                     th:data-thumb="${c.thumbnailUrl}"
                                     th:data-abs="${c.absoluteChange}"
                                     th:data-pct="${c.percentChange}"
+                                    th:data-qty="${c.quantity}"
+                                    th:data-rarity="${c.rarity}"
+                                    th:data-tradable="${c.tradable}"
                                     onclick="openCardDetail(this)"
                                     onmouseenter="showPreview(event, this)"
                                     onmouseleave="hidePreview()">
@@ -159,7 +194,9 @@
                                         <div th:text="${c.cardName}" class="fw-semibold" style="font-size:.9em"></div>
                                         <small class="text-muted" th:text="${c.setCode.toUpperCase()}"></small>
                                     </td>
-                                    <td class="text-end text-muted" style="font-size:.85em"
+                                    <td class="text-end" style="font-size:.85em"
+                                        th:text="${c.quantity}"></td>
+                                    <td class="text-end text-prev-price" style="font-size:.85em"
                                         th:text="${#numbers.formatDecimal(c.oldPrice, 1, 2)} + ' €'"></td>
                                     <td class="text-end" style="font-size:.9em"
                                         th:text="${#numbers.formatDecimal(c.newPrice, 1, 2)} + ' €'"></td>
@@ -204,6 +241,7 @@
                                 <tr>
                                     <th style="width:44px"></th>
                                     <th>Karte</th>
+                                    <th class="text-end">Qty</th>
                                     <th class="text-end">Vorher</th>
                                     <th class="text-end">Jetzt</th>
                                     <th class="text-end" id="th-losers-abs">+/− €</th>
@@ -218,6 +256,9 @@
                                     th:data-thumb="${c.thumbnailUrl}"
                                     th:data-abs="${c.absoluteChange}"
                                     th:data-pct="${c.percentChange}"
+                                    th:data-qty="${c.quantity}"
+                                    th:data-rarity="${c.rarity}"
+                                    th:data-tradable="${c.tradable}"
                                     onclick="openCardDetail(this)"
                                     onmouseenter="showPreview(event, this)"
                                     onmouseleave="hidePreview()">
@@ -231,7 +272,9 @@
                                         <div th:text="${c.cardName}" class="fw-semibold" style="font-size:.9em"></div>
                                         <small class="text-muted" th:text="${c.setCode.toUpperCase()}"></small>
                                     </td>
-                                    <td class="text-end text-muted" style="font-size:.85em"
+                                    <td class="text-end" style="font-size:.85em"
+                                        th:text="${c.quantity}"></td>
+                                    <td class="text-end text-prev-price" style="font-size:.85em"
                                         th:text="${#numbers.formatDecimal(c.oldPrice, 1, 2)} + ' €'"></td>
                                     <td class="text-end" style="font-size:.9em"
                                         th:text="${#numbers.formatDecimal(c.newPrice, 1, 2)} + ' €'"></td>
@@ -404,6 +447,60 @@
     const sortState = { winners: 'abs', losers: 'abs' };
     const PREVIEW_ROWS = 10;
 
+    // ── Filter state ──────────────────────────────────────────────────────────
+    // activeRarities: Set of 'C','U','R','M' — empty = no rarity filter
+    const filterState = { rarities: new Set(), tradable: false };
+
+    // ── Filter toggle ─────────────────────────────────────────────────────────
+    function toggleFilter(key) {
+        if (key === 'T') {
+            filterState.tradable = !filterState.tradable;
+            document.getElementById('filter-T').classList.toggle('active', filterState.tradable);
+        } else {
+            if (filterState.rarities.has(key)) {
+                filterState.rarities.delete(key);
+            } else {
+                filterState.rarities.add(key);
+            }
+            document.getElementById('filter-' + key).classList.toggle('active', filterState.rarities.has(key));
+        }
+        updateFilterHint();
+        applyFilter();
+    }
+
+    function updateFilterHint() {
+        const hint = document.getElementById('filter-hint');
+        if (!hint) return;
+        const rarityLabels = { C: 'Common', U: 'Uncommon', R: 'Rare', M: 'Mythic' };
+        const parts = [];
+        filterState.rarities.forEach(r => parts.push(rarityLabels[r] || r));
+        if (filterState.tradable) parts.push('Tradable');
+        hint.textContent = parts.length === 0
+            ? 'Kein Filter aktiv — alle Karten sichtbar'
+            : 'Aktiv: ' + parts.join(', ');
+    }
+
+    // Applies filter to both tables, then refreshes expand state
+    function applyFilter() {
+        ['winners', 'losers'].forEach(side => {
+            const tbody = document.getElementById(side + 'Body');
+            if (!tbody) return;
+            Array.from(tbody.querySelectorAll('tr')).forEach(r => {
+                const rarity   = (r.dataset.rarity || '').toLowerCase();
+                const tradable = r.dataset.tradable === 'true';
+
+                // Rarity filter: empty set = no filter; otherwise first char uppercase must match
+                const firstChar     = rarity.charAt(0).toUpperCase();
+                const rarityOk      = filterState.rarities.size === 0
+                                   || filterState.rarities.has(firstChar);
+                const tradableOk    = !filterState.tradable || tradable;
+
+                r.dataset.filtered = (rarityOk && tradableOk) ? 'true' : 'false';
+            });
+            applyExpand(side);
+        });
+    }
+
     // ── Sort toggle ───────────────────────────────────────────────────────────
     function setSort(side, mode) {
         sortState[side] = mode;
@@ -432,7 +529,7 @@
         });
         rows.forEach(r => tbody.appendChild(r));
 
-        // Re-apply preview/expand state
+        // Re-apply filter + expand state
         applyExpand(side);
     }
 
@@ -449,29 +546,37 @@
         const tbody = document.getElementById(side + 'Body');
         if (!tbody) return;
         const expanded = tbody.dataset.expanded === 'true';
-        const rows     = Array.from(tbody.querySelectorAll('tr'));
 
-        rows.forEach((r, i) => {
-            r.style.display = (expanded || i < PREVIEW_ROWS) ? '' : 'none';
+        let visPos = 0;  // counter among filter-passing rows
+        Array.from(tbody.querySelectorAll('tr')).forEach(r => {
+            const passes = r.dataset.filtered !== 'false';
+            if (!passes) {
+                r.style.display = 'none';
+                return;
+            }
+            visPos++;
+            r.style.display = (expanded || visPos <= PREVIEW_ROWS) ? '' : 'none';
         });
 
+        const total = Array.from(tbody.querySelectorAll('tr'))
+                          .filter(r => r.dataset.filtered !== 'false').length;
         const btn = document.getElementById('expand-' + side);
         if (!btn) return;
-        if (rows.length <= PREVIEW_ROWS) {
+        if (total <= PREVIEW_ROWS) {
             btn.style.display = 'none';
             return;
         }
+        btn.style.display = '';
         if (expanded) {
             btn.innerHTML = '<i class="bi bi-chevron-up"></i> Weniger anzeigen';
         } else {
-            btn.innerHTML = '<i class="bi bi-chevron-down"></i> Alle ' + rows.length + ' anzeigen';
+            btn.innerHTML = '<i class="bi bi-chevron-down"></i> Alle ' + total + ' anzeigen';
         }
     }
 
     // ── Init on page load ─────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
-        applyExpand('winners');
-        applyExpand('losers');
+        applyFilter();   // sets data-filtered + calls applyExpand for both sides
         // Grey out the pct column headers initially (abs is default)
         ['winners','losers'].forEach(side => {
             const th = document.getElementById('th-' + side + '-pct');

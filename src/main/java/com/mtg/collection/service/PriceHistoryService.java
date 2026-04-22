@@ -161,7 +161,7 @@ public class PriceHistoryService {
             bySet.computeIfAbsent(lat.getSetCode(), k -> new ArrayList<>())
                  .add(new PriceChange(lat.getCardName(), lat.getSetCode(),
                          lat.getCollectorNumber(), lat.getThumbnailUrl(),
-                         oldP, newP, abs, pct, 0, "", false));
+                         oldP, newP, abs, pct, 0, "", false, ""));
         }
 
         List<SetSummary> summaries = new ArrayList<>();
@@ -241,7 +241,7 @@ public class PriceHistoryService {
             deck.getExtraboard().forEach(c -> inDeckKeys.add(c.getSetCode().toLowerCase() + "_" + c.getCollectorNumber()));
         }
 
-        // Rarity map: setCode_cn → rarity (from Scryfall data)
+        // Rarity + setName map: setCode_cn → rarity, setCode → setName
         Set<String> setCodes = latestMap.values().stream()
                 .map(PriceHistory::getSetCode)
                 .collect(Collectors.toSet());
@@ -250,6 +250,11 @@ public class PriceHistoryService {
             rarityByKey.put(sc.getSetCode().toLowerCase() + "_" + sc.getCollectorNumber(),
                     sc.getRarity() != null ? sc.getRarity() : "");
         }
+        Map<String, String> setNameByCode = scryfallSetRepository.findAll().stream()
+                .collect(Collectors.toMap(
+                        s -> s.getSetCode().toLowerCase(),
+                        ScryfallSet::getName,
+                        (a, b) -> a));
 
         // Default sort: absolute change (more meaningful than % for portfolio relevance).
         // A card jumping €0.10→€0.20 (+100%) matters less than €5→€8 (+€3).
@@ -273,11 +278,12 @@ public class PriceHistoryService {
 
                     int     qty      = qtyByKey.getOrDefault(key, 0);
                     String  rarity   = rarityByKey.getOrDefault(key, "");
+                    String  setName  = setNameByCode.getOrDefault(lat.getSetCode(), "");
                     boolean tradable = !inDeckKeys.contains(key) && qty > 1;
 
                     return new PriceChange(lat.getCardName(), lat.getSetCode(),
                             lat.getCollectorNumber(), lat.getThumbnailUrl(),
-                            oldP, newP, abs, pct, qty, rarity, tradable);
+                            oldP, newP, abs, pct, qty, rarity, tradable, setName);
                 })
                 .filter(Objects::nonNull)
                 .sorted(order)
@@ -324,12 +330,14 @@ public class PriceHistoryService {
         private final int     quantity;
         private final String  rarity;
         private final boolean tradable;
+        private final String  setName;
 
         public PriceChange(String cardName, String setCode, String collectorNumber,
                            String thumbnailUrl,
                            double oldPrice, double newPrice,
                            double absoluteChange, double percentChange,
-                           int quantity, String rarity, boolean tradable) {
+                           int quantity, String rarity, boolean tradable,
+                           String setName) {
             this.cardName        = cardName;
             this.setCode         = setCode;
             this.collectorNumber = collectorNumber;
@@ -341,6 +349,7 @@ public class PriceHistoryService {
             this.quantity        = quantity;
             this.rarity          = rarity;
             this.tradable        = tradable;
+            this.setName         = setName;
         }
 
         public String  getCardName()        { return cardName; }
@@ -354,6 +363,7 @@ public class PriceHistoryService {
         public int     getQuantity()        { return quantity; }
         public String  getRarity()          { return rarity; }
         public boolean isTradable()         { return tradable; }
+        public String  getSetName()         { return setName; }
     }
 
     public static class SetSummary {

@@ -318,7 +318,7 @@ public class InventoryImportService {
             UserCard card = new UserCard();
             card.setName(cardName);
             card.setSetCode(setCode);
-            card.setCollectorNumber(cardNumber.replaceAll("[^0-9]", ""));
+            card.setCollectorNumber(cardNumber.replaceAll("[^0-9a-zA-Z]", ""));
             card.setQuantity(quantity);
             card.setFoil(isFoil);
             card.setFolderName(fields[0].trim()); // Folder Name column

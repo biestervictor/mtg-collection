@@ -47,6 +47,7 @@ class PriceHistoryServiceTest {
         lenient().when(userCardRepository.findAll()).thenReturn(Collections.emptyList());
         lenient().when(userDeckRepository.findAll()).thenReturn(Collections.emptyList());
         lenient().when(scryfallCardRepository.findBySetCodeIn(anyCollection())).thenReturn(Collections.emptyList());
+        lenient().when(scryfallSetRepository.findAll()).thenReturn(Collections.emptyList());
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

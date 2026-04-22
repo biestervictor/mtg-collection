@@ -424,6 +424,10 @@
             </div>
             <div class="modal-footer">
                 <span id="modalCardSet" class="text-muted me-auto" style="font-size:.85em"></span>
+                <a id="cmLink" href="#" target="_blank" rel="noopener"
+                   class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-cart3"></i> Cardmarket
+                </a>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Schließen</button>
             </div>
         </div>
@@ -621,6 +625,13 @@
 
         document.getElementById('cardDetailTitle').textContent = cardName;
         document.getElementById('modalCardSet').textContent    = (setCode || '').toUpperCase() + ' · #' + cn;
+
+        // Cardmarket search link
+        const cmLink = document.getElementById('cmLink');
+        if (cmLink) {
+            cmLink.href = 'https://www.cardmarket.com/en/Magic/Products/Search?searchString='
+                        + encodeURIComponent(cardName);
+        }
 
         const imgEl = document.getElementById('modalCardImg');
         if (thumb) { imgEl.src = thumb; imgEl.style.display = ''; }

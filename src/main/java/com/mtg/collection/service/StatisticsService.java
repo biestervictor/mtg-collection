@@ -66,6 +66,14 @@ public class StatisticsService {
         // Batch-load all Scryfall cards for the user's sets in ONE query
         Map<String, ScryfallCard> sfMap = buildScryfallMap(userCards);
 
+        // Actual distinct-card count per set from the DB (avoids stale ScryfallSet.cardCount)
+        Map<String, Integer> actualScryfallCountBySet = new HashMap<>();
+        for (ScryfallCard sc : sfMap.values()) {
+            if (sc.getSetCode() != null) {
+                actualScryfallCountBySet.merge(sc.getSetCode().toLowerCase(), 1, Integer::sum);
+            }
+        }
+
         UserStatistics stats = new UserStatistics();
         stats.setUser(user);
         
@@ -141,13 +149,11 @@ public class StatisticsService {
         
         List<SetValue> topSetsByValue = setValues.entrySet().stream()
                 .filter(e -> e.getValue() > 0)   // hide sets where all prices are 0
-                .filter(e -> {                   // hide token/memorabilia/minigame sets
-                    ScryfallSet set = setMap.get(e.getKey().toLowerCase());
-                    return set == null || set.getSetType() == null || !EXCLUDED_COMPLETION_SET_TYPES.contains(set.getSetType());
-                })
+                .filter(e -> !isExcludedFromCompletion(e.getKey(), setMap.get(e.getKey().toLowerCase())))
                 .map(e -> {
                     ScryfallSet set = setMap.get(e.getKey().toLowerCase());
-                    int totalCardsInSet = set != null ? set.getCardCount() : 0;
+                    int totalCardsInSet = actualScryfallCountBySet.getOrDefault(
+                            e.getKey().toLowerCase(), set != null ? set.getCardCount() : 0);
                     int uniqueOwned = setUniqueCardCounts.getOrDefault(e.getKey(), 0);
                     SetValue sv = new SetValue(e.getKey(), e.getValue(), totalCardsInSet, uniqueOwned);
                     if (set != null) sv.setIconUrl(set.getIcon());
@@ -170,10 +176,11 @@ public class StatisticsService {
             int    uniqueOwned   = entry.getValue();
             ScryfallSet s        = setMap.get(setCode.toLowerCase());
 
-            // Skip token sets, memorabilia, minigame sets
-            if (s != null && s.getSetType() != null && EXCLUDED_COMPLETION_SET_TYPES.contains(s.getSetType())) continue;
+            // Skip token sets, memorabilia, minigame sets (by setType or 4-char 't' heuristic)
+            if (isExcludedFromCompletion(setCode, s)) continue;
 
-            int totalCardsInSet  = s != null ? s.getCardCount() : 0;
+            int totalCardsInSet = actualScryfallCountBySet.getOrDefault(
+                    setCode.toLowerCase(), s != null ? s.getCardCount() : 0);
             if (totalCardsInSet > 0) {
                 double percentage = (uniqueOwned * 100.0) / totalCardsInSet;
                 SetCompletion sc = new SetCompletion(setCode, uniqueOwned, totalCardsInSet, percentage);
@@ -270,6 +277,22 @@ public class StatisticsService {
     }
 
     // ── Price enrichment helpers ──────────────────────────────────────────────
+
+    /**
+     * Returns true if the set should be excluded from completion/value statistics.
+     * Two checks are combined:
+     *   1. Explicit setType exclusion (token, memorabilia, minigame) from ScryfallSet
+     *   2. Heuristic: 4-char set codes starting with 't' are Scryfall token sets
+     *      (e.g. "tone" = tokens for ONE, "ttdm" = tokens for TDM). All legitimate
+     *      expansion sets use 2-3 character codes.
+     */
+    private static boolean isExcludedFromCompletion(String setCode, ScryfallSet s) {
+        if (s != null && s.getSetType() != null
+                && EXCLUDED_COMPLETION_SET_TYPES.contains(s.getSetType())) return true;
+        String lc = setCode.toLowerCase();
+        if (lc.length() == 4 && lc.charAt(0) == 't') return true;
+        return false;
+    }
 
     /**
      * Batch-loads all ScryfallCards for the given user cards' set codes in a SINGLE

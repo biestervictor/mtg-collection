@@ -2,6 +2,7 @@ package com.mtg.collection.service;
 
 import com.mtg.collection.dto.UserStatistics;
 import com.mtg.collection.model.ImportHistory;
+import com.mtg.collection.model.ScryfallCard;
 import com.mtg.collection.model.ScryfallSet;
 import com.mtg.collection.model.UserCard;
 import com.mtg.collection.repository.ImportHistoryRepository;
@@ -360,5 +361,71 @@ class StatisticsServiceTest {
         assertTrue(stats.getNearComplete60().isEmpty(), "50% set must NOT be in 60%+ list");
         assertFalse(stats.getNearComplete50().isEmpty(),  "50% set must appear in nearComplete50");
         assertEquals(50.0, stats.getNearComplete50().get(0).getPercentage(), 0.01);
+    }
+
+    // ── token-set exclusion heuristic tests ───────────────────────────────────
+
+    @Test
+    void setCompletion_tokenSetByHeuristic_isExcluded() {
+        // "tone" = 4-char code starting with 't' → token set heuristic
+        // ScryfallSet present but WITHOUT a setType field set
+        List<UserCard> cards = List.of(card("tone", "1", false, 1, 1.0));
+        when(userCardRepository.findByUser("testuser")).thenReturn(cards);
+        noImports();
+        // Provide a ScryfallSet for "tone" but leave setType null (simulates old DB docs)
+        when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tone", 50)));
+
+        UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
+
+        assertTrue(stats.getCompleteSets().isEmpty(),      "token set must not appear in completeSets");
+        assertTrue(stats.getNearCompleteSets().isEmpty(),  "token set must not appear in nearCompleteSets");
+        assertTrue(stats.getNearComplete80().isEmpty(),    "token set must not appear in nearComplete80");
+        assertTrue(stats.getNearComplete70().isEmpty(),    "token set must not appear in nearComplete70");
+        assertTrue(stats.getNearComplete60().isEmpty(),    "token set must not appear in nearComplete60");
+        assertTrue(stats.getNearComplete50().isEmpty(),    "token set must not appear in nearComplete50");
+    }
+
+    @Test
+    void topSetsByValue_tokenSetByHeuristic_isExcluded() {
+        // "ttdm" = 4-char code starting with 't' → must not appear in topSetsByValue
+        List<UserCard> cards = List.of(card("ttdm", "1", false, 1, 5.0));
+        when(userCardRepository.findByUser("testuser")).thenReturn(cards);
+        noImports();
+        when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("ttdm", 80)));
+
+        UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
+
+        assertFalse(stats.getTopSetsByValue().stream().anyMatch(sv -> sv.getSetCode().equalsIgnoreCase("ttdm")),
+                "Token set (4-char 't' heuristic) must not appear in topSetsByValue");
+    }
+
+    @Test
+    void setCompletion_actualScryfallCount_usedAsDenominator() {
+        // ScryfallSet.cardCount = 5 (stale), but DB has 7 actual ScryfallCards for this set.
+        // User owns 5 → with stale count: 100% (complete), with actual count: 71% (nearComplete70)
+        List<UserCard> userCards = new ArrayList<>();
+        for (int i = 1; i <= 5; i++) {
+            userCards.add(card("PW1", String.valueOf(i), false, 1, 1.0));
+        }
+        when(userCardRepository.findByUser("testuser")).thenReturn(userCards);
+        noImports();
+        when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("pw1", 5))); // stale: 5
+
+        // Simulate 7 ScryfallCards in the DB for set PW1
+        List<ScryfallCard> sfCards = new ArrayList<>();
+        for (int i = 1; i <= 7; i++) {
+            ScryfallCard sc = new ScryfallCard();
+            sc.setSetCode("PW1");
+            sc.setCollectorNumber(String.valueOf(i));
+            sfCards.add(sc);
+        }
+        when(scryfallCardRepository.findBySetCodeIn(any())).thenReturn(sfCards);
+
+        UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
+
+        assertTrue(stats.getCompleteSets().isEmpty(),
+                "Set must NOT be complete when actual Scryfall count (7) > stale cardCount (5)");
+        assertFalse(stats.getNearComplete70().isEmpty(),
+                "5/7 ≈ 71% must appear in nearComplete70");
     }
 }

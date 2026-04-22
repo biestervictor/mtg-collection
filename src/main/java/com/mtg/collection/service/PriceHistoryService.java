@@ -166,13 +166,13 @@ public class PriceHistoryService {
 
             List<PriceChange> winners = all.stream()
                     .filter(c -> c.absoluteChange > 0.0)
-                    .sorted(Comparator.comparingDouble(PriceChange::getPercentChange).reversed())
+                    .sorted(Comparator.comparingDouble(PriceChange::getAbsoluteChange).reversed())
                     .limit(topN)
                     .collect(Collectors.toList());
 
             List<PriceChange> losers = all.stream()
                     .filter(c -> c.absoluteChange < 0.0)
-                    .sorted(Comparator.comparingDouble(PriceChange::getPercentChange))
+                    .sorted(Comparator.comparingDouble(PriceChange::getAbsoluteChange))
                     .limit(topN)
                     .collect(Collectors.toList());
 
@@ -221,9 +221,11 @@ public class PriceHistoryService {
         Map<String, PriceHistory> latestMap = buildMap(priceHistoryRepository.findByDate(dates.get(0)));
         Map<String, PriceHistory> prevMap   = buildMap(priceHistoryRepository.findByDate(dates.get(1)));
 
+        // Default sort: absolute change (more meaningful than % for portfolio relevance).
+        // A card jumping €0.10→€0.20 (+100%) matters less than €5→€8 (+€3).
         Comparator<PriceChange> order = winners
-                ? Comparator.comparingDouble(PriceChange::getPercentChange).reversed()
-                : Comparator.comparingDouble(PriceChange::getPercentChange);
+                ? Comparator.comparingDouble(PriceChange::getAbsoluteChange).reversed()
+                : Comparator.comparingDouble(PriceChange::getAbsoluteChange);
 
         return latestMap.values().stream()
                 .filter(lat -> lat.getPriceRegular() != null && lat.getPriceRegular() >= minPrice)

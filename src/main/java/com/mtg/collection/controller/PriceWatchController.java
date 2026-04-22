@@ -15,7 +15,7 @@ import java.util.List;
 public class PriceWatchController {
 
     private static final double DEFAULT_MIN_PRICE = 1.0;
-    private static final int    TOP_N             = 10;
+    private static final int    TOP_N             = 50;
 
     private final PriceHistoryService priceHistoryService;
 

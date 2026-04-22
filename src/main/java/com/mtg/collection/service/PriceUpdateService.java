@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +37,34 @@ public class PriceUpdateService {
         } catch (Exception e) {
             log.error("Error during nightly price update", e);
         }
+    }
+
+    /**
+     * Full manual update:
+     * <ol>
+     *   <li>Refresh Scryfall cache prices for every set the users own cards from
+     *       (targeted — much faster than updating all sets).</li>
+     *   <li>Propagate the updated cache prices to each user's {@code UserCard} records.</li>
+     * </ol>
+     *
+     * @return map of results with keys {@code totalUpdated} and {@code perUser}
+     */
+    public Map<String, Object> runFullUpdate() {
+        log.info("Running full price update (targeted Scryfall fetch + propagation)");
+
+        Set<String> ownedSetCodes = userCardRepository.findAll().stream()
+                .map(c -> c.getSetCode().toLowerCase())
+                .collect(Collectors.toSet());
+        log.info("Refreshing Scryfall prices for {} owned sets", ownedSetCodes.size());
+        scryfallService.updatePricesForSets(ownedSetCodes);
+
+        Map<String, Integer> perUser = runUpdateForAllUsers();
+        int total = perUser.values().stream().mapToInt(Integer::intValue).sum();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalUpdated", total);
+        result.put("perUser", perUser);
+        return result;
     }
 
     /**

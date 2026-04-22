@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceWatch - MTG</title>
+    <link th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root { --primary-color: #1a1a2e; --secondary-color: #16213e; --accent-color: #e94560; --text-light: #f1f1f1; }
+        body        { background-color: #0f0f23; color: var(--text-light); min-height: 100vh; }
+        .navbar     { background-color: var(--primary-color) !important; }
+        .navbar-brand { font-weight: bold; color: var(--accent-color) !important; }
+        .nav-link   { color: var(--text-light) !important; }
+        .nav-link.active { color: var(--accent-color) !important; border-bottom: 2px solid var(--accent-color); }
+        .card       { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
+        .card-header { background-color: var(--primary-color) !important; }
+        footer      { background-color: var(--primary-color); color: #888; }
+
+        /* card thumbnail */
+        .card-thumb { width: 40px; height: 56px; object-fit: cover; border-radius: 3px; cursor: pointer; transition: transform .15s; }
+        .card-thumb:hover { transform: scale(1.15); z-index: 5; position: relative; }
+
+        .pct-winner { color: #4caf50; font-weight: 700; }
+        .pct-loser  { color: #f44336; font-weight: 700; }
+
+        /* table */
+        .table-dark td, .table-dark th { vertical-align: middle; }
+        .table-watch tbody tr { cursor: pointer; }
+        .table-watch tbody tr:hover { background-color: rgba(233,69,96,0.08) !important; }
+
+        /* sort toggle */
+        .btn-sort { border: 1px solid #3a3a5a; color: #888; background: transparent; padding: 2px 10px; font-size: .78rem; border-radius: 4px; }
+        .btn-sort.active { background: #2a2a4a; color: #f1f1f1; border-color: #555; }
+
+        /* expand button */
+        .btn-expand { border: 1px solid #2a2a4a; color: #888; background: transparent; font-size: .78rem;
+                      width: 100%; padding: 4px; border-top: none; }
+        .btn-expand:hover { background: #1a1a3e; color: #ccc; }
+
+        /* accordion */
+        .accordion-item  { background-color: var(--secondary-color); border: 1px solid #2a2a4a; }
+        .accordion-button { background-color: var(--primary-color); color: var(--text-light); }
+        .accordion-button:not(.collapsed) { background-color: #0d0d1f; color: var(--accent-color); box-shadow: none; }
+        .accordion-button::after { filter: invert(1); }
+        .accordion-body  { background-color: var(--secondary-color); padding: 0.75rem 1rem; }
+        .set-code-badge { font-size: .65em; background: #2a2a4a; color: #aaa; padding: 2px 7px; border-radius: 4px; letter-spacing: .5px; }
+
+        /* empty state */
+        .empty-state { text-align: center; padding: 3rem 1rem; color: #888; }
+        .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; color: #333; }
+
+        /* card detail modal */
+        .modal-content { background: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
+        .modal-header  { border-bottom: 1px solid #2a2a4a; }
+        .modal-footer  { border-top: 1px solid #2a2a4a; }
+        .chart-container { position: relative; height: 260px; }
+
+        /* hover preview */
+        #card-preview { display: none; position: fixed; z-index: 9999; width: 200px; pointer-events: none; }
+        #card-preview img { width: 100%; border-radius: 8px; box-shadow: 0 4px 24px rgba(0,0,0,.8); }
+    </style>
+</head>
+<body>
+
+<div th:replace="~{fragments/nav :: main-nav}"></div>
+
+<div class="container-fluid py-4">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <h2 class="mb-0"><i class="bi bi-graph-up-arrow text-success"></i> PriceWatch</h2>
+            <small class="text-muted">
+                Kursentwicklung deiner Sammlung ·
+                <span th:if="${lastSnapshotDate != null}">
+                    Letzter Snapshot:
+                    <strong th:text="${#temporals.format(lastSnapshotDate, 'dd.MM.yyyy')}"></strong>
+                </span>
+                <span th:if="${lastSnapshotDate == null}" class="text-warning">Noch kein Snapshot vorhanden</span>
+                · <span th:text="${totalTracked}">0</span> Karten beobachtet
+            </small>
+        </div>
+        <button class="btn btn-outline-light" id="btnUpdatePrices" onclick="triggerFullUpdate()">
+            <i class="bi bi-arrow-repeat"></i> Preise aktualisieren &amp; Snapshot
+        </button>
+    </div>
+
+    <!-- ── No-data state ───────────────────────────────────────────────────── -->
+    <div th:if="${lastSnapshotDate == null}" class="empty-state">
+        <i class="bi bi-clock-history"></i>
+        <h5>Noch keine Preisdaten</h5>
+        <p class="text-muted">Klicke <em>Preise aktualisieren &amp; Snapshot</em>, um den ersten Snapshot zu erstellen.<br>
+            Danach werden Gewinner und Verlierer nach dem zweiten nächtlichen Snapshot sichtbar.</p>
+    </div>
+
+    <!-- ── Only-one-snapshot notice ───────────────────────────────────────── -->
+    <div th:if="${lastSnapshotDate != null and #lists.isEmpty(winners) and #lists.isEmpty(losers) and #lists.isEmpty(sets)}"
+         class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        Nur ein Snapshot vorhanden — Kursveränderungen werden nach dem nächsten Snapshot (täglich 03:00 Uhr) angezeigt.
+    </div>
+
+    <!-- ── Global winners / losers ─────────────────────────────────────────── -->
+    <div th:if="${not #lists.isEmpty(winners) or not #lists.isEmpty(losers)}"
+         class="row g-3 mb-4">
+
+        <!-- ── Winners ── -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center gap-2 flex-wrap">
+                    <i class="bi bi-graph-up-arrow text-success"></i>
+                    <strong>Top Gewinner</strong>
+                    <span class="badge bg-success ms-1" th:text="${#lists.size(winners)}">0</span>
+                    <small class="text-muted ms-auto">Karten &gt; €1</small>
+                    <!-- sort toggle -->
+                    <div class="d-flex gap-1 ms-2">
+                        <button class="btn-sort active" id="sort-winners-abs"
+                                onclick="setSort('winners','abs')">€ Absolut</button>
+                        <button class="btn-sort" id="sort-winners-pct"
+                                onclick="setSort('winners','pct')">% Prozent</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div th:if="${#lists.isEmpty(winners)}" class="p-3 text-muted text-center">
+                        Keine Gewinner seit letztem Snapshot
+                    </div>
+                    <th:block th:unless="${#lists.isEmpty(winners)}">
+                        <table class="table table-dark table-sm table-hover mb-0 table-watch">
+                            <thead>
+                                <tr>
+                                    <th style="width:44px"></th>
+                                    <th>Karte</th>
+                                    <th class="text-end">Vorher</th>
+                                    <th class="text-end">Jetzt</th>
+                                    <th class="text-end" id="th-winners-abs">+/− €</th>
+                                    <th class="text-end" id="th-winners-pct">%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="winnersBody">
+                                <tr th:each="c,i : ${winners}"
+                                    th:data-setcode="${c.setCode}"
+                                    th:data-cn="${c.collectorNumber}"
+                                    th:data-cardname="${c.cardName}"
+                                    th:data-thumb="${c.thumbnailUrl}"
+                                    th:data-abs="${c.absoluteChange}"
+                                    th:data-pct="${c.percentChange}"
+                                    onclick="openCardDetail(this)"
+                                    onmouseenter="showPreview(event, this)"
+                                    onmouseleave="hidePreview()">
+                                    <td>
+                                        <img th:if="${c.thumbnailUrl != null}"
+                                             th:src="${c.thumbnailUrl}"
+                                             th:alt="${c.cardName}"
+                                             class="card-thumb">
+                                    </td>
+                                    <td>
+                                        <div th:text="${c.cardName}" class="fw-semibold" style="font-size:.9em"></div>
+                                        <small class="text-muted" th:text="${c.setCode.toUpperCase()}"></small>
+                                    </td>
+                                    <td class="text-end text-muted" style="font-size:.85em"
+                                        th:text="${#numbers.formatDecimal(c.oldPrice, 1, 2)} + ' €'"></td>
+                                    <td class="text-end" style="font-size:.9em"
+                                        th:text="${#numbers.formatDecimal(c.newPrice, 1, 2)} + ' €'"></td>
+                                    <td class="text-end pct-winner cell-abs"
+                                        th:text="${'+' + #numbers.formatDecimal(c.absoluteChange, 1, 2) + ' €'}"></td>
+                                    <td class="text-end pct-winner cell-pct"
+                                        th:text="${'+' + #numbers.formatDecimal(c.percentChange, 1, 1) + '%'}"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button class="btn-expand" id="expand-winners" onclick="toggleExpand('winners')">
+                            <i class="bi bi-chevron-down"></i> Alle <span th:text="${#lists.size(winners)}"></span> anzeigen
+                        </button>
+                    </th:block>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Losers ── -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center gap-2 flex-wrap">
+                    <i class="bi bi-graph-down-arrow text-danger"></i>
+                    <strong>Top Verlierer</strong>
+                    <span class="badge bg-danger ms-1" th:text="${#lists.size(losers)}">0</span>
+                    <small class="text-muted ms-auto">Karten &gt; €1</small>
+                    <!-- sort toggle -->
+                    <div class="d-flex gap-1 ms-2">
+                        <button class="btn-sort active" id="sort-losers-abs"
+                                onclick="setSort('losers','abs')">€ Absolut</button>
+                        <button class="btn-sort" id="sort-losers-pct"
+                                onclick="setSort('losers','pct')">% Prozent</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div th:if="${#lists.isEmpty(losers)}" class="p-3 text-muted text-center">
+                        Keine Verlierer seit letztem Snapshot
+                    </div>
+                    <th:block th:unless="${#lists.isEmpty(losers)}">
+                        <table class="table table-dark table-sm table-hover mb-0 table-watch">
+                            <thead>
+                                <tr>
+                                    <th style="width:44px"></th>
+                                    <th>Karte</th>
+                                    <th class="text-end">Vorher</th>
+                                    <th class="text-end">Jetzt</th>
+                                    <th class="text-end" id="th-losers-abs">+/− €</th>
+                                    <th class="text-end" id="th-losers-pct">%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="losersBody">
+                                <tr th:each="c,i : ${losers}"
+                                    th:data-setcode="${c.setCode}"
+                                    th:data-cn="${c.collectorNumber}"
+                                    th:data-cardname="${c.cardName}"
+                                    th:data-thumb="${c.thumbnailUrl}"
+                                    th:data-abs="${c.absoluteChange}"
+                                    th:data-pct="${c.percentChange}"
+                                    onclick="openCardDetail(this)"
+                                    onmouseenter="showPreview(event, this)"
+                                    onmouseleave="hidePreview()">
+                                    <td>
+                                        <img th:if="${c.thumbnailUrl != null}"
+                                             th:src="${c.thumbnailUrl}"
+                                             th:alt="${c.cardName}"
+                                             class="card-thumb">
+                                    </td>
+                                    <td>
+                                        <div th:text="${c.cardName}" class="fw-semibold" style="font-size:.9em"></div>
+                                        <small class="text-muted" th:text="${c.setCode.toUpperCase()}"></small>
+                                    </td>
+                                    <td class="text-end text-muted" style="font-size:.85em"
+                                        th:text="${#numbers.formatDecimal(c.oldPrice, 1, 2)} + ' €'"></td>
+                                    <td class="text-end" style="font-size:.9em"
+                                        th:text="${#numbers.formatDecimal(c.newPrice, 1, 2)} + ' €'"></td>
+                                    <td class="text-end pct-loser cell-abs"
+                                        th:text="${#numbers.formatDecimal(c.absoluteChange, 1, 2)} + ' €'"></td>
+                                    <td class="text-end pct-loser cell-pct"
+                                        th:text="${#numbers.formatDecimal(c.percentChange, 1, 1)} + '%'"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button class="btn-expand" id="expand-losers" onclick="toggleExpand('losers')">
+                            <i class="bi bi-chevron-down"></i> Alle <span th:text="${#lists.size(losers)}"></span> anzeigen
+                        </button>
+                    </th:block>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Per-set accordion ────────────────────────────────────────────────── -->
+    <div th:if="${not #lists.isEmpty(sets)}">
+        <h5 class="mb-3 mt-2">
+            <i class="bi bi-layers"></i> Sets im Detail
+            <small class="text-muted fw-normal ms-2" style="font-size:.75em">Nur Sets mit Karten &gt; €1</small>
+        </h5>
+        <div class="accordion" id="setsAccordion">
+            <div th:each="s,idx : ${sets}" class="accordion-item mb-2">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button"
+                            data-bs-toggle="collapse"
+                            th:data-bs-target="${'#setPanel' + idx.index}"
+                            th:aria-controls="${'setPanel' + idx.index}">
+                        <span class="set-code-badge me-2" th:text="${s.setCode.toUpperCase()}"></span>
+                        <span th:text="${s.setName}" class="me-3"></span>
+                        <span class="badge bg-success me-1" th:if="${not #lists.isEmpty(s.topWinners)}"
+                              th:text="${'+' + #lists.size(s.topWinners)}"></span>
+                        <span class="badge bg-danger me-1" th:if="${not #lists.isEmpty(s.topLosers)}"
+                              th:text="${'-' + #lists.size(s.topLosers)}"></span>
+                        <small class="text-muted ms-auto me-2" style="font-size:.75em"
+                               th:text="${s.trackedCount + ' beobachtet'}"></small>
+                    </button>
+                </h2>
+                <div th:id="${'setPanel' + idx.index}" class="accordion-collapse collapse"
+                     data-bs-parent="#setsAccordion">
+                    <div class="accordion-body">
+                        <div class="row g-2">
+                            <div class="col-md-6" th:if="${not #lists.isEmpty(s.topWinners)}">
+                                <div class="mb-1 fw-semibold text-success" style="font-size:.85em">
+                                    <i class="bi bi-arrow-up-circle-fill"></i> Gewinner
+                                </div>
+                                <table class="table table-dark table-sm table-hover mb-0 table-watch" style="font-size:.82em">
+                                    <tbody>
+                                        <tr th:each="c : ${s.topWinners}"
+                                            th:data-setcode="${c.setCode}"
+                                            th:data-cn="${c.collectorNumber}"
+                                            th:data-cardname="${c.cardName}"
+                                            th:data-thumb="${c.thumbnailUrl}"
+                                            onclick="openCardDetail(this)"
+                                            onmouseenter="showPreview(event, this)"
+                                            onmouseleave="hidePreview()">
+                                            <td style="width:36px">
+                                                <img th:if="${c.thumbnailUrl != null}"
+                                                     th:src="${c.thumbnailUrl}"
+                                                     th:alt="${c.cardName}"
+                                                     class="card-thumb" style="width:32px;height:45px">
+                                            </td>
+                                            <td th:text="${c.cardName}" class="fw-semibold"></td>
+                                            <td class="text-end"
+                                                th:text="${#numbers.formatDecimal(c.newPrice, 1, 2)} + ' €'"></td>
+                                            <td class="text-end pct-winner"
+                                                th:text="${'+' + #numbers.formatDecimal(c.absoluteChange, 1, 2) + ' €'}"></td>
+                                            <td class="text-end pct-winner"
+                                                th:text="${'+' + #numbers.formatDecimal(c.percentChange, 1, 1) + '%'}"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-md-6" th:if="${not #lists.isEmpty(s.topLosers)}">
+                                <div class="mb-1 fw-semibold text-danger" style="font-size:.85em">
+                                    <i class="bi bi-arrow-down-circle-fill"></i> Verlierer
+                                </div>
+                                <table class="table table-dark table-sm table-hover mb-0 table-watch" style="font-size:.82em">
+                                    <tbody>
+                                        <tr th:each="c : ${s.topLosers}"
+                                            th:data-setcode="${c.setCode}"
+                                            th:data-cn="${c.collectorNumber}"
+                                            th:data-cardname="${c.cardName}"
+                                            th:data-thumb="${c.thumbnailUrl}"
+                                            onclick="openCardDetail(this)"
+                                            onmouseenter="showPreview(event, this)"
+                                            onmouseleave="hidePreview()">
+                                            <td style="width:36px">
+                                                <img th:if="${c.thumbnailUrl != null}"
+                                                     th:src="${c.thumbnailUrl}"
+                                                     th:alt="${c.cardName}"
+                                                     class="card-thumb" style="width:32px;height:45px">
+                                            </td>
+                                            <td th:text="${c.cardName}" class="fw-semibold"></td>
+                                            <td class="text-end"
+                                                th:text="${#numbers.formatDecimal(c.newPrice, 1, 2)} + ' €'"></td>
+                                            <td class="text-end pct-loser"
+                                                th:text="${#numbers.formatDecimal(c.absoluteChange, 1, 2)} + ' €'"></td>
+                                            <td class="text-end pct-loser"
+                                                th:text="${#numbers.formatDecimal(c.percentChange, 1, 1)} + '%'"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /container -->
+
+<!-- ── Card detail modal ──────────────────────────────────────────────────── -->
+<div class="modal fade" id="cardDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cardDetailTitle">
+                    <i class="bi bi-graph-up"></i> Kursentwicklung
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-auto">
+                        <img id="modalCardImg" src="" alt="" style="width:130px;border-radius:8px;display:none;">
+                    </div>
+                    <div class="col">
+                        <div id="chartSpinner" class="text-center py-5">
+                            <div class="spinner-border text-secondary"></div>
+                            <div class="text-muted mt-2">Lade Kursdaten…</div>
+                        </div>
+                        <div id="chartNoData" class="text-center py-4 text-muted" style="display:none">
+                            <i class="bi bi-bar-chart-line" style="font-size:2rem"></i>
+                            <div class="mt-2">Noch keine Kursdaten für diese Karte</div>
+                        </div>
+                        <div class="chart-container" id="chartWrapper" style="display:none">
+                            <canvas id="priceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <span id="modalCardSet" class="text-muted me-auto" style="font-size:.85em"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Schließen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Card hover preview ─────────────────────────────────────────────────── -->
+<div id="card-preview"><img src="" alt=""></div>
+
+<footer class="py-3 mt-5">
+    <div class="container-fluid text-center">
+        <small>MTG Collection Manager</small>
+    </div>
+</footer>
+
+<script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
+<div th:replace="~{fragments/nav :: price-update-utils}"></div>
+
+<script>
+    // ── Sort state ────────────────────────────────────────────────────────────
+    const sortState = { winners: 'abs', losers: 'abs' };
+    const PREVIEW_ROWS = 10;
+
+    // ── Sort toggle ───────────────────────────────────────────────────────────
+    function setSort(side, mode) {
+        sortState[side] = mode;
+
+        // Toggle button styles
+        ['abs','pct'].forEach(m => {
+            const btn = document.getElementById('sort-' + side + '-' + m);
+            if (btn) btn.classList.toggle('active', m === mode);
+        });
+
+        // Highlight active column header
+        const thAbs = document.getElementById('th-' + side + '-abs');
+        const thPct = document.getElementById('th-' + side + '-pct');
+        if (thAbs) thAbs.style.color = mode === 'abs' ? '#f1f1f1' : '#888';
+        if (thPct) thPct.style.color = mode === 'pct' ? '#f1f1f1' : '#888';
+
+        // Re-sort tbody rows
+        const tbody = document.getElementById(side + 'Body');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.sort((a, b) => {
+            const av = parseFloat(a.dataset[mode]);
+            const bv = parseFloat(b.dataset[mode]);
+            // Winners: largest positive first; Losers: most negative first
+            return side === 'winners' ? bv - av : av - bv;
+        });
+        rows.forEach(r => tbody.appendChild(r));
+
+        // Re-apply preview/expand state
+        applyExpand(side);
+    }
+
+    // ── Expand / collapse ─────────────────────────────────────────────────────
+    function toggleExpand(side) {
+        const tbody = document.getElementById(side + 'Body');
+        if (!tbody) return;
+        const expanded = tbody.dataset.expanded === 'true';
+        tbody.dataset.expanded = String(!expanded);
+        applyExpand(side);
+    }
+
+    function applyExpand(side) {
+        const tbody = document.getElementById(side + 'Body');
+        if (!tbody) return;
+        const expanded = tbody.dataset.expanded === 'true';
+        const rows     = Array.from(tbody.querySelectorAll('tr'));
+
+        rows.forEach((r, i) => {
+            r.style.display = (expanded || i < PREVIEW_ROWS) ? '' : 'none';
+        });
+
+        const btn = document.getElementById('expand-' + side);
+        if (!btn) return;
+        if (rows.length <= PREVIEW_ROWS) {
+            btn.style.display = 'none';
+            return;
+        }
+        if (expanded) {
+            btn.innerHTML = '<i class="bi bi-chevron-up"></i> Weniger anzeigen';
+        } else {
+            btn.innerHTML = '<i class="bi bi-chevron-down"></i> Alle ' + rows.length + ' anzeigen';
+        }
+    }
+
+    // ── Init on page load ─────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+        applyExpand('winners');
+        applyExpand('losers');
+        // Grey out the pct column headers initially (abs is default)
+        ['winners','losers'].forEach(side => {
+            const th = document.getElementById('th-' + side + '-pct');
+            if (th) th.style.color = '#888';
+        });
+    });
+
+    // ── Hover preview ─────────────────────────────────────────────────────────
+    function showPreview(ev, row) {
+        const thumb = row.dataset.thumb;
+        if (!thumb) return;
+        const preview = document.getElementById('card-preview');
+        preview.querySelector('img').src = thumb;
+        preview.style.display = 'block';
+        movePreview(ev);
+    }
+    function hidePreview() {
+        document.getElementById('card-preview').style.display = 'none';
+    }
+    document.addEventListener('mousemove', function(ev) {
+        const preview = document.getElementById('card-preview');
+        if (preview.style.display !== 'none') movePreview(ev);
+    });
+    function movePreview(ev) {
+        const preview = document.getElementById('card-preview');
+        let x = ev.clientX + 16, y = ev.clientY - 80;
+        if (x + 200 > window.innerWidth)  x = ev.clientX - 216;
+        if (y + 280 > window.innerHeight) y = window.innerHeight - 290;
+        if (y < 0) y = 0;
+        preview.style.left = x + 'px';
+        preview.style.top  = y + 'px';
+    }
+
+    // ── Card detail modal ─────────────────────────────────────────────────────
+    let priceChartInstance = null;
+
+    function openCardDetail(row) {
+        const setCode  = row.dataset.setcode;
+        const cn       = row.dataset.cn;
+        const cardName = row.dataset.cardname;
+        const thumb    = row.dataset.thumb;
+
+        document.getElementById('cardDetailTitle').textContent = cardName;
+        document.getElementById('modalCardSet').textContent    = (setCode || '').toUpperCase() + ' · #' + cn;
+
+        const imgEl = document.getElementById('modalCardImg');
+        if (thumb) { imgEl.src = thumb; imgEl.style.display = ''; }
+        else         imgEl.style.display = 'none';
+
+        document.getElementById('chartSpinner').style.display  = '';
+        document.getElementById('chartWrapper').style.display  = 'none';
+        document.getElementById('chartNoData').style.display   = 'none';
+
+        if (priceChartInstance) { priceChartInstance.destroy(); priceChartInstance = null; }
+
+        new bootstrap.Modal(document.getElementById('cardDetailModal')).show();
+
+        fetch('/api/price-watch/history?setCode=' + encodeURIComponent(setCode)
+                + '&cn=' + encodeURIComponent(cn))
+            .then(r => r.json())
+            .then(data => renderChart(data))
+            .catch(() => {
+                document.getElementById('chartSpinner').style.display = 'none';
+                document.getElementById('chartNoData').style.display  = '';
+            });
+    }
+
+    function renderChart(history) {
+        document.getElementById('chartSpinner').style.display = 'none';
+        if (!history || history.length === 0) {
+            document.getElementById('chartNoData').style.display = '';
+            return;
+        }
+        document.getElementById('chartWrapper').style.display = '';
+
+        const labels  = history.map(h => h.date);
+        const regular = history.map(h => h.priceRegular);
+        const foil    = history.map(h => h.priceFoil);
+        const hasFoil = foil.some(v => v != null && v > 0);
+
+        const datasets = [{
+            label: 'Regular (€)', data: regular,
+            borderColor: '#4a9eff', backgroundColor: 'rgba(74,158,255,0.1)',
+            fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6
+        }];
+        if (hasFoil) datasets.push({
+            label: 'Foil (€)', data: foil,
+            borderColor: '#ffa726', backgroundColor: 'rgba(255,167,38,0.08)',
+            fill: false, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, borderDash: [5,3]
+        });
+
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        priceChartInstance = new Chart(ctx, {
+            type: 'line', data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { labels: { color: '#ccc', font: { size: 12 } } },
+                    tooltip: { callbacks: { label: ctx =>
+                        ctx.dataset.label + ': ' +
+                        (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) + ' €' : '–') }}
+                },
+                scales: {
+                    x: { ticks: { color: '#888', maxRotation: 45 }, grid: { color: '#1e1e3a' } },
+                    y: { ticks: { color: '#888', callback: v => v.toFixed(2) + ' €' },
+                         grid: { color: '#1e1e3a' }, beginAtZero: false }
+                }
+            }
+        });
+    }
+
+    // ── Price update button ───────────────────────────────────────────────────
+    function triggerFullUpdate() {
+        const btn = document.getElementById('btnUpdatePrices');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Aktualisiere…';
+        showNavToast('info', 'Preise werden aktualisiert…', 'Bitte warten – lädt Scryfall-Daten');
+
+        fetch('/api/prices/update', { method: 'POST' })
+            .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+            .then(data => {
+                const parts = Object.entries(data.perUser || {}).map(([u,n]) => u + ': ' + n);
+                showNavToast('success', 'Fertig',
+                    'Aktualisiert: ' + data.totalUpdated +
+                    ' · Snapshot: ' + (data.snapped || 0) +
+                    ' · ' + parts.join(', '));
+                setTimeout(() => location.reload(), 1500);
+            })
+            .catch(err => showNavToast('danger', 'Fehler', String(err)))
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Preise aktualisieren &amp; Snapshot';
+            });
+    }
+</script>
+</body>
+</html>

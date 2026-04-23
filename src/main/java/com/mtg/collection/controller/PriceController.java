@@ -4,6 +4,9 @@ import com.mtg.collection.model.ScryfallCard;
 import com.mtg.collection.service.PriceHistoryService;
 import com.mtg.collection.service.PriceUpdateService;
 import com.mtg.collection.service.ScryfallService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -14,6 +17,8 @@ import java.util.Map;
 
 @RestController
 public class PriceController {
+
+    private static final Logger log = LoggerFactory.getLogger(PriceController.class);
 
     private final PriceUpdateService  priceUpdateService;
     private final ScryfallService     scryfallService;
@@ -40,12 +45,17 @@ public class PriceController {
      */
     @PostMapping("/api/prices/update")
     public ResponseEntity<Map<String, Object>> triggerPriceUpdate() {
-        Map<String, Object> result = priceUpdateService.runFullUpdate();
-
-        int snapped = priceHistoryService.snapshotOwnedCardPrices();
-        result.put("snapped", snapped);
-
-        return ResponseEntity.ok(result);
+        try {
+            Map<String, Object> result = priceUpdateService.runFullUpdate();
+            int snapped = priceHistoryService.snapshotOwnedCardPrices();
+            result.put("snapped", snapped);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Manual price update failed", e);
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("error", e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
     /**

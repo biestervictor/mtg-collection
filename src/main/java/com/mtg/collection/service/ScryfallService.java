@@ -296,6 +296,8 @@ return sets;
     /**
      * Refreshes Scryfall prices for a specific subset of set codes.
      * Useful for targeted updates (e.g. only sets the user owns cards from).
+     * A 150 ms sleep between sets keeps the request rate well below Scryfall's
+     * hard limit of 10 req/s.
      */
     public void updatePricesForSets(Collection<String> setCodes) {
         log.info("Updating Scryfall prices for {} sets", setCodes.size());
@@ -305,6 +307,11 @@ return sets;
             } catch (Exception e) {
                 log.error("Failed to update prices for set: {}", setCode, e);
             }
+            try { Thread.sleep(150); } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                log.warn("updatePricesForSets interrupted");
+                break;
+            }
         }
         log.info("Targeted price update completed for {} sets", setCodes.size());
     }
@@ -312,15 +319,20 @@ return sets;
     public void updatePricesOnly() {
         List<ScryfallSet> sets = setRepository.findAll();
         log.info("Starting price update for {} sets", sets.size());
-        
+
         for (ScryfallSet set : sets) {
             try {
                 updatePricesForSet(set.getSetCode());
             } catch (Exception e) {
                 log.error("Failed to update prices for set: {}", set.getSetCode(), e);
             }
+            try { Thread.sleep(150); } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                log.warn("updatePricesOnly interrupted");
+                break;
+            }
         }
-        
+
         log.info("Price update completed");
     }
 

@@ -241,7 +241,8 @@ public class StatisticsService {
                 .filter(c -> c.getPriceUpdatedAt() != null && c.getPriceUpdatedAt().isBefore(yesterday))
                 .collect(Collectors.toMap(
                         c -> c.getSetCode() + c.getCollectorNumber() + c.isFoil(),
-                        UserCard::getPrice
+                        UserCard::getPrice,
+                        (existing, replacement) -> existing
                 ));
         
         List<CardPriceChange> winners = new ArrayList<>();

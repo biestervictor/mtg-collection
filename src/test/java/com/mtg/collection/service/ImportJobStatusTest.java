@@ -1,6 +1,7 @@
 package com.mtg.collection.service;
 
 import com.mtg.collection.dto.ImportResult.DuplicateInfo;
+import com.mtg.collection.dto.ImportResult.UnknownSetEntry;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -108,8 +109,13 @@ class ImportJobStatusTest {
     @Test
     void markDoneWithWarningsStoresUnknownSetCodes() {
         ImportJobStatus status = new ImportJobStatus("job1", "Victor", "inventory");
-        status.markDone(10, 0, 0, 10, List.of(), List.of("xyz", "abc"));
-        assertEquals(List.of("xyz", "abc"), status.getUnknownSetCodes());
+        List<UnknownSetEntry> entries = List.of(
+                new UnknownSetEntry("xyz", List.of("Card X")),
+                new UnknownSetEntry("abc", List.of("Card A")));
+        status.markDone(10, 0, 0, 10, List.of(), entries);
+        assertEquals(2, status.getUnknownSetCodes().size());
+        assertEquals("xyz", status.getUnknownSetCodes().get(0).getSetCode());
+        assertEquals("abc", status.getUnknownSetCodes().get(1).getSetCode());
     }
 
     @Test
@@ -126,7 +132,7 @@ class ImportJobStatusTest {
         ImportJobStatus status = new ImportJobStatus("job1", "Victor", "inventory");
         status.markDone(10, 0, 0, 10,
                 List.of(new DuplicateInfo("", "Card", "set", "1", false, 1)),
-                List.of("unknownset"));
+                List.of(new UnknownSetEntry("unknownset", List.of("Some Card"))));
         assertEquals(ImportJobStatus.State.DONE, status.getState());
     }
 

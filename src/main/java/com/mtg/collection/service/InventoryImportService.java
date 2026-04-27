@@ -3,6 +3,7 @@ package com.mtg.collection.service;
 import com.mtg.collection.dto.CardWithUserData;
 import com.mtg.collection.dto.ImportResult;
 import com.mtg.collection.dto.ImportResult.DuplicateInfo;
+import com.mtg.collection.dto.ImportResult.UnknownSetEntry;
 import com.mtg.collection.model.ImportHistory;
 import com.mtg.collection.model.ImportHistory.ImportedCardInfo;
 import com.mtg.collection.model.ScryfallCard;
@@ -131,18 +132,29 @@ public class InventoryImportService {
             importedCards.forEach(card -> importedSetCodes.add(card.getSetCode()));
 
             // Fetch Scryfall data and detect unknown set codes
-            List<String> unknownSetCodes = new ArrayList<>();
+            // Build a deduplicated list of card names per set code for the warning UI
+            Map<String, List<String>> cardNamesBySet = new LinkedHashMap<>();
+            for (UserCard uc : importedCards) {
+                cardNamesBySet
+                    .computeIfAbsent(uc.getSetCode().toLowerCase(), k -> new ArrayList<>())
+                    .add(uc.getName());
+            }
+
+            List<UnknownSetEntry> unknownSets = new ArrayList<>();
             List<ScryfallCard> sfCards = new ArrayList<>();
             for (String setCode : importedSetCodes) {
                 scryfallService.getCardsBySet(setCode, null);
                 List<ScryfallCard> fetched = scryfallCardRepository.findBySetCode(setCode);
                 if (fetched.isEmpty()) {
-                    unknownSetCodes.add(setCode);
+                    // Deduplicate card names for this set
+                    List<String> names = cardNamesBySet.getOrDefault(setCode.toLowerCase(), Collections.emptyList())
+                            .stream().distinct().sorted().collect(Collectors.toList());
+                    unknownSets.add(new UnknownSetEntry(setCode, names));
                     log.warn("Unknown set code (no Scryfall data): {}", setCode);
                 }
                 sfCards.addAll(fetched);
             }
-            result.setUnknownSetCodes(unknownSetCodes);
+            result.setUnknownSetCodes(unknownSets);
 
             Map<String, ScryfallCard> cardMap = sfCards.stream()
                     .collect(Collectors.toMap(
@@ -186,7 +198,9 @@ public class InventoryImportService {
                             d.getCollectorNumber(), d.isFoil(), d.getOccurrences()))
                     .collect(Collectors.toList());
             history.setDuplicatesRemoved(histDuplicates);
-            history.setUnknownSetCodes(new ArrayList<>(unknownSetCodes));
+            history.setUnknownSetCodes(unknownSets.stream()
+                    .map(UnknownSetEntry::getSetCode)
+                    .collect(Collectors.toList()));
 
             importHistoryRepository.save(history);
 

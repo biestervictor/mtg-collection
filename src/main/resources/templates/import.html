@@ -215,11 +215,21 @@
 
             // Unknown set codes warning block
             if (data.unknownSetCodes && data.unknownSetCodes.length > 0) {
-                html += '<div class="alert alert-warning mt-2 mb-0 p-2">' +
-                    '<strong>&#9888; ' + data.unknownSetCodes.length + ' unbekannte Set-Code(s)</strong>' +
-                    '<ul class="mb-0 mt-1 small">';
-                data.unknownSetCodes.forEach(s => {
-                    html += '<li>' + escHtml(s.toUpperCase()) + ' — kein Scryfall-Eintrag gefunden</li>';
+                html += '<div class="mt-2 mb-0 p-2 rounded" style="background:rgba(255,193,7,0.1);border:1px solid #ffc107;">' +
+                    '<strong style="color:#ffc107;">&#9888; ' + data.unknownSetCodes.length + ' unbekannte Set-Code(s)</strong>' +
+                    '<ul class="mb-0 mt-1 small" style="color:#ffd966;">';
+                data.unknownSetCodes.forEach(entry => {
+                    html += '<li><strong style="color:#ffc107;">' + escHtml(entry.setCode.toUpperCase()) + '</strong>' +
+                        ' — kein Scryfall-Eintrag gefunden';
+                    if (entry.cardNames && entry.cardNames.length > 0) {
+                        const shown = entry.cardNames.slice(0, 8);
+                        const rest  = entry.cardNames.length - shown.length;
+                        html += '<br><span style="color:#aaa;font-size:0.8rem;">'
+                            + shown.map(escHtml).join(', ');
+                        if (rest > 0) html += ' <em>+' + rest + ' weitere</em>';
+                        html += '</span>';
+                    }
+                    html += '</li>';
                 });
                 html += '</ul></div>';
             }

@@ -23,8 +23,8 @@ public class ImportJobStatus {
     private volatile String  errorMessage;
     private final    Instant startedAt   = Instant.now();
     private volatile Instant finishedAt;
-    private volatile List<ImportResult.DuplicateInfo> duplicatesRemoved = new ArrayList<>();
-    private volatile List<String>                     unknownSetCodes   = new ArrayList<>();
+    private volatile List<ImportResult.DuplicateInfo>  duplicatesRemoved = new ArrayList<>();
+    private volatile List<ImportResult.UnknownSetEntry> unknownSetCodes   = new ArrayList<>();
 
     public ImportJobStatus(String jobId, String user, String format) {
         this.jobId  = jobId;
@@ -42,8 +42,8 @@ public class ImportJobStatus {
     }
 
     public void markDone(int cardsCount, int addedCount, int removedCount, int newCardsCount,
-                         List<ImportResult.DuplicateInfo> duplicatesRemoved,
-                         List<String> unknownSetCodes) {
+                         List<ImportResult.DuplicateInfo>  duplicatesRemoved,
+                         List<ImportResult.UnknownSetEntry> unknownSetCodes) {
         markDone(cardsCount, addedCount, removedCount, newCardsCount);
         if (duplicatesRemoved != null) this.duplicatesRemoved = duplicatesRemoved;
         if (unknownSetCodes   != null) this.unknownSetCodes   = unknownSetCodes;
@@ -66,6 +66,6 @@ public class ImportJobStatus {
     public String  getErrorMessage()        { return errorMessage;        }
     public Instant getStartedAt()           { return startedAt;           }
     public Instant getFinishedAt()          { return finishedAt;          }
-    public List<ImportResult.DuplicateInfo> getDuplicatesRemoved() { return duplicatesRemoved; }
-    public List<String>                     getUnknownSetCodes()   { return unknownSetCodes;   }
+    public List<ImportResult.DuplicateInfo>  getDuplicatesRemoved() { return duplicatesRemoved; }
+    public List<ImportResult.UnknownSetEntry> getUnknownSetCodes()   { return unknownSetCodes;   }
 }

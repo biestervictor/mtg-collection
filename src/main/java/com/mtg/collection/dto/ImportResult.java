@@ -33,6 +33,20 @@ public class ImportResult {
         public int     getOccurrences()     { return occurrences; }
     }
 
+    // ── Inner class: unknown set code with associated card names ─────────────
+    public static class UnknownSetEntry {
+        private final String       setCode;
+        private final List<String> cardNames;
+
+        public UnknownSetEntry(String setCode, List<String> cardNames) {
+            this.setCode   = setCode;
+            this.cardNames = cardNames;
+        }
+
+        public String       getSetCode()   { return setCode; }
+        public List<String> getCardNames() { return cardNames; }
+    }
+
     // ── Fields ───────────────────────────────────────────────────────────────
     private int cardsCount;
     private int newCardsCount;
@@ -43,7 +57,7 @@ public class ImportResult {
     private List<ImportedCardInfo>   removedCards;
     private List<String>             errors;
     private List<DuplicateInfo>      duplicatesRemoved = new ArrayList<>();
-    private List<String>             unknownSetCodes   = new ArrayList<>();
+    private List<UnknownSetEntry>    unknownSetCodes   = new ArrayList<>();
 
     public ImportResult() {}
 
@@ -65,6 +79,6 @@ public class ImportResult {
     public void setErrors(List<String> errors) { this.errors = errors; }
     public List<DuplicateInfo> getDuplicatesRemoved() { return duplicatesRemoved; }
     public void setDuplicatesRemoved(List<DuplicateInfo> duplicatesRemoved) { this.duplicatesRemoved = duplicatesRemoved; }
-    public List<String> getUnknownSetCodes() { return unknownSetCodes; }
-    public void setUnknownSetCodes(List<String> unknownSetCodes) { this.unknownSetCodes = unknownSetCodes; }
+    public List<UnknownSetEntry> getUnknownSetCodes() { return unknownSetCodes; }
+    public void setUnknownSetCodes(List<UnknownSetEntry> unknownSetCodes) { this.unknownSetCodes = unknownSetCodes; }
 }

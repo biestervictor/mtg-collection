@@ -293,6 +293,8 @@ class InventoryImportServiceTest {
         when(scryfallCardRepository.findBySetCode("xyz")).thenReturn(Collections.emptyList());
         ImportResult result = importService.importInventory("Victor", csv(csv));
         assertNotNull(result.getUnknownSetCodes());
-        assertTrue(result.getUnknownSetCodes().contains("xyz"));
+        assertFalse(result.getUnknownSetCodes().isEmpty());
+        assertEquals("xyz", result.getUnknownSetCodes().get(0).getSetCode());
+        assertTrue(result.getUnknownSetCodes().get(0).getCardNames().contains("Mystery Card"));
     }
 }

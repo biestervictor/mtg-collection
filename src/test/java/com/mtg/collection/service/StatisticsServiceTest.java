@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -427,5 +428,24 @@ class StatisticsServiceTest {
                 "Set must NOT be complete when actual Scryfall count (7) > stale cardCount (5)");
         assertFalse(stats.getNearComplete70().isEmpty(),
                 "5/7 ≈ 71% must appear in nearComplete70");
+    }
+
+    @Test
+    void calculateDailyChanges_duplicateCardKey_doesNotThrow() {
+        // Two UserCard entries with identical setCode+collectorNumber+foil but priceUpdatedAt before yesterday
+        // This previously caused IllegalStateException: Duplicate key in Collectors.toMap()
+        LocalDate twoDaysAgo = LocalDate.now().minusDays(2);
+
+        UserCard c1 = card("NCC", "363", false, 1, 0.17);
+        c1.setPriceUpdatedAt(twoDaysAgo);
+        UserCard c2 = card("NCC", "363", false, 1, 0.17);
+        c2.setPriceUpdatedAt(twoDaysAgo);
+
+        when(userCardRepository.findByUser("testuser")).thenReturn(List.of(c1, c2));
+        when(importHistoryRepository.findByUserOrderByImportedAtDesc("testuser")).thenReturn(Collections.emptyList());
+        when(scryfallService.getAllSets(false)).thenReturn(Collections.emptyList());
+
+        // Must not throw IllegalStateException
+        assertDoesNotThrow(() -> statisticsService.getStatisticsForUser("testuser"));
     }
 }

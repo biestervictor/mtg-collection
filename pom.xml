@@ -116,7 +116,7 @@ echo "Version: ${project.version}"; \
 echo "Build-imestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
 mkdir -p target/classes/META-INF; \
 echo "app.version=${project.version}" > target/classes/META-INF/app.properties; \
-echo "app.build.timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> target/classes/META-INF/app.properties</argument>
+echo "app.build.timestamp=$(TZ=Europe/Berlin date '+%d.%m.%Y %H:%M')" >> target/classes/META-INF/app.properties</argument>
                             </arguments>
                         </configuration>
                     </execution>

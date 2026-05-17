@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Body Map – Health</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        body { background:#0f0f1a; color:#f1f1f1; }
+        .page-header { background:linear-gradient(135deg,#1a1a2e,#16213e); padding:2rem 0 1.5rem;
+                       border-bottom:1px solid #2a2a4a; margin-bottom:2rem; }
+        .chart-card { background:#16213e; border:1px solid #2a2a4a; border-radius:14px; padding:1.5rem; }
+        .range-btn.active { background:#e94560; border-color:#e94560; color:#fff; }
+        .range-btn { background:#16213e; border:1px solid #2a2a4a; color:#888; border-radius:8px;
+                     padding:.25rem .9rem; cursor:pointer; transition:.15s; }
+        .range-btn:hover { border-color:#e94560; color:#e94560; }
+
+        /* ── SVG Body Map ──────────────────────────────────────────────────── */
+        #bodyMapSvg { max-width:320px; width:100%; height:auto; }
+        .muscle-group {
+            transition: fill 0.5s, opacity 0.3s;
+            cursor: pointer;
+            stroke: #0f0f1a;
+            stroke-width: 1.5;
+        }
+        .muscle-group.inactive { fill: #1e2a4a; opacity: 0.6; }
+        .muscle-group:hover { opacity: 1 !important; stroke: #fff; stroke-width: 2; }
+
+        /* Colour scale: cold → hot */
+        .intensity-0  { fill: #1e2a4a; }
+        .intensity-1  { fill: #1a3a6a; }
+        .intensity-2  { fill: #15538a; }
+        .intensity-3  { fill: #0f6fa8; }
+        .intensity-4  { fill: #0d88bb; }
+        .intensity-5  { fill: #17a86e; }
+        .intensity-6  { fill: #2abf5a; }
+        .intensity-7  { fill: #f39c12; }
+        .intensity-8  { fill: #e67e22; }
+        .intensity-9  { fill: #e94560; }
+        .intensity-10 { fill: #c0392b; }
+
+        /* Tooltip */
+        #muscleTooltip {
+            position: absolute; background: #16213e; border: 1px solid #2a2a4a;
+            border-radius: 8px; padding: .5rem 1rem; font-size: .85rem;
+            pointer-events: none; display: none; z-index: 100; white-space: nowrap;
+        }
+        .legend-bar { height: 14px; border-radius: 4px;
+            background: linear-gradient(90deg,
+                #1e2a4a 0%, #1a3a6a 10%, #0d88bb 30%,
+                #17a86e 50%, #f39c12 70%, #e94560 90%, #c0392b 100%); }
+        .section-title { font-size:.9rem; text-transform:uppercase; letter-spacing:1px; color:#888;
+                         border-bottom:1px solid #2a2a4a; padding-bottom:.4rem; margin-bottom:1rem; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: main-nav}"></div>
+<div th:replace="~{fragments/nav :: price-update-utils}"></div>
+
+<div class="page-header">
+    <div class="container">
+        <div class="d-flex align-items-center gap-3">
+            <a href="/health" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+            <h3 class="mb-0"><i class="bi bi-person-bounding-box me-2"></i>Body Map – Muskelaktivierung</h3>
+        </div>
+        <p class="text-muted small mt-2 mb-0">
+            Farbe = Trainingsvolumen je Muskelgruppe basierend auf Workout-Typ und Häufigkeit.
+        </p>
+    </div>
+</div>
+
+<div class="container-xl">
+
+    <!-- Time range buttons -->
+    <div class="d-flex gap-2 mb-4 flex-wrap">
+        <a th:href="@{/health/body-map(days=30)}"
+           th:classappend="${days==30 ? ' active' : ''}" class="range-btn">30 Tage</a>
+        <a th:href="@{/health/body-map(days=90)}"
+           th:classappend="${days==90 ? ' active' : ''}" class="range-btn">90 Tage</a>
+        <a th:href="@{/health/body-map(days=180)}"
+           th:classappend="${days==180 ? ' active' : ''}" class="range-btn">6 Monate</a>
+        <a th:href="@{/health/body-map(days=365)}"
+           th:classappend="${days==365 ? ' active' : ''}" class="range-btn">1 Jahr</a>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- ── SVG Body ───────────────────────────────────────────────────── -->
+        <div class="col-md-5 d-flex justify-content-center">
+            <div class="chart-card text-center w-100">
+                <div class="section-title">Vorderseite</div>
+
+                <!-- Colour legend -->
+                <div class="d-flex align-items-center gap-2 mb-3 px-2">
+                    <span class="text-muted small">Wenig</span>
+                    <div class="legend-bar flex-grow-1"></div>
+                    <span class="text-muted small">Viel</span>
+                </div>
+
+                <div style="position:relative; display:inline-block;">
+                    <svg id="bodyMapSvg" viewBox="0 0 320 660" xmlns="http://www.w3.org/2000/svg">
+
+                        <!-- ── Body outline background ── -->
+                        <ellipse cx="160" cy="55" rx="42" ry="50" fill="#111827" stroke="#2a3a5a" stroke-width="1"/>
+
+                        <!-- ── Head ── -->
+                        <ellipse id="mg-head" class="muscle-group" cx="160" cy="55" rx="38" ry="46"
+                                 data-label="Kopf / Nacken"/>
+
+                        <!-- ── Neck ── -->
+                        <rect id="mg-neck" class="muscle-group" x="148" y="99" width="24" height="22" rx="6"
+                              data-label="Nacken / Trapezius (oben)"/>
+
+                        <!-- ── Left Shoulder ── -->
+                        <ellipse id="mg-left-shoulder" class="muscle-group"
+                                 cx="92" cy="130" rx="32" ry="22" transform="rotate(-20,92,130)"
+                                 data-label="Linke Schulter (Deltoideus)"/>
+
+                        <!-- ── Right Shoulder ── -->
+                        <ellipse id="mg-right-shoulder" class="muscle-group"
+                                 cx="228" cy="130" rx="32" ry="22" transform="rotate(20,228,130)"
+                                 data-label="Rechte Schulter (Deltoideus)"/>
+
+                        <!-- ── Chest Left ── -->
+                        <path id="mg-chest" class="muscle-group"
+                              d="M 125 120 Q 125 175 160 180 Q 195 175 195 120 Q 175 115 160 118 Q 145 115 125 120 Z"
+                              data-label="Brust (Pectoralis major)"/>
+
+                        <!-- ── Left Upper Arm (Bicep) ── -->
+                        <ellipse id="mg-left-bicep" class="muscle-group"
+                                 cx="70" cy="200" rx="20" ry="55"
+                                 data-label="Linker Oberarm (Bizeps)"/>
+
+                        <!-- ── Right Upper Arm (Bicep) ── -->
+                        <ellipse id="mg-right-bicep" class="muscle-group"
+                                 cx="250" cy="200" rx="20" ry="55"
+                                 data-label="Rechter Oberarm (Bizeps)"/>
+
+                        <!-- ── Left Forearm ── -->
+                        <ellipse id="mg-left-forearm" class="muscle-group"
+                                 cx="62" cy="295" rx="15" ry="45"
+                                 data-label="Linker Unterarm"/>
+
+                        <!-- ── Right Forearm ── -->
+                        <ellipse id="mg-right-forearm" class="muscle-group"
+                                 cx="258" cy="295" rx="15" ry="45"
+                                 data-label="Rechter Unterarm"/>
+
+                        <!-- ── Upper Abs ── -->
+                        <rect id="mg-abs" class="muscle-group"
+                              x="130" y="180" width="60" height="70" rx="8"
+                              data-label="Bauch (Rectus abdominis)"/>
+
+                        <!-- ── Left Oblique ── -->
+                        <ellipse id="mg-left-oblique" class="muscle-group"
+                                 cx="113" cy="220" rx="20" ry="50"
+                                 data-label="Linke Oblique (Seitenbauch)"/>
+
+                        <!-- ── Right Oblique ── -->
+                        <ellipse id="mg-right-oblique" class="muscle-group"
+                                 cx="207" cy="220" rx="20" ry="50"
+                                 data-label="Rechte Oblique (Seitenbauch)"/>
+
+                        <!-- ── Lower Abs / Hip ── -->
+                        <rect id="mg-glutes" class="muscle-group"
+                              x="128" y="250" width="64" height="50" rx="8"
+                              data-label="Hüfte / Gesäß (Gluteus)"/>
+
+                        <!-- ── Back Upper (visible as shoulder blades hint) ── -->
+                        <ellipse id="mg-back-upper" class="muscle-group"
+                                 cx="160" cy="195" rx="28" ry="15"
+                                 style="fill-opacity:0.3"
+                                 data-label="Oberer Rücken (Trapezius / Rhomboid)"/>
+
+                        <!-- ── Back Lower ── -->
+                        <ellipse id="mg-back-lower" class="muscle-group"
+                                 cx="160" cy="238" rx="22" ry="14"
+                                 style="fill-opacity:0.25"
+                                 data-label="Unterer Rücken (Erector Spinae)"/>
+
+                        <!-- ── Left Quadricep ── -->
+                        <ellipse id="mg-left-quad" class="muscle-group"
+                                 cx="118" cy="385" rx="32" ry="72"
+                                 data-label="Linker Oberschenkel (Quadrizeps)"/>
+
+                        <!-- ── Right Quadricep ── -->
+                        <ellipse id="mg-right-quad" class="muscle-group"
+                                 cx="202" cy="385" rx="32" ry="72"
+                                 data-label="Rechter Oberschenkel (Quadrizeps)"/>
+
+                        <!-- ── Left Hamstring (behind quad, slightly visible) ── -->
+                        <ellipse id="mg-left-hamstring" class="muscle-group"
+                                 cx="118" cy="415" rx="22" ry="40"
+                                 style="fill-opacity:0.25"
+                                 data-label="Linke Hamstrings (Oberschenkel hinten)"/>
+
+                        <!-- ── Right Hamstring ── -->
+                        <ellipse id="mg-right-hamstring" class="muscle-group"
+                                 cx="202" cy="415" rx="22" ry="40"
+                                 style="fill-opacity:0.25"
+                                 data-label="Rechte Hamstrings (Oberschenkel hinten)"/>
+
+                        <!-- ── Left Knee ── -->
+                        <ellipse cx="118" cy="458" rx="20" ry="12"
+                                 fill="#0f0f1a" stroke="#2a3a5a" stroke-width="1"/>
+
+                        <!-- ── Right Knee ── -->
+                        <ellipse cx="202" cy="458" rx="20" ry="12"
+                                 fill="#0f0f1a" stroke="#2a3a5a" stroke-width="1"/>
+
+                        <!-- ── Left Calf ── -->
+                        <ellipse id="mg-left-calf" class="muscle-group"
+                                 cx="118" cy="535" rx="21" ry="62"
+                                 data-label="Linke Wade (Gastrocnemius)"/>
+
+                        <!-- ── Right Calf ── -->
+                        <ellipse id="mg-right-calf" class="muscle-group"
+                                 cx="202" cy="535" rx="21" ry="62"
+                                 data-label="Rechte Wade (Gastrocnemius)"/>
+
+                        <!-- ── Feet ── -->
+                        <ellipse cx="112" cy="607" rx="20" ry="9" fill="#111827" stroke="#2a3a5a" stroke-width="1"/>
+                        <ellipse cx="208" cy="607" rx="20" ry="9" fill="#111827" stroke="#2a3a5a" stroke-width="1"/>
+
+                    </svg>
+
+                    <!-- Hover tooltip -->
+                    <div id="muscleTooltip"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Right: Legend + Workout breakdown ────────────────────────────── -->
+        <div class="col-md-7">
+
+            <!-- Workout type count breakdown -->
+            <div class="chart-card mb-4">
+                <div class="section-title">Workout-Typen im Zeitraum</div>
+                <canvas id="workoutDonut" style="max-height:200px;"></canvas>
+            </div>
+
+            <!-- Muscle group ranking -->
+            <div class="chart-card">
+                <div class="section-title">Muskelgruppen-Ranking</div>
+                <div id="muscleRanking"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script th:src="@{/webjars/jquery/jquery.min.js}"></script>
+<script th:inline="javascript">
+    const activation  = /*[[${activation}]]*/ {};
+    const typeCounts  = /*[[${typeCounts}]]*/ {};
+    const days        = /*[[${days}]]*/ 90;
+
+    // ── Apply colours to SVG muscle groups ────────────────────────────────────
+    const muscleLabels = {
+        'head': 'Kopf', 'neck': 'Nacken',
+        'left-shoulder': 'L. Schulter', 'right-shoulder': 'R. Schulter',
+        'chest': 'Brust',
+        'left-bicep': 'L. Bizeps', 'right-bicep': 'R. Bizeps',
+        'left-forearm': 'L. Unterarm', 'right-forearm': 'R. Unterarm',
+        'abs': 'Bauch',
+        'left-oblique': 'L. Oblique', 'right-oblique': 'R. Oblique',
+        'glutes': 'Gesäß / Hüfte',
+        'back-upper': 'Oberer Rücken', 'back-lower': 'Unterer Rücken',
+        'left-quad': 'L. Quadrizeps', 'right-quad': 'R. Quadrizeps',
+        'left-hamstring': 'L. Hamstrings', 'right-hamstring': 'R. Hamstrings',
+        'left-calf': 'L. Wade', 'right-calf': 'R. Wade'
+    };
+
+    function intensityClass(v) {
+        if (v == null || v === 0) return 'intensity-0';
+        const i = Math.round(v * 10);
+        return 'intensity-' + Math.min(10, Math.max(1, i));
+    }
+
+    function intensityColor(v) {
+        // Returns a CSS color for inline fill (gradient from dark blue → red)
+        const colors = [
+            '#1e2a4a','#1a3a6a','#15538a','#0f6fa8','#0d88bb',
+            '#17a86e','#2abf5a','#f39c12','#e67e22','#e94560','#c0392b'
+        ];
+        const i = Math.round((v || 0) * 10);
+        return colors[Math.min(10, Math.max(0, i))];
+    }
+
+    // Apply to SVG elements
+    document.querySelectorAll('.muscle-group').forEach(el => {
+        const id = el.id.replace('mg-', '');
+        const val = activation[id] || 0;
+        el.style.fill = intensityColor(val);
+        if (val === 0) el.style.opacity = '0.4';
+        else el.style.opacity = '0.85';
+    });
+
+    // ── Tooltip ───────────────────────────────────────────────────────────────
+    const tooltip = document.getElementById('muscleTooltip');
+    const svgContainer = document.querySelector('[style*="position:relative"]');
+
+    document.querySelectorAll('.muscle-group').forEach(el => {
+        el.addEventListener('mousemove', (e) => {
+            const id    = el.id.replace('mg-', '');
+            const val   = activation[id] || 0;
+            const label = el.dataset.label || muscleLabels[id] || id;
+            const pct   = Math.round(val * 100);
+            tooltip.innerHTML = `<strong>${label}</strong><br>
+                <span style="color:${intensityColor(val)}">Aktivierung: ${pct}%</span>`;
+            tooltip.style.display = 'block';
+            const rect = svgContainer.getBoundingClientRect();
+            tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+            tooltip.style.top  = (e.clientY - rect.top  - 10) + 'px';
+        });
+        el.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+    });
+
+    // ── Workout type donut ─────────────────────────────────────────────────────
+    (function() {
+        const labelMap = {
+            'TraditionalStrengthTraining': 'Krafttraining', 'Running': 'Laufen',
+            'Walking': 'Gehen', 'CoreTraining': 'Core', 'Cycling': 'Radfahren',
+            'Hiking': 'Wandern', 'FunctionalStrengthTraining': 'Functional',
+            'Yoga': 'Yoga', 'Swimming': 'Schwimmen', 'CardioDance': 'Cardio Dance',
+            'Rowing': 'Rudern'
+        };
+        const labels = Object.keys(typeCounts).map(k => labelMap[k] || k);
+        const values = Object.values(typeCounts);
+        const colors = ['#e94560','#27ae60','#3498db','#f39c12','#9b59b6',
+                        '#1abc9c','#e67e22','#e74c3c','#2ecc71','#16a085','#8e44ad'];
+
+        new Chart(document.getElementById('workoutDonut'), {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data: values, backgroundColor: colors,
+                                         borderColor:'#16213e', borderWidth:2 }] },
+            options: {
+                responsive: true,
+                plugins: { legend: { position:'right', labels:{ color:'#ccc', font:{size:11} } } }
+            }
+        });
+    })();
+
+    // ── Muscle ranking bars ────────────────────────────────────────────────────
+    (function() {
+        const container = document.getElementById('muscleRanking');
+        const sorted = Object.entries(activation)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 12); // top 12
+
+        if (sorted.length === 0) {
+            container.innerHTML = '<p class="text-muted">Keine Workout-Daten im Zeitraum.</p>';
+            return;
+        }
+
+        let html = '';
+        sorted.forEach(([id, val]) => {
+            const label = muscleLabels[id] || id;
+            const pct   = Math.round(val * 100);
+            const color = intensityColor(val);
+            html += `<div class="mb-2">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="small">${label}</span>
+                    <span class="small" style="color:${color}">${pct}%</span>
+                </div>
+                <div style="background:#0f0f1a;border-radius:4px;height:6px;overflow:hidden;">
+                    <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .5s;"></div>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    })();
+</script>
+</body>
+</html>

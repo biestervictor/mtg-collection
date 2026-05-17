@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Workouts – Health</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        body { background:#0f0f1a; color:#f1f1f1; }
+        .page-header { background:linear-gradient(135deg,#1a1a2e,#16213e); padding:2rem 0 1.5rem;
+                       border-bottom:1px solid #2a2a4a; margin-bottom:2rem; }
+        .chart-card { background:#16213e; border:1px solid #2a2a4a; border-radius:14px; padding:1.5rem; margin-bottom:1.5rem; }
+        .section-title { font-size:.9rem; text-transform:uppercase; letter-spacing:1px; color:#888;
+                         border-bottom:1px solid #2a2a4a; padding-bottom:.4rem; margin-bottom:1rem; }
+        .range-btn { background:#16213e; border:1px solid #2a2a4a; color:#888; border-radius:8px;
+                     padding:.25rem .9rem; cursor:pointer; transition:.15s; text-decoration:none; display:inline-block; }
+        .range-btn:hover { border-color:#e94560; color:#e94560; }
+        .range-btn.active { background:#e94560; border-color:#e94560; color:#fff; }
+        canvas { max-height:280px; }
+        /* Heatmap */
+        .heatmap-wrap { overflow-x:auto; }
+        .heatmap-grid { display:flex; gap:3px; }
+        .heatmap-col { display:flex; flex-direction:column; gap:3px; }
+        .heatmap-cell { width:13px; height:13px; border-radius:3px; background:#1e2640;
+                        flex-shrink:0; cursor:pointer; transition:.1s; }
+        .heatmap-cell:hover { outline:2px solid #fff; }
+        .heatmap-cell.w0 { background:#1e2640; }
+        .heatmap-cell.w1 { background:#1e4d2d; }
+        .heatmap-cell.w2 { background:#27763e; }
+        .heatmap-cell.w3 { background:#2ea04f; }
+        .heatmap-cell.w4+ { background:#39d353; }
+        .heatmap-months { display:flex; gap:3px; margin-bottom:4px; }
+        .heatmap-month-label { font-size:.65rem; color:#888; }
+        /* Workout table */
+        .workout-row { border-bottom:1px solid #1a2040; padding:.55rem 0; }
+        .workout-row:last-child { border-bottom:none; }
+        /* Stat pill */
+        .stat-pill { display:inline-flex; flex-direction:column; align-items:center;
+                     background:#0f0f1a; border-radius:10px; padding:.6rem 1rem; min-width:100px; }
+        .stat-pill .v { font-size:1.4rem; font-weight:800; }
+        .stat-pill .l { font-size:.7rem; color:#888; text-transform:uppercase; }
+        /* Type legend dots */
+        .legend-dot { width:10px; height:10px; border-radius:50%; display:inline-block; flex-shrink:0; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: main-nav}"></div>
+<div th:replace="~{fragments/nav :: price-update-utils}"></div>
+
+<div class="page-header">
+    <div class="container">
+        <div class="d-flex align-items-center gap-3">
+            <a href="/health" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+            <h3 class="mb-0"><i class="bi bi-lightning-charge-fill text-warning me-2"></i>Workouts</h3>
+        </div>
+    </div>
+</div>
+
+<div class="container-xl">
+
+    <!-- Range buttons -->
+    <div class="d-flex gap-2 mb-4 flex-wrap">
+        <a th:href="@{/health/workouts(days=90)}"  th:classappend="${days==90  ? ' active' : ''}" class="range-btn">90 Tage</a>
+        <a th:href="@{/health/workouts(days=180)}" th:classappend="${days==180 ? ' active' : ''}" class="range-btn">6 Monate</a>
+        <a th:href="@{/health/workouts(days=365)}" th:classappend="${days==365 ? ' active' : ''}" class="range-btn">1 Jahr</a>
+        <a th:href="@{/health/workouts(days=730)}" th:classappend="${days==730 ? ' active' : ''}" class="range-btn">2 Jahre</a>
+        <a th:href="@{/health/workouts(days=1825)}"th:classappend="${days==1825? ' active' : ''}" class="range-btn">Alles</a>
+    </div>
+
+    <!-- Summary pill -->
+    <div class="d-flex gap-3 flex-wrap mb-4">
+        <div class="stat-pill">
+            <span class="v text-warning" th:text="${totalWorkouts}">0</span>
+            <span class="l">Gesamt</span>
+        </div>
+        <div id="pillCounted" class="stat-pill">
+            <span class="v" id="periodCount" style="color:#f39c12;">–</span>
+            <span class="l">Im Zeitraum</span>
+        </div>
+        <div class="stat-pill">
+            <span class="v" id="topType" style="color:#e94560;">–</span>
+            <span class="l">Top Aktivität</span>
+        </div>
+    </div>
+
+    <!-- Top row: heatmap + donut -->
+    <div class="row g-3 mb-3">
+
+        <!-- Calendar Heatmap -->
+        <div class="col-lg-8">
+            <div class="chart-card">
+                <div class="section-title">Aktivitäts-Heatmap</div>
+                <div class="heatmap-wrap">
+                    <div id="heatmapMonths" class="heatmap-months"></div>
+                    <div id="heatmapGrid" class="heatmap-grid"></div>
+                </div>
+                <div class="mt-2 d-flex align-items-center gap-2" style="font-size:.75rem; color:#888;">
+                    <span>weniger</span>
+                    <div class="heatmap-cell w0" style="width:12px;height:12px;"></div>
+                    <div class="heatmap-cell w1" style="width:12px;height:12px;"></div>
+                    <div class="heatmap-cell w2" style="width:12px;height:12px;"></div>
+                    <div class="heatmap-cell w3" style="width:12px;height:12px;"></div>
+                    <div class="heatmap-cell w4+" style="width:12px;height:12px;"></div>
+                    <span>mehr</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Donut chart -->
+        <div class="col-lg-4">
+            <div class="chart-card h-100">
+                <div class="section-title">Workout-Typen</div>
+                <canvas id="typeDonut" style="max-height:220px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- VO2max trend -->
+    <div class="chart-card" th:if="${!#strings.equals(vo2series,'[]')}">
+        <div class="section-title">VO₂ max Trend (1 Jahr)</div>
+        <canvas id="vo2Chart"></canvas>
+    </div>
+
+    <!-- Recent workouts list -->
+    <div class="chart-card">
+        <div class="section-title">Letzte Workouts</div>
+        <div th:each="w : ${recentWorkouts}" class="workout-row d-flex align-items-center gap-3">
+            <i class="bi text-warning" th:classappend="${w.activityIcon}" style="font-size:1.2rem;width:24px;text-align:center;"></i>
+            <div class="flex-grow-1">
+                <span class="fw-semibold" th:text="${w.activityLabel}"></span>
+                <span class="text-muted ms-2 small" th:text="${w.date}"></span>
+            </div>
+            <div class="text-end small text-muted">
+                <span th:if="${w.durationMinutes > 0}"
+                      th:text="${#numbers.formatDecimal(w.durationMinutes, 1, 0)} + ' min'"></span>
+                <span th:if="${w.caloriesBurned > 0}" class="ms-2"
+                      th:text="${#numbers.formatDecimal(w.caloriesBurned, 1, 0)} + ' kcal'"></span>
+                <span th:if="${w.distanceKm > 0}" class="ms-2 badge"
+                      style="background:#1e3a5f;color:#3498db;"
+                      th:text="${#numbers.formatDecimal(w.distanceKm, 1, 2)} + ' km'"></span>
+            </div>
+        </div>
+        <div th:if="${#lists.isEmpty(recentWorkouts)}" class="text-muted text-center py-4">
+            Keine Workouts im Zeitraum.
+        </div>
+    </div>
+
+</div>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script th:src="@{/webjars/jquery/jquery.min.js}"></script>
+<script th:inline="javascript">
+    const calendarData = /*[[${calendar}]]*/ [];
+    const typeCounts   = /*[[${typeCounts}]]*/ {};
+    const vo2Data      = /*[[${vo2series}]]*/ [];
+    const periodDays   = /*[[${days}]]*/ 365;
+
+    const TYPE_LABELS = {
+        'TraditionalStrengthTraining': 'Krafttraining',
+        'FunctionalStrengthTraining': 'Functional',
+        'Running': 'Laufen', 'Walking': 'Gehen', 'CoreTraining': 'Core',
+        'Cycling': 'Radfahren', 'Hiking': 'Wandern', 'Yoga': 'Yoga',
+        'Swimming': 'Schwimmen', 'Rowing': 'Rudern', 'CardioDance': 'Tanz'
+    };
+    const TYPE_COLORS = ['#e94560','#f39c12','#27ae60','#3498db','#9b59b6',
+                         '#1abc9c','#e67e22','#e74c3c','#2ecc71','#16a085','#8e44ad'];
+
+    // ── Summary pills ──────────────────────────────────────────────────────
+    (function() {
+        const total = Object.values(typeCounts).reduce((s, v) => s + v, 0);
+        document.getElementById('periodCount').textContent = total;
+
+        const top = Object.entries(typeCounts).sort((a,b) => b[1]-a[1])[0];
+        if (top) {
+            document.getElementById('topType').textContent = TYPE_LABELS[top[0]] || top[0];
+        }
+    })();
+
+    // ── Calendar Heatmap ───────────────────────────────────────────────────
+    (function() {
+        // Build map date → {count, primaryType}
+        const dayMap = {};
+        calendarData.forEach(d => { dayMap[d.date] = d; });
+
+        // Determine range: last `periodDays` days ending today
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const startDate = new Date(today);
+        startDate.setDate(startDate.getDate() - periodDays);
+
+        // Align startDate to Sunday
+        const dayOfWeek = startDate.getDay(); // 0=Sun
+        startDate.setDate(startDate.getDate() - dayOfWeek);
+
+        // Build weeks (columns), each column is an array of 7 days (Sun→Sat)
+        const grid = document.getElementById('heatmapGrid');
+        const monthsEl = document.getElementById('heatmapMonths');
+        const MONTHS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+
+        let cur = new Date(startDate);
+        let lastMonth = -1;
+        const monthCols = [];
+
+        while (cur <= today) {
+            const col = document.createElement('div');
+            col.className = 'heatmap-col';
+            let colMonthLabel = '';
+
+            for (let row = 0; row < 7; row++) {
+                const cellDate = new Date(cur);
+                if (cellDate > today) { cur.setDate(cur.getDate() + 1); break; }
+
+                const iso = cellDate.toISOString().substring(0, 10);
+                const info = dayMap[iso];
+                const count = info ? info.count : 0;
+                const wClass = count === 0 ? 'w0'
+                             : count === 1 ? 'w1'
+                             : count === 2 ? 'w2'
+                             : count === 3 ? 'w3' : 'w4+';
+
+                const cell = document.createElement('div');
+                cell.className = 'heatmap-cell ' + wClass;
+                cell.title = iso + (info ? ': ' + count + ' Workout' + (count>1?'s':'') + ' (' + (TYPE_LABELS[info.primaryType]||info.primaryType) + ')' : ': kein Workout');
+
+                if (cellDate.getMonth() !== lastMonth && row === 0) {
+                    colMonthLabel = MONTHS[cellDate.getMonth()];
+                    lastMonth = cellDate.getMonth();
+                }
+
+                col.appendChild(cell);
+                cur.setDate(cur.getDate() + 1);
+            }
+
+            monthCols.push(colMonthLabel);
+            grid.appendChild(col);
+        }
+
+        // Month labels
+        monthCols.forEach(label => {
+            const span = document.createElement('span');
+            span.className = 'heatmap-month-label';
+            span.textContent = label;
+            span.style.width = '16px';
+            monthsEl.appendChild(span);
+        });
+    })();
+
+    // ── Donut chart ────────────────────────────────────────────────────────
+    (function() {
+        const labels = Object.keys(typeCounts).map(k => TYPE_LABELS[k] || k);
+        const values = Object.values(typeCounts);
+        if (values.length === 0) return;
+
+        new Chart(document.getElementById('typeDonut'), {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{ data: values, backgroundColor: TYPE_COLORS,
+                             borderColor:'#16213e', borderWidth:2 }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position:'bottom', labels:{ color:'#ccc', font:{size:11}, boxWidth:14 } }
+                }
+            }
+        });
+    })();
+
+    // ── VO2max trend ───────────────────────────────────────────────────────
+    (function() {
+        if (!vo2Data.length) return;
+        const canvas = document.getElementById('vo2Chart');
+        if (!canvas) return;
+
+        new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: vo2Data.map(p => p.date),
+                datasets: [{
+                    label: 'VO₂ max (mL/kg/min)',
+                    data: vo2Data.map(p => p.value),
+                    borderColor: '#9b59b6',
+                    backgroundColor: 'rgba(155,89,182,.12)',
+                    fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { labels:{ color:'#ccc' } } },
+                scales: {
+                    x: { ticks:{ color:'#888', maxTicksLimit:8 }, grid:{ color:'#1a2040' } },
+                    y: { ticks:{ color:'#888' }, grid:{ color:'#1a2040' },
+                         title:{ display:true, text:'mL/kg/min', color:'#888' } }
+                }
+            }
+        });
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cardio & Herz – Health</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        body { background:#0f0f1a; color:#f1f1f1; }
+        .page-header { background:linear-gradient(135deg,#1a1a2e,#16213e); padding:2rem 0 1.5rem;
+                       border-bottom:1px solid #2a2a4a; margin-bottom:2rem; }
+        .chart-card { background:#16213e; border:1px solid #2a2a4a; border-radius:14px; padding:1.5rem; margin-bottom:1.5rem; }
+        .section-title { font-size:.9rem; text-transform:uppercase; letter-spacing:1px; color:#888;
+                         border-bottom:1px solid #2a2a4a; padding-bottom:.4rem; margin-bottom:1rem; }
+        .range-btn { background:#16213e; border:1px solid #2a2a4a; color:#888; border-radius:8px;
+                     padding:.25rem .9rem; cursor:pointer; transition:.15s; text-decoration:none; display:inline-block; }
+        .range-btn:hover { border-color:#e94560; color:#e94560; }
+        .range-btn.active { background:#e94560; border-color:#e94560; color:#fff; }
+        canvas { max-height:260px; }
+        .stat-pill { display:inline-flex; flex-direction:column; align-items:center;
+                     background:#0f0f1a; border-radius:10px; padding:.6rem 1rem; min-width:100px; }
+        .stat-pill .v { font-size:1.5rem; font-weight:800; }
+        .stat-pill .l { font-size:.7rem; color:#888; text-transform:uppercase; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: main-nav}"></div>
+<div th:replace="~{fragments/nav :: price-update-utils}"></div>
+
+<div class="page-header">
+    <div class="container">
+        <div class="d-flex align-items-center gap-3">
+            <a href="/health" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+            <h3 class="mb-0"><i class="bi bi-activity text-danger me-2"></i>Cardio &amp; Herz</h3>
+        </div>
+    </div>
+</div>
+
+<div class="container-xl">
+
+    <!-- Range buttons -->
+    <div class="d-flex gap-2 mb-4 flex-wrap">
+        <a th:href="@{/health/cardio(days=30)}"  th:classappend="${days==30  ? ' active' : ''}" class="range-btn">30 Tage</a>
+        <a th:href="@{/health/cardio(days=90)}"  th:classappend="${days==90  ? ' active' : ''}" class="range-btn">90 Tage</a>
+        <a th:href="@{/health/cardio(days=180)}" th:classappend="${days==180 ? ' active' : ''}" class="range-btn">6 Monate</a>
+        <a th:href="@{/health/cardio(days=365)}" th:classappend="${days==365 ? ' active' : ''}" class="range-btn">1 Jahr</a>
+        <a th:href="@{/health/cardio(days=1095)}"th:classappend="${days==1095? ' active' : ''}" class="range-btn">3 Jahre</a>
+    </div>
+
+    <!-- Current stats strip -->
+    <div class="d-flex gap-3 flex-wrap mb-4">
+        <div class="stat-pill">
+            <span class="v text-danger"
+                  th:if="${stats.latestRestingHR != null}"
+                  th:text="${#numbers.formatDecimal(stats.latestRestingHR, 1, 0)}">–</span>
+            <span class="v text-muted" th:unless="${stats.latestRestingHR != null}">–</span>
+            <span class="l">Ruhepuls (bpm)</span>
+        </div>
+        <div class="stat-pill">
+            <span class="v" style="color:#e67e22;"
+                  th:if="${stats.avgHRV7d > 0}"
+                  th:text="${#numbers.formatDecimal(stats.avgHRV7d, 1, 1)}">–</span>
+            <span class="v text-muted" th:unless="${stats.avgHRV7d > 0}">–</span>
+            <span class="l">Ø HRV 7d (ms)</span>
+        </div>
+        <div class="stat-pill">
+            <span class="v" style="color:#9b59b6;"
+                  th:if="${stats.latestVO2Max != null}"
+                  th:text="${#numbers.formatDecimal(stats.latestVO2Max, 1, 1)}">–</span>
+            <span class="v text-muted" th:unless="${stats.latestVO2Max != null}">–</span>
+            <span class="l">VO₂ max</span>
+        </div>
+        <div class="stat-pill" id="pillBP">
+            <span class="v" style="color:#3498db;" id="bpVal">–</span>
+            <span class="l">Blutdruck</span>
+        </div>
+    </div>
+
+    <!-- Charts: Resting HR + HRV side by side -->
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="chart-card">
+                <div class="section-title"><i class="bi bi-heart-fill text-danger me-1"></i> Ruhepuls</div>
+                <canvas id="rhrChart"></canvas>
+                <div id="rhrEmpty" class="text-muted text-center py-3 d-none">Keine Daten im Zeitraum.</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="chart-card">
+                <div class="section-title"><i class="bi bi-broadcast me-1" style="color:#e67e22;"></i> HRV (SDNN)</div>
+                <canvas id="hrvChart"></canvas>
+                <div id="hrvEmpty" class="text-muted text-center py-3 d-none">Keine Daten im Zeitraum.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VO2max -->
+    <div class="chart-card">
+        <div class="section-title"><i class="bi bi-lungs me-1" style="color:#9b59b6;"></i> VO₂ max</div>
+        <canvas id="vo2Chart"></canvas>
+        <div id="vo2Empty" class="text-muted text-center py-3 d-none">Keine Daten im Zeitraum.</div>
+    </div>
+
+    <!-- Blood pressure -->
+    <div class="chart-card">
+        <div class="section-title"><i class="bi bi-droplet me-1" style="color:#3498db;"></i> Blutdruck</div>
+        <canvas id="bpChart"></canvas>
+        <div id="bpEmpty" class="text-muted text-center py-3 d-none">Keine Daten im Zeitraum.</div>
+    </div>
+
+</div>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script th:src="@{/webjars/jquery/jquery.min.js}"></script>
+<script th:inline="javascript">
+    const rhrData  = /*[[${rhrSeries}]]*/ [];
+    const hrvData  = /*[[${hrvSeries}]]*/ [];
+    const vo2Data  = /*[[${vo2Series}]]*/ [];
+    const sysData  = /*[[${sysBPSeries}]]*/ [];
+    const diaData  = /*[[${diaBPSeries}]]*/ [];
+
+    // Common chart options helper
+    function lineOpts(yTitle) {
+        return {
+            responsive: true,
+            interaction: { mode:'index', intersect:false },
+            plugins: { legend:{ labels:{ color:'#ccc' } } },
+            scales: {
+                x: { ticks:{ color:'#888', maxTicksLimit:8 }, grid:{ color:'#1a2040' } },
+                y: { ticks:{ color:'#888' }, grid:{ color:'#1a2040' },
+                     title:{ display:!!yTitle, text:yTitle || '', color:'#888' } }
+            }
+        };
+    }
+
+    // ── Resting HR ─────────────────────────────────────────────────────────
+    (function() {
+        if (!rhrData.length) { document.getElementById('rhrEmpty').classList.remove('d-none'); return; }
+        new Chart(document.getElementById('rhrChart'), {
+            type: 'line',
+            data: {
+                labels: rhrData.map(p => p.date),
+                datasets: [{ label:'Ruhepuls (bpm)', data: rhrData.map(p => p.value),
+                             borderColor:'#e74c3c', backgroundColor:'rgba(231,76,60,.1)',
+                             fill:true, tension:.35, pointRadius:2, borderWidth:2 }]
+            },
+            options: lineOpts('bpm')
+        });
+    })();
+
+    // ── HRV (from daily – avgHrv field) ────────────────────────────────────
+    (function() {
+        const filtered = hrvData.filter(p => p.avgHrv > 0);
+        if (!filtered.length) { document.getElementById('hrvEmpty').classList.remove('d-none'); return; }
+        new Chart(document.getElementById('hrvChart'), {
+            type: 'line',
+            data: {
+                labels: filtered.map(p => p.date),
+                datasets: [{ label:'HRV SDNN (ms)', data: filtered.map(p => p.avgHrv),
+                             borderColor:'#e67e22', backgroundColor:'rgba(230,126,34,.1)',
+                             fill:true, tension:.35, pointRadius:2, borderWidth:2 }]
+            },
+            options: lineOpts('ms')
+        });
+    })();
+
+    // ── VO2max ─────────────────────────────────────────────────────────────
+    (function() {
+        if (!vo2Data.length) { document.getElementById('vo2Empty').classList.remove('d-none'); return; }
+        new Chart(document.getElementById('vo2Chart'), {
+            type: 'line',
+            data: {
+                labels: vo2Data.map(p => p.date),
+                datasets: [{ label:'VO₂ max (mL/kg/min)', data: vo2Data.map(p => p.value),
+                             borderColor:'#9b59b6', backgroundColor:'rgba(155,89,182,.1)',
+                             fill:true, tension:.35, pointRadius:3, borderWidth:2 }]
+            },
+            options: lineOpts('mL/kg/min')
+        });
+    })();
+
+    // ── Blood Pressure ─────────────────────────────────────────────────────
+    (function() {
+        if (!sysData.length && !diaData.length) {
+            document.getElementById('bpEmpty').classList.remove('d-none'); return;
+        }
+
+        // Merge labels from both series
+        const labelSet = new Set([...sysData.map(p=>p.date), ...diaData.map(p=>p.date)]);
+        const labels = [...labelSet].sort();
+        const sysMap = Object.fromEntries(sysData.map(p=>[p.date, p.value]));
+        const diaMap = Object.fromEntries(diaData.map(p=>[p.date, p.value]));
+
+        // Show latest in pill
+        if (sysData.length && diaData.length) {
+            const s = sysData[sysData.length-1].value;
+            const d = diaData[diaData.length-1].value;
+            document.getElementById('bpVal').textContent =
+                Math.round(s) + '/' + Math.round(d);
+        }
+
+        new Chart(document.getElementById('bpChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label:'Systolisch (mmHg)', data: labels.map(l => sysMap[l] ?? null),
+                      borderColor:'#e74c3c', backgroundColor:'rgba(231,76,60,.08)',
+                      fill:false, tension:.3, pointRadius:3, borderWidth:2 },
+                    { label:'Diastolisch (mmHg)', data: labels.map(l => diaMap[l] ?? null),
+                      borderColor:'#3498db', backgroundColor:'rgba(52,152,219,.08)',
+                      fill:false, tension:.3, pointRadius:3, borderWidth:2 }
+                ]
+            },
+            options: {
+                ...lineOpts('mmHg'),
+                plugins: {
+                    legend: { labels:{ color:'#ccc' } },
+                    annotation: {}
+                }
+            }
+        });
+    })();
+</script>
+</body>
+</html>

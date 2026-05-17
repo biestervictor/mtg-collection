@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Körperzusammensetzung – Health</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        body { background:#0f0f1a; color:#f1f1f1; }
+        .page-header { background:linear-gradient(135deg,#1a1a2e,#16213e); padding:2rem 0 1.5rem;
+                       border-bottom:1px solid #2a2a4a; margin-bottom:2rem; }
+        .chart-card { background:#16213e; border:1px solid #2a2a4a; border-radius:14px; padding:1.5rem; margin-bottom:1.5rem; }
+        .section-title { font-size:.9rem; text-transform:uppercase; letter-spacing:1px; color:#888;
+                         border-bottom:1px solid #2a2a4a; padding-bottom:.4rem; margin-bottom:1rem; }
+        .range-btn.active { background:#e94560; border-color:#e94560; color:#fff; }
+        .range-btn { background:#16213e; border:1px solid #2a2a4a; color:#888; border-radius:8px;
+                     padding:.25rem .9rem; cursor:pointer; transition:.15s; }
+        .range-btn:hover { border-color:#e94560; color:#e94560; }
+        .stat-pill { display:inline-flex; flex-direction:column; align-items:center;
+                     background:#0f0f1a; border-radius:10px; padding:.7rem 1.2rem; min-width:110px; }
+        .stat-pill .v { font-size:1.5rem; font-weight:800; }
+        .stat-pill .l { font-size:.72rem; color:#888; text-transform:uppercase; }
+        canvas { max-height:300px; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: main-nav}"></div>
+<div th:replace="~{fragments/nav :: price-update-utils}"></div>
+
+<div class="page-header">
+    <div class="container">
+        <div class="d-flex align-items-center gap-3">
+            <a href="/health" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+            <h3 class="mb-0"><i class="bi bi-bar-chart-line me-2"></i>Körperzusammensetzung</h3>
+        </div>
+    </div>
+</div>
+
+<div class="container-xl">
+
+    <!-- Date range buttons -->
+    <div class="d-flex gap-2 mb-4 flex-wrap">
+        <a th:href="@{/health/body-composition(days=30)}"
+           th:classappend="${days==30 ? ' active' : ''}" class="range-btn">30 Tage</a>
+        <a th:href="@{/health/body-composition(days=90)}"
+           th:classappend="${days==90 ? ' active' : ''}" class="range-btn">90 Tage</a>
+        <a th:href="@{/health/body-composition(days=180)}"
+           th:classappend="${days==180 ? ' active' : ''}" class="range-btn">6 Monate</a>
+        <a th:href="@{/health/body-composition(days=365)}"
+           th:classappend="${days==365 ? ' active' : ''}" class="range-btn">1 Jahr</a>
+        <a th:href="@{/health/body-composition(days=1095)}"
+           th:classappend="${days==1095 ? ' active' : ''}" class="range-btn">3 Jahre</a>
+        <a th:href="@{/health/body-composition(days=3650)}"
+           th:classappend="${days==3650 ? ' active' : ''}" class="range-btn">Alles</a>
+    </div>
+
+    <!-- Current stats strip -->
+    <div class="d-flex gap-3 flex-wrap mb-4">
+        <div class="stat-pill">
+            <span class="v" style="color:#e94560;"
+                  th:text="${stats.currentWeightKg != null ? #numbers.formatDecimal(stats.currentWeightKg,1,1) + ' kg' : '–'}">–</span>
+            <span class="l">Gewicht</span>
+        </div>
+        <div class="stat-pill">
+            <span class="v" style="color:#27ae60;"
+                  th:text="${stats.currentLeanMassKg != null ? #numbers.formatDecimal(stats.currentLeanMassKg,1,1) + ' kg' : '–'}">–</span>
+            <span class="l">Lean Mass</span>
+        </div>
+        <div class="stat-pill">
+            <span class="v" style="color:#3498db;"
+                  th:text="${stats.currentBodyFatPct != null ? #numbers.formatDecimal(stats.currentBodyFatPct,1,1) + ' %' : '–'}">–</span>
+            <span class="l">Körperfett</span>
+        </div>
+        <div class="stat-pill">
+            <span class="v" style="color:#f39c12;"
+                  th:text="${stats.currentBmi != null ? #numbers.formatDecimal(stats.currentBmi,1,1) : '–'}">–</span>
+            <span class="l">BMI</span>
+        </div>
+        <div class="stat-pill" th:if="${stats.currentWeightKg != null and stats.currentLeanMassKg != null}">
+            <span class="v" style="color:#9b59b6;"
+                  th:text="${#numbers.formatDecimal(stats.currentWeightKg - stats.currentLeanMassKg, 1,1) + ' kg'}">–</span>
+            <span class="l">Fettmasse</span>
+        </div>
+    </div>
+
+    <!-- ── Gewicht + Lean Mass ─────────────────────────────────────────────── -->
+    <div class="chart-card">
+        <div class="section-title">Gewicht &amp; Lean Body Mass (kg)</div>
+        <canvas id="chartMass"></canvas>
+    </div>
+
+    <!-- ── Körperfett % ──────────────────────────────────────────────────────── -->
+    <div class="chart-card">
+        <div class="section-title">Körperfett &amp; BMI</div>
+        <canvas id="chartFat"></canvas>
+    </div>
+
+    <!-- ── Fat Mass vs Lean Mass (stacked area) ─────────────────────────────── -->
+    <div class="chart-card">
+        <div class="section-title">Fettmasse vs. Lean Mass (gestapelt)</div>
+        <canvas id="chartStacked"></canvas>
+    </div>
+</div>
+
+<script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+<script th:inline="javascript">
+    const series = /*[[${series}]]*/ [];
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+    function movingAvg(arr, n) {
+        return arr.map((_, i) => {
+            const slice = arr.slice(Math.max(0, i - n + 1), i + 1).filter(v => v != null);
+            return slice.length ? slice.reduce((a, b) => a + b, 0) / slice.length : null;
+        });
+    }
+
+    const labels  = series.map(p => p.date);
+    const weight  = series.map(p => p.bodyMassKg);
+    const lean    = series.map(p => p.leanBodyMassKg);
+    const fat     = series.map(p => p.bodyFatPct);
+    const bmi     = series.map(p => p.bmi);
+    const fatMass = series.map((p, i) =>
+        (p.bodyMassKg != null && p.leanBodyMassKg != null)
+            ? parseFloat((p.bodyMassKg - p.leanBodyMassKg).toFixed(2)) : null);
+
+    const gridColor = '#1a2040', tickColor = '#888';
+    const defaultOptions = {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#ccc' } } },
+        scales: {
+            x: { ticks: { color: tickColor, maxTicksLimit: 8 }, grid: { color: gridColor } },
+            y: { ticks: { color: tickColor }, grid: { color: gridColor } }
+        }
+    };
+
+    // ── Chart 1: Gewicht & Lean ───────────────────────────────────────────────
+    new Chart(document.getElementById('chartMass'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { label: 'Gewicht (kg)', data: weight,
+                  borderColor: '#e94560', backgroundColor: 'rgba(233,69,96,.07)',
+                  fill: true, tension: 0.3, pointRadius: 2 },
+                { label: 'Gewicht Ø7d', data: movingAvg(weight, 7),
+                  borderColor: '#c0392b', borderDash: [4,3],
+                  pointRadius: 0, borderWidth: 1.5, tension: 0.4 },
+                { label: 'Lean Mass (kg)', data: lean,
+                  borderColor: '#27ae60', backgroundColor: 'rgba(39,174,96,.07)',
+                  fill: true, tension: 0.3, pointRadius: 2 },
+                { label: 'Lean Mass Ø7d', data: movingAvg(lean, 7),
+                  borderColor: '#1e8449', borderDash: [4,3],
+                  pointRadius: 0, borderWidth: 1.5, tension: 0.4 }
+            ]
+        },
+        options: { ...defaultOptions }
+    });
+
+    // ── Chart 2: Körperfett & BMI ─────────────────────────────────────────────
+    new Chart(document.getElementById('chartFat'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { label: 'Körperfett (%)', data: fat,
+                  borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,.07)',
+                  fill: true, tension: 0.35, pointRadius: 2, yAxisID: 'yFat' },
+                { label: 'BMI', data: bmi,
+                  borderColor: '#f39c12', tension: 0.35,
+                  pointRadius: 2, yAxisID: 'yBmi' }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#ccc' } } },
+            scales: {
+                x:    { ticks: { color: tickColor, maxTicksLimit: 8 }, grid: { color: gridColor } },
+                yFat: { position: 'left',  ticks: { color: '#3498db', callback: v => v + ' %' }, grid: { color: gridColor } },
+                yBmi: { position: 'right', ticks: { color: '#f39c12' }, grid: { drawOnChartArea: false } }
+            }
+        }
+    });
+
+    // ── Chart 3: Stacked fat vs lean ──────────────────────────────────────────
+    new Chart(document.getElementById('chartStacked'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { label: 'Lean Mass (kg)', data: lean,
+                  borderColor: '#27ae60', backgroundColor: 'rgba(39,174,96,.5)',
+                  fill: 'origin', tension: 0.3, pointRadius: 0 },
+                { label: 'Fettmasse (kg)', data: fatMass,
+                  borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,.4)',
+                  fill: '-1', tension: 0.3, pointRadius: 0 }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#ccc' } } },
+            scales: {
+                x: { ticks: { color: tickColor, maxTicksLimit: 8 }, grid: { color: gridColor },
+                     stacked: true },
+                y: { ticks: { color: tickColor, callback: v => v + ' kg' },
+                     grid: { color: gridColor }, stacked: true }
+            }
+        }
+    });
+</script>
+</body>
+</html>

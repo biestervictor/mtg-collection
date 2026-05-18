@@ -45,6 +45,6 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 ENTRYPOINT ["sh", "-c", "\
     VERSION=$(grep VERSION /app/version.properties | cut -d= -f2); \
     BUILD_TS=$(grep BUILD_TIMESTAMP /app/version.properties | cut -d= -f2); \
-    java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 \
-         -Dapp.version=$VERSION -Dapp.build.timestamp=$BUILD_TS \
+    exec java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 \
+         \"-Dapp.version=$VERSION\" \"-Dapp.build.timestamp=$BUILD_TS\" \
          -jar /app/app.jar"]

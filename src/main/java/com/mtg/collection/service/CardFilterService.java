@@ -29,13 +29,32 @@ public class CardFilterService {
         }
 
         if (frameStyle != null && !frameStyle.isEmpty() && !"all".equals(frameStyle)) {
-            switch (frameStyle) {
-                case "extendedart": filtered = filterToOnlyExtendedArt(filtered); break;
-                case "showcase":    filtered = filterToOnlyShowcase(filtered);    break;
-                case "borderless":  filtered = filterToOnlyBorderless(filtered);  break;
-                case "fullart":     filtered = filterToOnlyFullArt(filtered);     break;
-                default: break;
-            }
+            final List<String> styles = java.util.Arrays.asList(frameStyle.split(","));
+            filtered = filtered.stream()
+                    .filter(c -> {
+                        if (c.getCard() == null) return false;
+                        for (String style : styles) {
+                            switch (style.trim()) {
+                                case "extendedart":
+                                    if (c.getCard().getFrameStatus() != null &&
+                                            c.getCard().getFrameStatus().contains("extendedart")) return true;
+                                    break;
+                                case "showcase":
+                                    if (c.getCard().getFrameStatus() != null &&
+                                            c.getCard().getFrameStatus().contains("showcase")) return true;
+                                    break;
+                                case "borderless":
+                                    if ("borderless".equalsIgnoreCase(c.getCard().getBorderColor())) return true;
+                                    break;
+                                case "fullart":
+                                    if (c.getCard().isFullArt()) return true;
+                                    break;
+                                default: break;
+                            }
+                        }
+                        return false;
+                    })
+                    .collect(Collectors.toList());
         }
 
         if (state != null && !state.isEmpty() && !"all".equals(state)) {
@@ -142,37 +161,6 @@ public class CardFilterService {
         return cards.stream()
                 .filter(c -> c.getCard() == null || c.getCard().getTypeLine() == null ||
                             !c.getCard().getTypeLine().toLowerCase().contains("token"))
-                .collect(Collectors.toList());
-    }
-
-    // frame_effects contains "extendedart"
-    private List<CardWithUserData> filterToOnlyExtendedArt(List<CardWithUserData> cards) {
-        return cards.stream()
-                .filter(c -> c.getCard() != null && c.getCard().getFrameStatus() != null &&
-                            c.getCard().getFrameStatus().contains("extendedart"))
-                .collect(Collectors.toList());
-    }
-
-    // frame_effects contains "showcase"
-    private List<CardWithUserData> filterToOnlyShowcase(List<CardWithUserData> cards) {
-        return cards.stream()
-                .filter(c -> c.getCard() != null && c.getCard().getFrameStatus() != null &&
-                            c.getCard().getFrameStatus().contains("showcase"))
-                .collect(Collectors.toList());
-    }
-
-    // border_color == "borderless"
-    private List<CardWithUserData> filterToOnlyBorderless(List<CardWithUserData> cards) {
-        return cards.stream()
-                .filter(c -> c.getCard() != null &&
-                            "borderless".equalsIgnoreCase(c.getCard().getBorderColor()))
-                .collect(Collectors.toList());
-    }
-
-    // full_art == true (e.g. full-art basic lands, full-art promos)
-    private List<CardWithUserData> filterToOnlyFullArt(List<CardWithUserData> cards) {
-        return cards.stream()
-                .filter(c -> c.getCard() != null && c.getCard().isFullArt())
                 .collect(Collectors.toList());
     }
 

@@ -1,6 +1,7 @@
 package com.mtg.collection.controller;
 
 import com.mtg.collection.dto.CardWithUserData;
+import com.mtg.collection.model.ScryfallCard;
 import com.mtg.collection.model.ScryfallSet;
 import com.mtg.collection.service.CardFilterService;
 import com.mtg.collection.service.CollectionService;
@@ -9,7 +10,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
 public class CollectionController {
@@ -103,5 +105,57 @@ public class CollectionController {
             scryfallService.clearAllCache();
             return "redirect:/show";
         }
+    }
+
+    @GetMapping("/api/set/{setCode}/top-cards")
+    @ResponseBody
+    public Map<String, List<Map<String, Object>>> getTopCardsForSet(@PathVariable String setCode) {
+        List<ScryfallCard> allCards = scryfallService.getCardsBySet(setCode, null);
+
+        String[] rarities = {"mythic", "rare", "uncommon", "common"};
+        Map<String, List<ScryfallCard>> byRarity = new LinkedHashMap<>();
+
+        for (String rarity : rarities) {
+            final String r = rarity;
+            List<ScryfallCard> group = allCards.stream()
+                    .filter(c -> r.equalsIgnoreCase(c.getRarity()))
+                    .filter(c -> c.getPriceRegular() != null || c.getPriceFoil() != null)
+                    .sorted((a, b) -> Double.compare(maxCardPrice(b), maxCardPrice(a)))
+                    .collect(Collectors.toList());
+            byRarity.put(rarity, group);
+        }
+
+        // If a lower rarity's top 10 are all < 10 cents → give +5 extra slots to the next higher rarity
+        int[] limits = {10, 10, 10, 10};
+        for (int i = rarities.length - 1; i >= 1; i--) {
+            List<ScryfallCard> top10 = byRarity.get(rarities[i]).stream().limit(10).collect(Collectors.toList());
+            boolean allCheap = !top10.isEmpty() && top10.stream().allMatch(c -> maxCardPrice(c) < 0.10);
+            if (allCheap) limits[i - 1] += 5;
+        }
+
+        Map<String, List<Map<String, Object>>> result = new LinkedHashMap<>();
+        for (int i = 0; i < rarities.length; i++) {
+            final int limit = limits[i];
+            String rarity = rarities[i];
+            List<Map<String, Object>> cardList = byRarity.get(rarity).stream()
+                    .limit(limit)
+                    .map(c -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("name", c.getName());
+                        m.put("thumbnail", c.getThumbnailFront());
+                        m.put("priceRegular", c.getPriceRegular());
+                        m.put("priceFoil", c.getPriceFoil());
+                        return m;
+                    })
+                    .collect(Collectors.toList());
+            result.put(rarity, cardList);
+        }
+        return result;
+    }
+
+    private double maxCardPrice(ScryfallCard c) {
+        double r = c.getPriceRegular() != null ? c.getPriceRegular() : 0;
+        double f = c.getPriceFoil() != null ? c.getPriceFoil() : 0;
+        return Math.max(r, f);
     }
 }

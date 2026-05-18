@@ -72,7 +72,7 @@ jobs:
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Extracted version: $VERSION"
-          echo "BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          echo "BUILD_TIMESTAMP=$(TZ=Europe/Berlin date '+%d.%m.%Y %H:%M')" >> "$GITHUB_OUTPUT"
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3

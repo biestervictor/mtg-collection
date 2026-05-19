@@ -47,11 +47,6 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: java
-
       - name: Bump patch version in pom.xml
         if: github.actor != 'dependabot[bot]' && github.event_name == 'push'
         run: |
@@ -74,10 +69,8 @@ jobs:
           echo "Extracted version: $VERSION"
           echo "BUILD_TIMESTAMP=$(TZ=Europe/Berlin date '+%d.%m.%Y %H:%M')" >> "$GITHUB_OUTPUT"
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          output: results.sarif
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

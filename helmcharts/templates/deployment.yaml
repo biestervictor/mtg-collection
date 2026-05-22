@@ -21,6 +21,18 @@ spec:
           env:
             - name: TZ
               value: "Europe/Berlin"
+            - name: AZURE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: mtg-collection-entra-secret
+                  key: azureClientId
+            - name: AZURE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: mtg-collection-entra-secret
+                  key: azureClientSecret
+            - name: AZURE_TENANT_ID
+              value: "{{ .Values.secretstore.tenantId }}"
             {{- if .Values.mongodb.auth }}
             - name: SPRING_DATA_MONGODB_URI
               valueFrom:
@@ -39,7 +51,7 @@ spec:
             - containerPort: {{ .Values.mtgcollection.deployment.port }}
           startupProbe:
             httpGet:
-              path: /
+              path: /actuator/health/liveness
               port: {{ .Values.mtgcollection.deployment.port }}
             initialDelaySeconds: 30
             periodSeconds: 10
@@ -47,14 +59,14 @@ spec:
             timeoutSeconds: 5
           livenessProbe:
             httpGet:
-              path: /
+              path: /actuator/health/liveness
               port: {{ .Values.mtgcollection.deployment.port }}
             periodSeconds: 15
             failureThreshold: 3
             timeoutSeconds: 5
           readinessProbe:
             httpGet:
-              path: /
+              path: /actuator/health/readiness
               port: {{ .Values.mtgcollection.deployment.port }}
             periodSeconds: 10
             failureThreshold: 3

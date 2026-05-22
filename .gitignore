@@ -45,6 +45,10 @@ Thumbs.db
 application-local.yml
 application-dev.yml
 
+# Spring application config (tracked explicitly)
+!src/main/resources/application.properties
+!src/main/resources/application-ci.properties
+
 # Env
 .env
 .env.*

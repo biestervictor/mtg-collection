@@ -1,0 +1,20 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: mtg-collection-entra-external-secret
+  namespace: {{ .Values.mtgcollection.nameSpace }}
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    name: {{ .Values.secretstore.name }}
+    kind: ClusterSecretStore
+  target:
+    name: mtg-collection-entra-secret
+    creationPolicy: Owner
+  data:
+    - secretKey: azureClientId
+      remoteRef:
+        key: azureClientId
+    - secretKey: azureClientSecret
+      remoteRef:
+        key: azureClientSecret

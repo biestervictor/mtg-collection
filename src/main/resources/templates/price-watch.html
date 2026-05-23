@@ -618,6 +618,17 @@
 
     // ── Card detail modal ─────────────────────────────────────────────────────
     let priceChartInstance = null;
+    let pendingChartData   = null;
+
+    // Render chart once the Bootstrap modal animation has fully completed.
+    // Without this the canvas has zero dimensions during the 300 ms CSS transition,
+    // causing Chart.js to draw an invisible (0-height) chart.
+    document.getElementById('cardDetailModal').addEventListener('shown.bs.modal', function () {
+        if (pendingChartData !== null) {
+            renderChart(pendingChartData);
+            pendingChartData = null;
+        }
+    });
 
     function openCardDetail(row) {
         const setCode  = row.dataset.setcode;
@@ -649,14 +660,25 @@
         document.getElementById('chartNoData').style.display   = 'none';
 
         if (priceChartInstance) { priceChartInstance.destroy(); priceChartInstance = null; }
+        pendingChartData = null;
 
-        new bootstrap.Modal(document.getElementById('cardDetailModal')).show();
+        const modalEl = document.getElementById('cardDetailModal');
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
 
         fetch('/api/price-watch/history?setCode=' + encodeURIComponent(setCode)
                 + '&cn=' + encodeURIComponent(cn))
             .then(r => r.json())
-            .then(data => renderChart(data))
+            .then(data => {
+                // If the modal is already fully shown (animation done), render now.
+                // Otherwise store the data – the shown.bs.modal listener will render it.
+                if (modalEl.classList.contains('show')) {
+                    renderChart(data);
+                } else {
+                    pendingChartData = data;
+                }
+            })
             .catch(() => {
+                pendingChartData = null;
                 document.getElementById('chartSpinner').style.display = 'none';
                 document.getElementById('chartNoData').style.display  = '';
             });

@@ -6,6 +6,7 @@
     <title>Verkaufsvorschlag - MTG</title>
     <link th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         :root { --primary-color: #1a1a2e; --secondary-color: #16213e; --accent-color: #e94560; --text-light: #f1f1f1; }
         body  { background-color: #0f0f23; color: var(--text-light); min-height: 100vh; }
@@ -251,6 +252,16 @@
                                         <i class="bi bi-cart2"></i>
                                     </a>
                                     <button type="button"
+                                            class="btn btn-sm btn-outline-info"
+                                            th:data-setcode="${s.userCard.setCode.toLowerCase()}"
+                                            th:data-cn="${s.userCard.collectorNumber}"
+                                            th:data-cardname="${s.userCard.name}"
+                                            th:data-thumb="${s.thumbnailUrl}"
+                                            onclick="openCardDetail(this)"
+                                            title="Kursentwicklung">
+                                        <i class="bi bi-graph-up"></i>
+                                    </button>
+                                    <button type="button"
                                             class="btn btn-sm btn-outline-secondary"
                                             th:data-setcode="${s.userCard.setCode.toLowerCase()}"
                                             th:data-collnumber="${s.userCard.collectorNumber}"
@@ -285,6 +296,48 @@
 
     <!-- Hover card preview -->
     <div id="card-preview"><img src="" alt="Card preview"></div>
+
+    <!-- Price history chart modal -->
+    <div class="modal fade" id="cardDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content" style="background:#16213e;border:1px solid #2a2a4a;color:#f1f1f1;">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="cardDetailTitle">
+                        <i class="bi bi-graph-up"></i> Kursentwicklung
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-auto">
+                            <img id="modalCardImg" src="" alt="" style="width:130px;border-radius:8px;display:none;">
+                        </div>
+                        <div class="col">
+                            <div id="chartSpinner" class="text-center py-5">
+                                <div class="spinner-border text-secondary"></div>
+                                <div class="text-muted mt-2">Lade Kursdaten…</div>
+                            </div>
+                            <div id="chartNoData" class="text-center py-4 text-muted" style="display:none">
+                                <i class="bi bi-bar-chart-line" style="font-size:2rem"></i>
+                                <div class="mt-2">Noch keine Kursdaten für diese Karte</div>
+                            </div>
+                            <div class="chart-container" id="chartWrapper" style="display:none;height:220px;">
+                                <canvas id="priceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <span id="modalCardSet" class="text-muted me-auto" style="font-size:.85em"></span>
+                    <a id="cmLink" href="#" target="_blank" rel="noopener"
+                       class="btn btn-sm btn-outline-warning">
+                        <i class="bi bi-cart3"></i> Cardmarket
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Schließen</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <footer class="text-center py-3 mt-4"><p>MTG Collection Manager</p></footer>
     <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
@@ -428,6 +481,110 @@
 
         // Init on load
         document.addEventListener('DOMContentLoaded', applyFilters);
+
+        // ── Price history chart ───────────────────────────────────────────────
+        let priceChartInstance = null;
+        let pendingChartData   = null;
+
+        document.getElementById('cardDetailModal').addEventListener('shown.bs.modal', function () {
+            if (pendingChartData !== null) {
+                renderChart(pendingChartData);
+                pendingChartData = null;
+            }
+        });
+
+        function openCardDetail(btn) {
+            const setCode  = btn.dataset.setcode;
+            const cn       = btn.dataset.cn;
+            const cardName = btn.dataset.cardname;
+            const thumb    = btn.dataset.thumb;
+
+            document.getElementById('cardDetailTitle').textContent = cardName || '';
+            document.getElementById('modalCardSet').textContent    = (setCode || '').toUpperCase() + ' · #' + cn;
+
+            const cmLink = document.getElementById('cmLink');
+            if (cmLink) {
+                const slug = s => s.replace(/[''',:.!?()/&]/g, '').replace(/\s+/g, '-').replace(/-{2,}/g, '-');
+                cmLink.href = 'https://www.cardmarket.com/en/Magic/Products/Singles/'
+                            + encodeURIComponent(setCode.toUpperCase()) + '/'
+                            + encodeURIComponent(slug(cardName || ''));
+            }
+
+            const imgEl = document.getElementById('modalCardImg');
+            if (thumb) { imgEl.src = thumb; imgEl.style.display = ''; }
+            else         imgEl.style.display = 'none';
+
+            document.getElementById('chartSpinner').style.display  = '';
+            document.getElementById('chartWrapper').style.display  = 'none';
+            document.getElementById('chartNoData').style.display   = 'none';
+
+            if (priceChartInstance) { priceChartInstance.destroy(); priceChartInstance = null; }
+            pendingChartData = null;
+
+            const modalEl = document.getElementById('cardDetailModal');
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+            fetch('/api/price-watch/history?setCode=' + encodeURIComponent(setCode)
+                    + '&cn=' + encodeURIComponent(cn))
+                .then(r => r.json())
+                .then(data => {
+                    if (modalEl.classList.contains('show')) {
+                        renderChart(data);
+                    } else {
+                        pendingChartData = data;
+                    }
+                })
+                .catch(() => {
+                    pendingChartData = null;
+                    document.getElementById('chartSpinner').style.display = 'none';
+                    document.getElementById('chartNoData').style.display  = '';
+                });
+        }
+
+        function renderChart(history) {
+            document.getElementById('chartSpinner').style.display = 'none';
+            if (!history || history.length === 0) {
+                document.getElementById('chartNoData').style.display = '';
+                return;
+            }
+            document.getElementById('chartWrapper').style.display = '';
+
+            const labels  = history.map(h => h.date);
+            const regular = history.map(h => h.priceRegular);
+            const foil    = history.map(h => h.priceFoil);
+            const hasFoil = foil.some(v => v != null && v > 0);
+
+            const datasets = [{
+                label: 'Regular (€)', data: regular,
+                borderColor: '#4a9eff', backgroundColor: 'rgba(74,158,255,0.1)',
+                fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6
+            }];
+            if (hasFoil) datasets.push({
+                label: 'Foil (€)', data: foil,
+                borderColor: '#ffa726', backgroundColor: 'rgba(255,167,38,0.08)',
+                fill: false, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, borderDash: [5,3]
+            });
+
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            priceChartInstance = new Chart(ctx, {
+                type: 'line', data: { labels, datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { labels: { color: '#ccc', font: { size: 12 } } },
+                        tooltip: { callbacks: { label: ctx =>
+                            ctx.dataset.label + ': ' +
+                            (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) + ' €' : '–') }}
+                    },
+                    scales: {
+                        x: { ticks: { color: '#888', maxRotation: 45 }, grid: { color: '#1e1e3a' } },
+                        y: { ticks: { color: '#888', callback: v => v.toFixed(2) + ' €' },
+                             grid: { color: '#1e1e3a' }, beginAtZero: false }
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>

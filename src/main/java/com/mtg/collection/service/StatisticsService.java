@@ -114,12 +114,24 @@ public class StatisticsService {
                 ));
 
         // Unique card count per set (distinct collector numbers, foil/normal merged)
-        // This is the correct basis for set-completion: card 1/453 … 453/453
+        // Used for set-value display: card 1/453 … 453/453
         Map<String, Integer> setUniqueCardCounts = userCards.stream()
                 .collect(Collectors.groupingBy(
                         UserCard::getSetCode,
                         Collectors.collectingAndThen(
                                 Collectors.mapping(UserCard::getCollectorNumber, Collectors.toSet()),
+                                Set::size)
+                ));
+
+        // Unique card NAME count per set – used for set-completion:
+        // foil and non-foil of the same card, or different printings (extended art etc.)
+        // all count as ONE card toward completion.
+        Map<String, Integer> setUniqueNameCounts = userCards.stream()
+                .collect(Collectors.groupingBy(
+                        UserCard::getSetCode,
+                        Collectors.collectingAndThen(
+                                Collectors.mapping(c -> c.getName() != null ? c.getName().toLowerCase() : "",
+                                        Collectors.toSet()),
                                 Set::size)
                 ));
 
@@ -171,7 +183,7 @@ public class StatisticsService {
         List<SetCompletion> nearComplete50 = new ArrayList<>();
 
         // Use ALL sets where the user owns cards – not just those with price > 0
-        for (Map.Entry<String, Integer> entry : setUniqueCardCounts.entrySet()) {
+        for (Map.Entry<String, Integer> entry : setUniqueNameCounts.entrySet()) {
             String setCode       = entry.getKey();
             int    uniqueOwned   = entry.getValue();
             ScryfallSet s        = setMap.get(setCode.toLowerCase());
@@ -179,8 +191,10 @@ public class StatisticsService {
             // Skip token sets, memorabilia, minigame sets (by setType or 4-char 't' heuristic)
             if (isExcludedFromCompletion(setCode, s)) continue;
 
-            int totalCardsInSet = actualScryfallCountBySet.getOrDefault(
-                    setCode.toLowerCase(), s != null ? s.getCardCount() : 0);
+            // Use the official Scryfall set card count as denominator.
+            // This is independent of what users own, preventing the false 100% that occurs
+            // when the denominator is derived from the same data as the numerator.
+            int totalCardsInSet = s != null ? s.getCardCount() : 0;
             if (totalCardsInSet > 0) {
                 double percentage = (uniqueOwned * 100.0) / totalCardsInSet;
                 SetCompletion sc = new SetCompletion(setCode, uniqueOwned, totalCardsInSet, percentage);

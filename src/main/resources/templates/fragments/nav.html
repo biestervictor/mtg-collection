@@ -119,6 +119,13 @@
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <span class="dropdown-item-text small text-muted">
+                                    <i class="bi bi-database me-1"></i>
+                                    <span th:text="${mongoHost}">mongodb</span>
+                                </span>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <span class="dropdown-item-text small text-muted">
                                     <i class="bi bi-shield-check me-1"></i>
                                     Eingeloggt als:
                                     <strong class="text-light"
@@ -141,8 +148,6 @@
         <div class="version-info">
             <span th:if="${isProd}" class="env-badge env-badge-prod">PROD</span>
             <span th:unless="${isProd}" class="env-badge env-badge-dev">DEV</span>
-            <span th:text="${mongoHost}" style="margin-right: 10px;"></span>
-            <span th:if="${not #strings.isEmpty(buildTimestamp)}">· v<span th:text="${appVersion}"></span> · <span th:text="${buildTimestamp}"></span></span>
         </div>
     </nav>
 

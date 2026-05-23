@@ -401,18 +401,18 @@ class StatisticsServiceTest {
     }
 
     @Test
-    void setCompletion_actualScryfallCount_usedAsDenominator() {
-        // ScryfallSet.cardCount = 5 (stale), but DB has 7 actual ScryfallCards for this set.
-        // User owns 5 → with stale count: 100% (complete), with actual count: 71% (nearComplete70)
+    void setCompletion_scryfallSetCardCount_usedAsDenominator() {
+        // ScryfallSet.cardCount (5) is the authoritative denominator, NOT the count of ScryfallCards in DB (7).
+        // User owns all 5 unique named cards → 5/5 = 100% complete, regardless of DB having 7 entries.
         List<UserCard> userCards = new ArrayList<>();
         for (int i = 1; i <= 5; i++) {
             userCards.add(card("PW1", String.valueOf(i), false, 1, 1.0));
         }
         when(userCardRepository.findByUser("testuser")).thenReturn(userCards);
         noImports();
-        when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("pw1", 5))); // stale: 5
+        when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("pw1", 5)));
 
-        // Simulate 7 ScryfallCards in the DB for set PW1
+        // DB has 7 ScryfallCards – these must NOT inflate the denominator
         List<ScryfallCard> sfCards = new ArrayList<>();
         for (int i = 1; i <= 7; i++) {
             ScryfallCard sc = new ScryfallCard();
@@ -424,10 +424,41 @@ class StatisticsServiceTest {
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
 
+        assertFalse(stats.getCompleteSets().isEmpty(),
+                "User owns all 5 named cards of a 5-card set → must be 100% complete");
+        assertEquals(100.0, stats.getCompleteSets().get(0).getPercentage(), 0.01);
+    }
+
+    @Test
+    void setCompletion_noFalseHundredPercent_whenOwnedNamesLessThanSetCardCount() {
+        // Regression: old bug caused denominator = count of user's ScryfallCards in DB,
+        // which equalled the owned count, producing false 100%.
+        // New behaviour: ScryfallSet.cardCount (10) is the denominator → 5/10 = 50%.
+        List<UserCard> userCards = new ArrayList<>();
+        for (int i = 1; i <= 5; i++) {
+            userCards.add(card("MH2", String.valueOf(i), false, 1, 5.0));
+        }
+        when(userCardRepository.findByUser("testuser")).thenReturn(userCards);
+        noImports();
+        when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("mh2", 10)));
+
+        // DB intentionally has only 5 ScryfallCards (old bug: denominator=5=numerator → 100%)
+        List<ScryfallCard> sfCards = new ArrayList<>();
+        for (int i = 1; i <= 5; i++) {
+            ScryfallCard sc = new ScryfallCard();
+            sc.setSetCode("MH2");
+            sc.setCollectorNumber(String.valueOf(i));
+            sfCards.add(sc);
+        }
+        when(scryfallCardRepository.findBySetCodeIn(any())).thenReturn(sfCards);
+
+        UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
+
         assertTrue(stats.getCompleteSets().isEmpty(),
-                "Set must NOT be complete when actual Scryfall count (7) > stale cardCount (5)");
-        assertFalse(stats.getNearComplete70().isEmpty(),
-                "5/7 ≈ 71% must appear in nearComplete70");
+                "5/10 = 50% — must NOT show as 100% just because DB also has exactly 5 ScryfallCards");
+        assertFalse(stats.getNearComplete50().isEmpty(),
+                "5/10 = 50% must appear in nearComplete50");
+        assertEquals(50.0, stats.getNearComplete50().get(0).getPercentage(), 0.01);
     }
 
     @Test

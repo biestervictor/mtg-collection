@@ -412,7 +412,7 @@
                         <span class="ms-2" th:text="'/ ' + ${totalCount} + ' Karten'">/ 0 Karten</span>
                     </div>
                     <button type="button" class="btn btn-outline-info btn-sm"
-                            th:onclick="'openSetInfo(\'' + ${selectedSet} + '\')'">
+                            th:data-set="${selectedSet}" onclick="openSetInfo(this.dataset.set)">
                         <i class="bi bi-info-circle"></i> Set Info
                     </button>
                 </div>

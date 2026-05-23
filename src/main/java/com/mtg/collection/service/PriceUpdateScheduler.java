@@ -12,11 +12,14 @@ public class PriceUpdateScheduler {
 
     private final ScryfallService     scryfallService;
     private final PriceHistoryService priceHistoryService;
+    private final ReportCacheService  reportCacheService;
 
     public PriceUpdateScheduler(ScryfallService scryfallService,
-                                PriceHistoryService priceHistoryService) {
+                                PriceHistoryService priceHistoryService,
+                                ReportCacheService reportCacheService) {
         this.scryfallService     = scryfallService;
         this.priceHistoryService = priceHistoryService;
+        this.reportCacheService  = reportCacheService;
     }
 
     /** Step 1 (00:02) — refresh all Scryfall card prices from the API. */
@@ -42,6 +45,22 @@ public class PriceUpdateScheduler {
             log.info("Nightly price snapshot: {} cards recorded", count);
         } catch (Exception e) {
             log.error("Nightly price snapshot failed", e);
+        }
+    }
+
+    /**
+     * Step 3 (03:30) — pre-compute Statistics and Sell Suggestions for all users.
+     * Runs after prices are updated (00:02) and snapshotted (03:00), so the cache
+     * always reflects the freshest data when users open the pages in the morning.
+     */
+    @Scheduled(cron = "0 30 3 * * *")
+    public void precomputeReportsNightly() {
+        log.info("Starting nightly report pre-computation");
+        try {
+            reportCacheService.refreshAll();
+            log.info("Nightly report pre-computation completed");
+        } catch (Exception e) {
+            log.error("Nightly report pre-computation failed", e);
         }
     }
 }

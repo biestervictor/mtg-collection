@@ -21,7 +21,12 @@
                     <li class="nav-item"><a class="nav-link" th:href="@{/sell-suggestions}">Verkauf</a></li>
                     <li class="nav-item"><a class="nav-link" th:classappend="${currentUri == '/price-watch' ? 'active' : ''}" th:href="@{/price-watch}">PriceWatch</a></li>
                 </ul>
-                <ul class="navbar-nav align-items-center">
+                <ul class="navbar-nav align-items-center gap-2">
+                    <!-- ENV badge left of user menu -->
+                    <li class="nav-item">
+                        <span th:if="${isProd}" class="env-badge env-badge-prod">PROD</span>
+                        <span th:unless="${isProd}" class="env-badge env-badge-dev">DEV</span>
+                    </li>
                     <!-- User menu dropdown -->
                     <li class="nav-item dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
@@ -118,17 +123,17 @@
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <span class="dropdown-item-text small text-muted">
+                                <span class="dropdown-item-text" style="color:#adb5bd;font-size:.82em;">
                                     <i class="bi bi-database me-1"></i>
                                     <span th:text="${mongoHost}">mongodb</span>
                                 </span>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <span class="dropdown-item-text small text-muted">
+                                <span class="dropdown-item-text" style="color:#adb5bd;font-size:.82em;">
                                     <i class="bi bi-shield-check me-1"></i>
                                     Eingeloggt als:
-                                    <strong class="text-light"
+                                    <strong style="color:#f1f1f1;"
                                             th:text="${#authentication?.name ?: 'User'}">User</strong>
                                 </span>
                             </li>
@@ -144,10 +149,6 @@
                     </li>
                 </ul>
             </div>
-        </div>
-        <div class="version-info">
-            <span th:if="${isProd}" class="env-badge env-badge-prod">PROD</span>
-            <span th:unless="${isProd}" class="env-badge env-badge-dev">DEV</span>
         </div>
     </nav>
 

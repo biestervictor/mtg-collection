@@ -69,21 +69,52 @@
     <main class="container py-4">
         <h1 class="mb-4"><i class="bi bi-graph-up"></i> Statistics</h1>
 
+        <!-- Flash messages -->
+        <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>
+            <span th:text="${successMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <span th:text="${errorMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
         <div class="row mb-4">
             <div class="col-md-12">
                 <div class="card">
                     <div class="card-body">
-                        <form action="/statistics" method="get" class="row g-3">
-                            <div class="col-md-4">
-                                <select class="form-select" name="user" onchange="this.form.submit()">
-                                    <option value="">-- Select User --</option>
-                                     <option th:each="user : ${allStatistics.keySet()}"
-                                            th:value="${user}"
-                                            th:text="${user}"
-                                            th:selected="${selectedUser == user}">User</option>
-                                </select>
-                            </div>
-                        </form>
+                        <div class="d-flex gap-3 align-items-end flex-wrap">
+                            <form action="/statistics" method="get" class="row g-3 flex-grow-1">
+                                <div class="col-md-4">
+                                    <select class="form-select" name="user" onchange="this.form.submit()">
+                                        <option value="">-- Select User --</option>
+                                         <option th:each="user : ${allStatistics.keySet()}"
+                                                th:value="${user}"
+                                                th:text="${user}"
+                                                th:selected="${selectedUser == user}">User</option>
+                                    </select>
+                                </div>
+                            </form>
+                            <form th:action="@{/statistics/refresh-sets}" method="post">
+                                <input type="hidden" name="user" th:value="${selectedUser}"/>
+                                <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                        title="Re-fetch set card counts from Scryfall (fixes stale 100% completion)">
+                                    <i class="bi bi-arrow-clockwise"></i> Refresh Set Counts
+                                </button>
+                            </form>
+                            <form th:action="@{/statistics/refresh-reports}" method="post">
+                                <input type="hidden" name="user" th:value="${selectedUser}"/>
+                                <button type="submit" class="btn btn-outline-warning btn-sm"
+                                        title="Recompute statistics (and sell suggestions) for this user now">
+                                    <i class="bi bi-lightning-charge"></i> Refresh Reports
+                                </button>
+                            </form>
+                            <span th:if="${statsComputedAt != null}" class="text-secondary small align-self-center">
+                                <i class="bi bi-clock"></i> computed <span th:text="${statsComputedAt}"></span>
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>

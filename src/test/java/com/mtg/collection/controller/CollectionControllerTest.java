@@ -107,4 +107,34 @@ class CollectionControllerTest {
         c.setFullArt(true);
         assertEquals("Showcase", CollectionController.treatmentGroup(c));
     }
+
+    @Test
+    void treatmentGroup_frame1997_returnsRetroFrame() {
+        ScryfallCard c = new ScryfallCard();
+        c.setFrame("1997");
+        assertEquals("Retro Frame", CollectionController.treatmentGroup(c));
+    }
+
+    @Test
+    void treatmentGroup_frame1993_returnsRetroFrame() {
+        ScryfallCard c = new ScryfallCard();
+        c.setFrame("1993");
+        assertEquals("Retro Frame", CollectionController.treatmentGroup(c));
+    }
+
+    @Test
+    void treatmentGroup_frame2015_returnsNormal() {
+        ScryfallCard c = new ScryfallCard();
+        c.setFrame("2015");
+        assertEquals("Normal", CollectionController.treatmentGroup(c));
+    }
+
+    @Test
+    void treatmentGroup_showcaseTakesPrecedenceOverRetroFrame() {
+        // If a card somehow has both showcase frame_effects AND old frame year, showcase wins.
+        ScryfallCard c = new ScryfallCard();
+        c.setFrameStatus("showcase");
+        c.setFrame("1997");
+        assertEquals("Showcase", CollectionController.treatmentGroup(c));
+    }
 }

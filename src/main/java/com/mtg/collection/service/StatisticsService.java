@@ -68,9 +68,25 @@ public class StatisticsService {
 
         // Actual distinct-card count per set from the DB (avoids stale ScryfallSet.cardCount)
         Map<String, Integer> actualScryfallCountBySet = new HashMap<>();
+        // Count of SPECIAL-FRAME ScryfallCards per set (Showcase, ExtArt, Borderless, Retro Frame)
+        Map<String, Integer> totalSpecialBySet = new HashMap<>();
         for (ScryfallCard sc : sfMap.values()) {
             if (sc.getSetCode() != null) {
-                actualScryfallCountBySet.merge(sc.getSetCode().toLowerCase(), 1, Integer::sum);
+                String lc = sc.getSetCode().toLowerCase();
+                actualScryfallCountBySet.merge(lc, 1, Integer::sum);
+                if (isSpecialFrame(sc)) totalSpecialBySet.merge(lc, 1, Integer::sum);
+            }
+        }
+
+        // Owned special-frame collector numbers per set (keyed by UserCard.setCode to match
+        // the setUniqueNameCounts key used in the completion loop below)
+        Map<String, Set<String>> ownedSpecialCnBySet = new HashMap<>();
+        for (UserCard uc : userCards) {
+            ScryfallCard sc = sfMap.get(uc.getSetCode() + "_" + uc.getCollectorNumber());
+            if (sc != null && isSpecialFrame(sc)) {
+                ownedSpecialCnBySet
+                        .computeIfAbsent(uc.getSetCode(), k -> new HashSet<>())
+                        .add(uc.getCollectorNumber());
             }
         }
 
@@ -203,6 +219,10 @@ public class StatisticsService {
                 int ownedAll = setUniqueCardCounts.getOrDefault(setCode, 0);
                 int totalAll = actualScryfallCountBySet.getOrDefault(setCode.toLowerCase(), 0);
                 sc.setAllArtworksStats(ownedAll, totalAll);
+                // Special-frame stats: only Showcase / ExtArt / Borderless / Retro-Frame variants
+                int ownedSpecial = ownedSpecialCnBySet.getOrDefault(setCode, Collections.emptySet()).size();
+                int totalSpecial = totalSpecialBySet.getOrDefault(setCode.toLowerCase(), 0);
+                sc.setSpecialFrameStats(ownedSpecial, totalSpecial);
                 if (uniqueOwned >= totalCardsInSet) {
                     completeSets.add(sc);
                 } else if (percentage >= 90) {
@@ -305,6 +325,21 @@ public class StatisticsService {
      *      (e.g. "tone" = tokens for ONE, "ttdm" = tokens for TDM). All legitimate
      *      expansion sets use 2-3 character codes.
      */
+    /**
+     * Returns true if this card is a special-frame variant (Showcase, Extended Art,
+     * Borderless, or Retro Frame). Used to split statistics into Standard vs. special-frame.
+     * Full-Art cards are intentionally excluded here because full-art basics are part of the
+     * standard set count (ScryfallSet.cardCount includes them).
+     */
+    static boolean isSpecialFrame(ScryfallCard sc) {
+        if (sc == null) return false;
+        String fs = sc.getFrameStatus();
+        if (fs != null && (fs.contains("showcase") || fs.contains("extendedart"))) return true;
+        if ("borderless".equalsIgnoreCase(sc.getBorderColor())) return true;
+        String frame = sc.getFrame();
+        return "1997".equals(frame) || "1993".equals(frame);
+    }
+
     private static boolean isExcludedFromCompletion(String setCode, ScryfallSet s) {
         if (s != null && s.getSetType() != null
                 && EXCLUDED_COMPLETION_SET_TYPES.contains(s.getSetType())) return true;
@@ -413,7 +448,11 @@ public class StatisticsService {
         private int totalCards;
         private double percentage;
         private String iconUrl;
-        // All-artworks track (including Showcase, Extended Art, Borderless, …)
+        // Special-frame track (Showcase, Extended Art, Borderless, Retro Frame)
+        private int ownedSpecialFrames;
+        private int totalSpecialFrames;
+        private double percentageSpecialFrames;
+        // Gesamt track (all unique collector numbers vs. all ScryfallCard docs in DB)
         private int ownedAllArtworks;
         private int totalAllArtworks;
         private double percentageAllArtworks;
@@ -425,7 +464,14 @@ public class StatisticsService {
             this.percentage = percentage;
         }
 
-        /** Call after construction to attach the all-artworks stats. */
+        /** Call after construction to attach the special-frame stats. */
+        public void setSpecialFrameStats(int owned, int total) {
+            this.ownedSpecialFrames      = owned;
+            this.totalSpecialFrames      = total;
+            this.percentageSpecialFrames = total > 0 ? (owned * 100.0) / total : 0;
+        }
+
+        /** Call after construction to attach the gesamt (all-printings) stats. */
         public void setAllArtworksStats(int owned, int total) {
             this.ownedAllArtworks      = owned;
             this.totalAllArtworks      = total;
@@ -438,6 +484,10 @@ public class StatisticsService {
         public double getPercentage()            { return percentage; }
         public String getIconUrl()               { return iconUrl; }
         public void   setIconUrl(String iconUrl) { this.iconUrl = iconUrl; }
+
+        public int    getOwnedSpecialFrames()      { return ownedSpecialFrames; }
+        public int    getTotalSpecialFrames()      { return totalSpecialFrames; }
+        public double getPercentageSpecialFrames() { return percentageSpecialFrames; }
 
         public int    getOwnedAllArtworks()      { return ownedAllArtworks; }
         public int    getTotalAllArtworks()      { return totalAllArtworks; }

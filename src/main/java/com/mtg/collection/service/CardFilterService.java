@@ -46,6 +46,11 @@ public class CardFilterService {
                                 case "borderless":
                                     if ("borderless".equalsIgnoreCase(c.getCard().getBorderColor())) return true;
                                     break;
+                                case "retroframe": {
+                                    String fr = c.getCard().getFrame();
+                                    if ("1997".equals(fr) || "1993".equals(fr)) return true;
+                                    break;
+                                }
                                 case "fullart":
                                     if (c.getCard().isFullArt()) return true;
                                     break;

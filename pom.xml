@@ -15,7 +15,7 @@
     <artifactId>mtg-collection-manager</artifactId>
 
 
-    <version>0.1.71</version>
+    <version>0.1.72</version>
     <name>MTG Collection Manager</name>
     <description>Magic The Gathering Collection Manager - Spring Boot Thymeleaf</description>
     

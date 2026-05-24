@@ -59,6 +59,34 @@
         .card-item-owned { font-size: 0.65rem; color: #888; }
         .card-item-owned .owned-foil { color: #ffd700; }
 
+        /* ── Treatment-group divider ────────────────────────────── */
+        .treatment-divider {
+            width: 100%;                   /* forces a new flex row */
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 18px 0 6px;
+            font-size: 0.78rem;
+            color: rgba(255,255,255,.55);
+        }
+        .treatment-divider:first-child { margin-top: 4px; }
+        .divider-line {
+            flex: 1;
+            height: 1px;
+            background: rgba(255,255,255,.15);
+        }
+        .divider-label {
+            white-space: nowrap;
+            color: rgba(255,255,255,.75);
+            font-weight: 600;
+            letter-spacing: .3px;
+        }
+        .divider-label .divider-missing {
+            font-weight: 400;
+            color: rgba(255,255,255,.45);
+            margin-left: 6px;
+        }
+
         /* ── Set Search ─────────────────────────────────────── */
         .set-search-wrapper { position: relative; }
         .set-input-row {
@@ -424,54 +452,72 @@
                     <div class="card-list" id="cardList"
                          th:if="${filteredCards != null and not #lists.isEmpty(filteredCards)}">
 
-                        <div th:each="cardData, iter : ${filteredCards}"
-                             class="card-item"
-                             th:data-index="${iter.index}"
-                             th:data-name="${cardData.card.name}"
-                             th:data-qty="${cardData.quantity}"
-                             th:data-foil-qty="${cardData.foilQuantity}"
-                             th:data-price="${cardData.card.priceRegular}"
-                             th:data-foil-price="${cardData.card.priceFoil}"
-                             th:data-image="${cardData.card.imageFront}"
-                             th:data-rarity="${cardData.card.rarity}"
-                             onclick="openCardModal(this)">
+                        <th:block th:each="cardData, iter : ${filteredCards}">
 
-                            <div class="card-thumb-wrapper">
-                                <span class="badge badge-qty"
-                                      th:if="${cardData.quantity > 0}"
-                                      th:text="${cardData.quantity}">1</span>
-                                <span class="badge badge-foil"
-                                      th:if="${cardData.foilQuantity > 0}"
-                                      th:text="${cardData.foilQuantity} + '✨'">F</span>
-                                <img th:src="${cardData.card.thumbnailFront}"
-                                     class="card-image" alt="Card"
-                                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3Ctext x=\'75\' y=\'105\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'10\'%3ENo Image%3C/text%3E%3C/svg%3E'">
+                            <!-- Group divider at the start of each new treatment group -->
+                            <div th:if="${groupDividers != null and groupDividers.containsKey(iter.index)}"
+                                 th:with="grp=${groupDividers.get(iter.index)}"
+                                 class="treatment-divider">
+                                <span class="divider-line"></span>
+                                <span class="divider-label">
+                                    <span th:text="${grp.label}">Normal</span>
+                                    <span class="divider-missing"
+                                          th:text="${grp.missing} + ' von ' + ${grp.total} + ' fehlen'">
+                                        0 von 0 fehlen
+                                    </span>
+                                </span>
+                                <span class="divider-line"></span>
                             </div>
 
-                            <div class="card-item-meta">
-                                <span class="card-item-name" th:text="${cardData.card.name}">Name</span>
+                            <div class="card-item"
+                                 th:data-index="${iter.index}"
+                                 th:data-name="${cardData.card.name}"
+                                 th:data-qty="${cardData.quantity}"
+                                 th:data-foil-qty="${cardData.foilQuantity}"
+                                 th:data-price="${cardData.card.priceRegular}"
+                                 th:data-foil-price="${cardData.card.priceFoil}"
+                                 th:data-image="${cardData.card.imageFront}"
+                                 th:data-rarity="${cardData.card.rarity}"
+                                 onclick="openCardModal(this)">
 
-                                <!-- Price row -->
-                                <div class="card-item-price"
-                                     th:if="${cardData.card.priceRegular != null or cardData.card.priceFoil != null}">
-                                    <span th:if="${cardData.card.priceRegular != null}"
-                                          th:text="'€' + ${#numbers.formatDecimal(cardData.card.priceRegular, 1, 2)}"></span>
-                                    <span class="foil-price"
-                                          th:if="${cardData.card.priceFoil != null}"
-                                          th:text="'✨€' + ${#numbers.formatDecimal(cardData.card.priceFoil, 1, 2)}"></span>
-                                </div>
-
-                                <!-- Owned row -->
-                                <div class="card-item-owned"
-                                     th:if="${cardData.quantity > 0 or cardData.foilQuantity > 0}">
-                                    <span th:if="${cardData.quantity > 0}"
-                                          th:text="${cardData.quantity} + 'x'"></span>
-                                    <span class="owned-foil"
+                                <div class="card-thumb-wrapper">
+                                    <span class="badge badge-qty"
+                                          th:if="${cardData.quantity > 0}"
+                                          th:text="${cardData.quantity}">1</span>
+                                    <span class="badge badge-foil"
                                           th:if="${cardData.foilQuantity > 0}"
-                                          th:text="${cardData.foilQuantity} + '✨'"></span>
+                                          th:text="${cardData.foilQuantity} + '✨'">F</span>
+                                    <img th:src="${cardData.card.thumbnailFront}"
+                                         class="card-image" alt="Card"
+                                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3Ctext x=\'75\' y=\'105\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'10\'%3ENo Image%3C/text%3E%3C/svg%3E'">
+                                </div>
+
+                                <div class="card-item-meta">
+                                    <span class="card-item-name" th:text="${cardData.card.name}">Name</span>
+
+                                    <!-- Price row -->
+                                    <div class="card-item-price"
+                                         th:if="${cardData.card.priceRegular != null or cardData.card.priceFoil != null}">
+                                        <span th:if="${cardData.card.priceRegular != null}"
+                                              th:text="'€' + ${#numbers.formatDecimal(cardData.card.priceRegular, 1, 2)}"></span>
+                                        <span class="foil-price"
+                                              th:if="${cardData.card.priceFoil != null}"
+                                              th:text="'✨€' + ${#numbers.formatDecimal(cardData.card.priceFoil, 1, 2)}"></span>
+                                    </div>
+
+                                    <!-- Owned row -->
+                                    <div class="card-item-owned"
+                                         th:if="${cardData.quantity > 0 or cardData.foilQuantity > 0}">
+                                        <span th:if="${cardData.quantity > 0}"
+                                              th:text="${cardData.quantity} + 'x'"></span>
+                                        <span class="owned-foil"
+                                              th:if="${cardData.foilQuantity > 0}"
+                                              th:text="${cardData.foilQuantity} + '✨'"></span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+
+                        </th:block>
                     </div>
 
                     <div th:if="${filteredCards == null or #lists.isEmpty(filteredCards)}"

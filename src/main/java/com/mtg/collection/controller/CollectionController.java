@@ -171,7 +171,7 @@ public class CollectionController {
     // ── Treatment-group helpers ──────────────────────────────────────────────
 
     private static final List<String> GROUP_ORDER =
-            Arrays.asList("Normal", "Showcase", "Extended Art", "Borderless", "Full Art");
+            Arrays.asList("Normal", "Showcase", "Extended Art", "Borderless", "Retro Frame", "Full Art");
 
     static String treatmentGroup(ScryfallCard card) {
         if (card == null) return "Normal";
@@ -179,6 +179,10 @@ public class CollectionController {
         if (fs != null && fs.contains("showcase"))    return "Showcase";
         if (fs != null && fs.contains("extendedart")) return "Extended Art";
         if ("borderless".equalsIgnoreCase(card.getBorderColor())) return "Borderless";
+        // Old-bordered / retro-frame cards (e.g. MH2 bonus sheet) have frame="1997" or "1993"
+        // and empty frame_effects – they can only be detected via the `frame` year field.
+        String frame = card.getFrame();
+        if ("1997".equals(frame) || "1993".equals(frame)) return "Retro Frame";
         if (card.isFullArt())                          return "Full Art";
         return "Normal";
     }

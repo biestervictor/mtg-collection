@@ -140,6 +140,7 @@ return sets;
                     existing.setFrameStatus(newCard.getFrameStatus());
                     existing.setBorderColor(newCard.getBorderColor());
                     existing.setFullArt(newCard.isFullArt());
+                    existing.setFrame(newCard.getFrame());
                     existing.setThumbnailFront(newCard.getThumbnailFront());
                     existing.setImageFront(newCard.getImageFront());
                     existing.setThumbnailBack(newCard.getThumbnailBack());
@@ -255,6 +256,11 @@ return sets;
         // full_art: true for full-art cards (e.g. full-art lands)
         if (cardNode.has("full_art")) {
             card.setFullArt(cardNode.get("full_art").asBoolean());
+        }
+        // frame: "1993" / "1997" = old-bordered retro-frame cards (e.g. MH2 bonus sheet),
+        //        "2015" = modern frame, "future" = future-shifted.
+        if (cardNode.has("frame")) {
+            card.setFrame(cardNode.get("frame").asText());
         }
 
         // Extract image URLs: regular card vs. double-faced card (DFC)

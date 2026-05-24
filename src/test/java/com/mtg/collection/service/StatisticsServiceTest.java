@@ -492,6 +492,7 @@ class StatisticsServiceTest {
         //
         // Standard completion: 2 unique names / 3 = 66.7% → nearComplete60
         // All-artworks:        3 unique cnumbers / 5 = 60%
+        // Special frames:      1 owned showcase / 2 total showcase = 50%
 
         UserCard uc1 = new UserCard("testuser", "Alpha", "TST", "1", 1, false);
         UserCard uc2 = new UserCard("testuser", "Beta",  "TST", "2", 1, false);
@@ -503,10 +504,17 @@ class StatisticsServiceTest {
 
         // 5 ScryfallCard docs: cn 1-3 normal, cn 4-5 showcase
         List<ScryfallCard> sfCards = new ArrayList<>();
-        for (int i = 1; i <= 5; i++) {
+        for (int i = 1; i <= 3; i++) {
             ScryfallCard sc = new ScryfallCard();
             sc.setSetCode("TST");
             sc.setCollectorNumber(String.valueOf(i));
+            sfCards.add(sc);
+        }
+        for (int i = 4; i <= 5; i++) {
+            ScryfallCard sc = new ScryfallCard();
+            sc.setSetCode("TST");
+            sc.setCollectorNumber(String.valueOf(i));
+            sc.setFrameStatus("showcase");   // special frame
             sfCards.add(sc);
         }
         when(scryfallCardRepository.findBySetCodeIn(any())).thenReturn(sfCards);
@@ -524,5 +532,54 @@ class StatisticsServiceTest {
         assertEquals(3, sc.getOwnedAllArtworks(), "3 distinct collector numbers owned");
         assertEquals(5, sc.getTotalAllArtworks(), "5 ScryfallCard docs in cache");
         assertEquals(60.0, sc.getPercentageAllArtworks(), 0.1);
+
+        // Special-frame track: 1 owned showcase (cn=4) / 2 total showcase (cn=4,5) → 50%
+        assertEquals(1, sc.getOwnedSpecialFrames(), "only 1 showcase card owned");
+        assertEquals(2, sc.getTotalSpecialFrames(), "2 showcase cards in cache");
+        assertEquals(50.0, sc.getPercentageSpecialFrames(), 0.1);
+    }
+
+    @Test
+    void isSpecialFrame_showcase_returnsTrue() {
+        ScryfallCard sc = new ScryfallCard();
+        sc.setFrameStatus("showcase");
+        assertTrue(StatisticsService.isSpecialFrame(sc));
+    }
+
+    @Test
+    void isSpecialFrame_extendedart_returnsTrue() {
+        ScryfallCard sc = new ScryfallCard();
+        sc.setFrameStatus("extendedart,legendary");
+        assertTrue(StatisticsService.isSpecialFrame(sc));
+    }
+
+    @Test
+    void isSpecialFrame_borderless_returnsTrue() {
+        ScryfallCard sc = new ScryfallCard();
+        sc.setBorderColor("borderless");
+        assertTrue(StatisticsService.isSpecialFrame(sc));
+    }
+
+    @Test
+    void isSpecialFrame_retroFrame1997_returnsTrue() {
+        ScryfallCard sc = new ScryfallCard();
+        sc.setFrame("1997");
+        assertTrue(StatisticsService.isSpecialFrame(sc));
+    }
+
+    @Test
+    void isSpecialFrame_normalCard_returnsFalse() {
+        ScryfallCard sc = new ScryfallCard();
+        sc.setFrame("2015");
+        sc.setBorderColor("black");
+        assertFalse(StatisticsService.isSpecialFrame(sc));
+    }
+
+    @Test
+    void isSpecialFrame_fullArtOnly_returnsFalse() {
+        // Full-art cards (e.g. full-art basics) are in the standard card count; not a special frame.
+        ScryfallCard sc = new ScryfallCard();
+        sc.setFullArt(true);
+        assertFalse(StatisticsService.isSpecialFrame(sc));
     }
 }

@@ -23,6 +23,9 @@ public class ScryfallCard {
     private String purchaseLink;
     private String borderColor;
     private boolean fullArt;
+    /** Scryfall `frame` property: "1993", "1997", "2003", "2015", "future".
+     *  Old-bordered / retro-frame cards have "1993" or "1997". */
+    private String frame;
     
     public ScryfallCard() {}
 
@@ -58,4 +61,6 @@ public class ScryfallCard {
     public void setBorderColor(String borderColor) { this.borderColor = borderColor; }
     public boolean isFullArt() { return fullArt; }
     public void setFullArt(boolean fullArt) { this.fullArt = fullArt; }
+    public String getFrame() { return frame; }
+    public void setFrame(String frame) { this.frame = frame; }
 }

@@ -2,8 +2,12 @@ package com.mtg.collection.controller;
 
 import com.mtg.collection.dto.CardWithUserData;
 import com.mtg.collection.dto.TreatmentGroupStat;
+import com.mtg.collection.dto.WizardCard;
+import com.mtg.collection.dto.WizardGroup;
 import com.mtg.collection.model.ScryfallCard;
 import com.mtg.collection.model.ScryfallSet;
+import com.mtg.collection.model.UserCard;
+import com.mtg.collection.repository.UserCardRepository;
 import com.mtg.collection.service.CardFilterService;
 import com.mtg.collection.service.CollectionService;
 import com.mtg.collection.service.ScryfallService;
@@ -20,13 +24,16 @@ public class CollectionController {
     private final CollectionService collectionService;
     private final ScryfallService scryfallService;
     private final CardFilterService cardFilterService;
+    private final UserCardRepository userCardRepository;
 
     public CollectionController(CollectionService collectionService,
-                              ScryfallService scryfallService,
-                              CardFilterService cardFilterService) {
+                                ScryfallService scryfallService,
+                                CardFilterService cardFilterService,
+                                UserCardRepository userCardRepository) {
         this.collectionService = collectionService;
         this.scryfallService = scryfallService;
         this.cardFilterService = cardFilterService;
+        this.userCardRepository = userCardRepository;
     }
 
     @GetMapping("/show")
@@ -166,6 +173,67 @@ public class CollectionController {
         double r = c.getPriceRegular() != null ? c.getPriceRegular() : 0;
         double f = c.getPriceFoil() != null ? c.getPriceFoil() : 0;
         return Math.max(r, f);
+    }
+
+    // ── Missing Card Wizard ──────────────────────────────────────────────────
+
+    /**
+     * Returns missing cards for {@code user} in {@code set}, grouped by treatment
+     * category (Normal / Showcase / …).  For each card the response includes the
+     * Scryfall price and a list of other app-users who own ≥ 2 copies (i.e. 1
+     * tradable copy).
+     */
+    @GetMapping("/api/wizard")
+    @ResponseBody
+    public List<WizardGroup> getMissingWizard(
+            @RequestParam String set,
+            @RequestParam String user) {
+
+        // 1. Full card list for this user + set (owned & missing)
+        List<CardWithUserData> allCards = collectionService.getCardsWithUserData(user, set, null);
+
+        // 2. Keep only cards the user does NOT own at all
+        List<CardWithUserData> missing = allCards.stream()
+                .filter(c -> c.getQuantity() == 0 && c.getFoilQuantity() == 0)
+                .collect(Collectors.toList());
+
+        // 3. Build tradable map: collectorNumber → set of other users with qty > 1
+        List<UserCard> allUsersCardsForSet = userCardRepository.findBySetCode(set.toLowerCase());
+        Map<String, Set<String>> tradableMap = new LinkedHashMap<>();
+        for (UserCard uc : allUsersCardsForSet) {
+            if (user.equals(uc.getUser())) continue;
+            if (uc.getQuantity() > 1) {
+                tradableMap.computeIfAbsent(uc.getCollectorNumber(), k -> new LinkedHashSet<>())
+                           .add(uc.getUser());
+            }
+        }
+
+        // 4. Bucket missing cards into treatment groups (preserving GROUP_ORDER)
+        Map<String, List<WizardCard>> byGroup = new LinkedHashMap<>();
+        for (String g : GROUP_ORDER) byGroup.put(g, new ArrayList<>());
+
+        for (CardWithUserData c : missing) {
+            ScryfallCard sc = c.getCard();
+            if (sc == null) continue;
+            String group = treatmentGroup(sc);
+            List<String> traders = new ArrayList<>(
+                    tradableMap.getOrDefault(sc.getCollectorNumber(), Collections.emptySet()));
+            byGroup.get(group).add(new WizardCard(
+                    sc.getName(), sc.getCollectorNumber(), sc.getRarity(),
+                    sc.getThumbnailFront(), sc.getPriceRegular(), sc.getPriceFoil(),
+                    sc.getPurchaseLink(), traders));
+        }
+
+        // 5. Convert to ordered result, dropping empty groups
+        return byGroup.entrySet().stream()
+                .filter(e -> !e.getValue().isEmpty())
+                .map(e -> {
+                    double total = e.getValue().stream()
+                            .mapToDouble(wc -> wc.getPriceRegular() != null ? wc.getPriceRegular() : 0.0)
+                            .sum();
+                    return new WizardGroup(e.getKey(), e.getValue(), total);
+                })
+                .collect(Collectors.toList());
     }
 
     // ── Treatment-group helpers ──────────────────────────────────────────────

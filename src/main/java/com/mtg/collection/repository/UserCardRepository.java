@@ -12,6 +12,9 @@ public interface UserCardRepository extends MongoRepository<UserCard, String> {
     List<UserCard> findByUser(String user);
     
     List<UserCard> findByUserAndSetCode(String user, String setCode);
-    
+
+    /** Returns ALL users' cards for a given set code (used for cross-user tradable lookups). */
+    List<UserCard> findBySetCode(String setCode);
+
     void deleteByUser(String user);
 }

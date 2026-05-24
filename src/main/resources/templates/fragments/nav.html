@@ -21,7 +21,12 @@
                     <li class="nav-item"><a class="nav-link" th:href="@{/sell-suggestions}">Verkauf</a></li>
                     <li class="nav-item"><a class="nav-link" th:classappend="${currentUri == '/price-watch' ? 'active' : ''}" th:href="@{/price-watch}">PriceWatch</a></li>
                 </ul>
-                <ul class="navbar-nav align-items-center">
+                <ul class="navbar-nav align-items-center gap-2">
+                    <!-- ENV badge — left of user menu -->
+                    <li class="nav-item">
+                        <span th:if="${isProd}" class="env-badge env-badge-prod">PROD</span>
+                        <span th:unless="${isProd}" class="env-badge env-badge-dev">DEV</span>
+                    </li>
                     <!-- User menu dropdown -->
                     <li class="nav-item dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
@@ -107,7 +112,7 @@
                                 <a class="dropdown-item d-flex align-items-center gap-2 text-warning" href="#"
                                    onclick="rebuildNavDecks(); return false;">
                                     <i class="bi bi-arrow-clockwise"></i> Rebuild Decks
-                                    <small class="text-muted ms-auto">(fix images)</small>
+                                    <small class="ms-auto" style="color:rgba(255,255,255,.55);">(fix images)</small>
                                 </a>
                             </li>
                             <li>
@@ -118,17 +123,17 @@
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <span class="dropdown-item-text small text-muted">
+                                <span class="dropdown-item-text" style="font-size:.82em;color:rgba(255,255,255,.7);">
                                     <i class="bi bi-database me-1"></i>
                                     <span th:text="${mongoHost}">mongodb</span>
                                 </span>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <span class="dropdown-item-text small text-muted">
+                                <span class="dropdown-item-text" style="font-size:.82em;color:rgba(255,255,255,.7);">
                                     <i class="bi bi-shield-check me-1"></i>
                                     Eingeloggt als:
-                                    <strong class="text-light"
+                                    <strong style="color:#f1f1f1;"
                                             th:text="${#authentication?.name ?: 'User'}">User</strong>
                                 </span>
                             </li>
@@ -145,10 +150,6 @@
                 </ul>
             </div>
         </div>
-        <div class="version-info">
-            <span th:if="${isProd}" class="env-badge env-badge-prod">PROD</span>
-            <span th:unless="${isProd}" class="env-badge env-badge-dev">DEV</span>
-        </div>
     </nav>
 
     <!-- Reusable price-update JS + toast container + user menu + import notification logic -->
@@ -159,6 +160,12 @@
             .env-badge-dev  { background:#27ae60; color:#fff; }
             .version-info { font-size:0.7em; color:#888; white-space:nowrap; }
             #navImportBadge { position:absolute; top:-8px; right:-8px; min-width:18px; height:18px; font-size:0.65em; line-height:18px; padding:0 5px; border-radius:9px; background:#e94560; color:#fff; text-align:center; font-weight:bold; pointer-events:none; display:none; }
+            /* Bootstrap's .text-muted resolves to #6c757d which is unreadable on dark backgrounds.
+               Override it for every dark surface used in this app. */
+            .dropdown-menu-dark .text-muted,
+            .dropdown-menu-dark small,
+            #navRemoveUserModal .text-muted,
+            #navImportResultModal .text-muted { color: rgba(255,255,255,.65) !important; }
         </style>
         <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:11000"></div>
 

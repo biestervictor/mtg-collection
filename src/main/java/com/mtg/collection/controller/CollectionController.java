@@ -1,6 +1,7 @@
 package com.mtg.collection.controller;
 
 import com.mtg.collection.dto.CardWithUserData;
+import com.mtg.collection.dto.TreatmentGroupStat;
 import com.mtg.collection.model.ScryfallCard;
 import com.mtg.collection.model.ScryfallSet;
 import com.mtg.collection.service.CardFilterService;
@@ -54,12 +55,20 @@ public class CollectionController {
         if (set != null && !set.isEmpty() && user != null && !user.isEmpty()) {
             List<CardWithUserData> cards = collectionService.getCardsWithUserData(user, set, null);
             List<CardWithUserData> filteredCards = cardFilterService.filterCards(cards, state, printing, rarity, search, showBasics, frameStyle, hideTokens);
-            
+
+            // Sort filtered results by treatment group so Normal comes first, then Showcase, etc.
+            List<CardWithUserData> sortedCards = sortByTreatmentGroup(filteredCards);
+
+            // Build per-group stats from the UNFILTERED full-set cards so the divider always
+            // shows the set-wide total and missing count, regardless of active filters.
+            Map<Integer, TreatmentGroupStat> groupDividers = computeGroupDividers(sortedCards, cards);
+
             model.addAttribute("selectedSet", set);
             model.addAttribute("selectedUser", user);
             model.addAttribute("cards", cards);
-            model.addAttribute("filteredCards", filteredCards);
-            model.addAttribute("filteredCount", filteredCards.size());
+            model.addAttribute("filteredCards", sortedCards);
+            model.addAttribute("groupDividers", groupDividers);
+            model.addAttribute("filteredCount", sortedCards.size());
             model.addAttribute("totalCount", cards.size());
         } else {
             model.addAttribute("selectedSet", set);
@@ -157,5 +166,61 @@ public class CollectionController {
         double r = c.getPriceRegular() != null ? c.getPriceRegular() : 0;
         double f = c.getPriceFoil() != null ? c.getPriceFoil() : 0;
         return Math.max(r, f);
+    }
+
+    // ── Treatment-group helpers ──────────────────────────────────────────────
+
+    private static final List<String> GROUP_ORDER =
+            Arrays.asList("Normal", "Showcase", "Extended Art", "Borderless", "Full Art");
+
+    static String treatmentGroup(ScryfallCard card) {
+        if (card == null) return "Normal";
+        String fs = card.getFrameStatus();
+        if (fs != null && fs.contains("showcase"))    return "Showcase";
+        if (fs != null && fs.contains("extendedart")) return "Extended Art";
+        if ("borderless".equalsIgnoreCase(card.getBorderColor())) return "Borderless";
+        if (card.isFullArt())                          return "Full Art";
+        return "Normal";
+    }
+
+    private List<CardWithUserData> sortByTreatmentGroup(List<CardWithUserData> cards) {
+        return cards.stream()
+                .sorted(Comparator.comparingInt(c -> {
+                    int idx = GROUP_ORDER.indexOf(treatmentGroup(c.getCard()));
+                    return idx < 0 ? GROUP_ORDER.size() : idx;
+                }))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Returns a map: index-in-sortedCards → TreatmentGroupStat for every position where
+     * a new treatment group starts. Stats (total / missing) are derived from allCards
+     * (the unfiltered set) so they reflect set-wide completeness regardless of filters.
+     */
+    private Map<Integer, TreatmentGroupStat> computeGroupDividers(
+            List<CardWithUserData> sortedCards, List<CardWithUserData> allCards) {
+
+        // Aggregate total + missing per group from the full unfiltered set
+        Map<String, int[]> groupStats = new LinkedHashMap<>(); // [total, missing]
+        for (CardWithUserData c : allCards) {
+            if (c.getCard() == null) continue;
+            String g = treatmentGroup(c.getCard());
+            groupStats.computeIfAbsent(g, k -> new int[2]);
+            groupStats.get(g)[0]++;
+            if (c.getQuantity() == 0 && c.getFoilQuantity() == 0) groupStats.get(g)[1]++;
+        }
+
+        // Walk the sorted (possibly filtered) list and record where each group starts
+        Map<Integer, TreatmentGroupStat> dividers = new LinkedHashMap<>();
+        String currentGroup = null;
+        for (int i = 0; i < sortedCards.size(); i++) {
+            String g = treatmentGroup(sortedCards.get(i).getCard());
+            if (!g.equals(currentGroup)) {
+                currentGroup = g;
+                int[] s = groupStats.getOrDefault(g, new int[]{0, 0});
+                dividers.put(i, new TreatmentGroupStat(g, s[0], s[1]));
+            }
+        }
+        return dividers;
     }
 }

@@ -479,4 +479,50 @@ class StatisticsServiceTest {
         // Must not throw IllegalStateException
         assertDoesNotThrow(() -> statisticsService.getStatisticsForUser("testuser"));
     }
+
+    @Test
+    void setCompletion_allArtworksStats_populatedFromScryfallCache() {
+        // Set has 3 standard cards (cardCount = 3), plus 2 Showcase variants (same names as cn=1,2).
+        // So total ScryfallCard docs = 5, but only 3 distinct names exist.
+        //
+        // User owns:
+        //   cn=1 "Alpha" (standard)
+        //   cn=2 "Beta"  (standard)
+        //   cn=4 "Alpha" (showcase variant of Alpha – same name, different cn)
+        //
+        // Standard completion: 2 unique names / 3 = 66.7% → nearComplete60
+        // All-artworks:        3 unique cnumbers / 5 = 60%
+
+        UserCard uc1 = new UserCard("testuser", "Alpha", "TST", "1", 1, false);
+        UserCard uc2 = new UserCard("testuser", "Beta",  "TST", "2", 1, false);
+        UserCard uc4 = new UserCard("testuser", "Alpha", "TST", "4", 1, false); // showcase, same name
+
+        when(userCardRepository.findByUser("testuser")).thenReturn(List.of(uc1, uc2, uc4));
+        noImports();
+        when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 3)));
+
+        // 5 ScryfallCard docs: cn 1-3 normal, cn 4-5 showcase
+        List<ScryfallCard> sfCards = new ArrayList<>();
+        for (int i = 1; i <= 5; i++) {
+            ScryfallCard sc = new ScryfallCard();
+            sc.setSetCode("TST");
+            sc.setCollectorNumber(String.valueOf(i));
+            sfCards.add(sc);
+        }
+        when(scryfallCardRepository.findBySetCodeIn(any())).thenReturn(sfCards);
+
+        UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
+
+        // Standard track: 2 unique names / 3 → 66.7% → nearComplete60
+        assertFalse(stats.getNearComplete60().isEmpty(), "2/3 = 66.7% must land in nearComplete60");
+        StatisticsService.SetCompletion sc = stats.getNearComplete60().get(0);
+        assertEquals(2, sc.getOwnedCards());
+        assertEquals(3, sc.getTotalCards());
+        assertEquals(66.6, sc.getPercentage(), 0.2);
+
+        // All-artworks track: 3 unique collector numbers / 5 Scryfall docs → 60%
+        assertEquals(3, sc.getOwnedAllArtworks(), "3 distinct collector numbers owned");
+        assertEquals(5, sc.getTotalAllArtworks(), "5 ScryfallCard docs in cache");
+        assertEquals(60.0, sc.getPercentageAllArtworks(), 0.1);
+    }
 }

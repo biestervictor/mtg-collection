@@ -312,7 +312,7 @@
                         <div class="card-body pb-1" th:if="${!userStatistics.completeSets.isEmpty()}">
                             <h6><span class="tier-badge tier-90">100%</span> Complete Sets</h6>
                             <table class="table table-striped">
-                                <thead><tr><th>Set</th><th>Cards</th></tr></thead>
+                                <thead><tr><th>Set</th><th>Std.</th><th>Alle Artworks</th><th style="white-space:nowrap">Alle %</th></tr></thead>
                                 <tbody>
                                     <tr th:each="set, stat : ${userStatistics.completeSets}" th:if="${stat.index < 10}">
                                          <td>
@@ -322,6 +322,12 @@
                                              <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${set.ownedCards}">0</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 1)} + '%'">0%</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
                                     </tr>
                                 </tbody>
                                 <tbody class="collapse" id="more-complete-sets"
@@ -334,6 +340,12 @@
                                              <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
                                          </td>
                                         <td th:text="${set.ownedCards}">0</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 1)} + '%'">0%</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -351,7 +363,7 @@
                         <div class="card-body py-1" th:if="${!userStatistics.nearCompleteSets.isEmpty()}">
                             <h6><span class="tier-badge tier-90">90%+</span> Near Complete</h6>
                             <table class="table table-striped table-sm">
-                                <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
+                                <thead><tr><th>Set</th><th>Standard</th><th>%</th><th>Alle Artworks</th><th style="white-space:nowrap">Alle %</th></tr></thead>
                                 <tbody>
                                     <tr th:each="set : ${userStatistics.nearCompleteSets}">
                                          <td>
@@ -362,6 +374,12 @@
                                          </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 1)} + '%'">0%</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -371,7 +389,7 @@
                         <div class="card-body py-1" th:if="${!userStatistics.nearComplete80.isEmpty()}">
                             <h6><span class="tier-badge tier-80">80%+</span></h6>
                             <table class="table table-striped table-sm">
-                                <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
+                                <thead><tr><th>Set</th><th>Standard</th><th>%</th><th>Alle Artworks</th><th style="white-space:nowrap">Alle %</th></tr></thead>
                                 <tbody>
                                     <tr th:each="set : ${userStatistics.nearComplete80}">
                                          <td>
@@ -382,6 +400,12 @@
                                          </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 1)} + '%'">0%</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -391,7 +415,7 @@
                         <div class="card-body py-1" th:if="${!userStatistics.nearComplete70.isEmpty()}">
                             <h6><span class="tier-badge tier-70">70%+</span></h6>
                             <table class="table table-striped table-sm">
-                                <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
+                                <thead><tr><th>Set</th><th>Standard</th><th>%</th><th>Alle Artworks</th><th style="white-space:nowrap">Alle %</th></tr></thead>
                                 <tbody>
                                     <tr th:each="set : ${userStatistics.nearComplete70}">
                                          <td>
@@ -402,6 +426,12 @@
                                          </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 1)} + '%'">0%</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -411,7 +441,7 @@
                         <div class="card-body py-1" th:if="${!userStatistics.nearComplete60.isEmpty()}">
                             <h6><span class="tier-badge tier-60">60%+</span></h6>
                             <table class="table table-striped table-sm">
-                                <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
+                                <thead><tr><th>Set</th><th>Standard</th><th>%</th><th>Alle Artworks</th><th style="white-space:nowrap">Alle %</th></tr></thead>
                                 <tbody>
                                     <tr th:each="set : ${userStatistics.nearComplete60}">
                                          <td>
@@ -422,6 +452,12 @@
                                          </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 1)} + '%'">0%</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -431,7 +467,7 @@
                         <div class="card-body py-1" th:if="${!userStatistics.nearComplete50.isEmpty()}">
                             <h6><span class="tier-badge tier-50">50%+</span></h6>
                             <table class="table table-striped table-sm">
-                                <thead><tr><th>Set</th><th>Cards</th><th>%</th></tr></thead>
+                                <thead><tr><th>Set</th><th>Standard</th><th>%</th><th>Alle Artworks</th><th style="white-space:nowrap">Alle %</th></tr></thead>
                                 <tbody>
                                     <tr th:each="set : ${userStatistics.nearComplete50}">
                                          <td>
@@ -442,6 +478,12 @@
                                          </td>
                                         <td th:text="${set.ownedCards} + '/' + ${set.totalCards}">0/0</td>
                                         <td th:text="${#numbers.formatDecimal(set.percentage, 1, 1)} + '%'">0%</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
+                                        <td th:if="${set.totalAllArtworks > 0}"
+                                            th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 1)} + '%'">0%</td>
+                                        <td th:unless="${set.totalAllArtworks > 0}" class="text-muted">—</td>
                                     </tr>
                                 </tbody>
                             </table>

@@ -273,7 +273,14 @@ public class CollectionService {
     }
 
     public List<CardWithUserData> getCardsWithUserData(String user, String setCode, List<String> filters) {
-        List<ScryfallCard> sfCards = scryfallService.getCardsBySet(setCode, filters);
+        // Deduplicate by collectorNumber – MongoDB may accumulate multiple documents for the
+        // same physical card (e.g. after repeated imports or case-mismatch set-code saves).
+        // Keep the first occurrence; duplicates would cause the same card to appear twice in the grid.
+        Map<String, ScryfallCard> dedupedMap = new java.util.LinkedHashMap<>();
+        for (ScryfallCard sc : scryfallService.getCardsBySet(setCode, filters)) {
+            dedupedMap.putIfAbsent(sc.getCollectorNumber(), sc);
+        }
+        List<ScryfallCard> sfCards = new ArrayList<>(dedupedMap.values());
         List<UserCard> userCards = getUserCardsBySet(user, setCode);
 
         Map<String, UserCard> userCardMap = new HashMap<>();

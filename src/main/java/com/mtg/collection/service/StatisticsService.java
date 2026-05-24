@@ -199,6 +199,10 @@ public class StatisticsService {
                 double percentage = (uniqueOwned * 100.0) / totalCardsInSet;
                 SetCompletion sc = new SetCompletion(setCode, uniqueOwned, totalCardsInSet, percentage);
                 if (s != null) sc.setIconUrl(s.getIcon());
+                // All-artworks stats: unique collector-numbers owned vs. all ScryfallCard docs in cache
+                int ownedAll = setUniqueCardCounts.getOrDefault(setCode, 0);
+                int totalAll = actualScryfallCountBySet.getOrDefault(setCode.toLowerCase(), 0);
+                sc.setAllArtworksStats(ownedAll, totalAll);
                 if (uniqueOwned >= totalCardsInSet) {
                     completeSets.add(sc);
                 } else if (percentage >= 90) {
@@ -409,20 +413,35 @@ public class StatisticsService {
         private int totalCards;
         private double percentage;
         private String iconUrl;
+        // All-artworks track (including Showcase, Extended Art, Borderless, …)
+        private int ownedAllArtworks;
+        private int totalAllArtworks;
+        private double percentageAllArtworks;
 
         public SetCompletion(String setCode, int ownedCards, int totalCards, double percentage) {
-            this.setCode = setCode;
+            this.setCode    = setCode;
             this.ownedCards = ownedCards;
             this.totalCards = totalCards;
             this.percentage = percentage;
         }
 
-        public String getSetCode() { return setCode; }
-        public int getOwnedCards() { return ownedCards; }
-        public int getTotalCards() { return totalCards; }
-        public double getPercentage() { return percentage; }
-        public String getIconUrl() { return iconUrl; }
-        public void setIconUrl(String iconUrl) { this.iconUrl = iconUrl; }
+        /** Call after construction to attach the all-artworks stats. */
+        public void setAllArtworksStats(int owned, int total) {
+            this.ownedAllArtworks      = owned;
+            this.totalAllArtworks      = total;
+            this.percentageAllArtworks = total > 0 ? (owned * 100.0) / total : 0;
+        }
+
+        public String getSetCode()               { return setCode; }
+        public int    getOwnedCards()            { return ownedCards; }
+        public int    getTotalCards()            { return totalCards; }
+        public double getPercentage()            { return percentage; }
+        public String getIconUrl()               { return iconUrl; }
+        public void   setIconUrl(String iconUrl) { this.iconUrl = iconUrl; }
+
+        public int    getOwnedAllArtworks()      { return ownedAllArtworks; }
+        public int    getTotalAllArtworks()      { return totalAllArtworks; }
+        public double getPercentageAllArtworks() { return percentageAllArtworks; }
     }
 
     public static class CardPriceChange {

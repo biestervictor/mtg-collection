@@ -44,6 +44,57 @@ public class StatisticsService {
         this.mongoTemplate = mongoTemplate;
     }
 
+    /**
+     * Returns the missing cards for a given user and set, split into standard and special-frame lists.
+     * Each list is sorted by collector number (numeric where possible).
+     */
+    public Map<String, Object> getMissingCards(String user, String setCode) {
+        // Try as-is first, then lowercase (ScryfallCards are usually stored lowercase)
+        List<ScryfallCard> allCards = scryfallCardRepository.findBySetCode(setCode);
+        if (allCards.isEmpty()) {
+            allCards = scryfallCardRepository.findBySetCode(setCode.toLowerCase());
+        }
+
+        // Build owned collector-number set (normalise to lowercase for matching)
+        Set<String> ownedCns = userCardRepository.findByUserAndSetCode(user, setCode)
+                .stream().map(uc -> uc.getCollectorNumber().toLowerCase()).collect(Collectors.toSet());
+        if (ownedCns.isEmpty()) {
+            ownedCns = userCardRepository.findByUserAndSetCode(user, setCode.toUpperCase())
+                    .stream().map(uc -> uc.getCollectorNumber().toLowerCase()).collect(Collectors.toSet());
+        }
+
+        List<Map<String, Object>> standard = new ArrayList<>();
+        List<Map<String, Object>> special  = new ArrayList<>();
+
+        for (ScryfallCard sc : allCards) {
+            if (!ownedCns.contains(sc.getCollectorNumber().toLowerCase())) {
+                Map<String, Object> card = new LinkedHashMap<>();
+                card.put("name",   sc.getName());
+                card.put("number", sc.getCollectorNumber());
+                card.put("img",    sc.getThumbnailFront());
+                card.put("rarity", sc.getRarity());
+                if (isSpecialFrame(sc)) {
+                    special.add(card);
+                } else {
+                    standard.add(card);
+                }
+            }
+        }
+
+        Comparator<Map<String, Object>> byCn = Comparator.comparingInt(m -> {
+            try { return Integer.parseInt((String) m.get("number")); }
+            catch (NumberFormatException e) { return Integer.MAX_VALUE; }
+        });
+        standard.sort(byCn);
+        special.sort(byCn);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("setCode",  setCode);
+        result.put("standard", standard);
+        result.put("special",  special);
+        return result;
+    }
+
     /** Returns a distinct, sorted list of all users who have cards in the collection. */
     public List<String> getDistinctUsers() {
         return mongoTemplate.findDistinct(new Query(), "user", UserCard.class, String.class)
@@ -492,6 +543,14 @@ public class StatisticsService {
         public int    getOwnedAllArtworks()      { return ownedAllArtworks; }
         public int    getTotalAllArtworks()      { return totalAllArtworks; }
         public double getPercentageAllArtworks() { return percentageAllArtworks; }
+
+        // Computed: Standard = Gesamt minus Sonderrahmen (alle Collector-Nummern ohne Special Frames)
+        public int getOwnedStandardCards() { return ownedAllArtworks - ownedSpecialFrames; }
+        public int getTotalStandardCards() { return totalAllArtworks - totalSpecialFrames; }
+        public double getPercentageStandard() {
+            int total = getTotalStandardCards();
+            return total > 0 ? (getOwnedStandardCards() * 100.0) / total : 0;
+        }
     }
 
     public static class CardPriceChange {

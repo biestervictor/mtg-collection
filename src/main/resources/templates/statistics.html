@@ -60,6 +60,35 @@
         /* Hover card preview */
         #card-preview { display:none; position:fixed; z-index:9999; pointer-events:none; }
         #card-preview img { width:230px; border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,.85); }
+
+        /* Set completion column separators */
+        .col-sep { border-left: 1px solid rgba(255,255,255,0.12) !important; }
+
+        /* Wizard/mage button */
+        .wizard-btn { background: none; border: none; color: #f0c040; opacity: 0.75;
+                      line-height:1; cursor: pointer; padding: 2px 4px; }
+        .wizard-btn:hover { opacity: 1; color: #ffe066; }
+
+        /* Missing cards modal */
+        #missingCardsModal .modal-content { background-color: #1a1a2e; color: #f1f1f1;
+                                            border: 1px solid #2a2a4a; }
+        #missingCardsModal .modal-header { border-bottom-color: #2a2a4a; }
+        #missingCardsModal .modal-footer { border-top-color: #2a2a4a; }
+        #missingCardsModal .card-grid { display:flex; flex-wrap:wrap; gap:6px; }
+        #missingCardsModal .mc-card { display:flex; flex-direction:column; align-items:center;
+                                      width:76px; cursor:default; }
+        #missingCardsModal .mc-card img { width:72px; border-radius:5px;
+                                           box-shadow:0 2px 8px rgba(0,0,0,.6); }
+        #missingCardsModal .mc-card .mc-info { font-size:0.6rem; color:#aaa;
+                                               text-align:center; margin-top:2px; line-height:1.2; }
+        #missingCardsModal h6.section-label { font-size:0.75rem; color:#888;
+                                              text-transform:uppercase; letter-spacing:.05em;
+                                              margin:0.75rem 0 0.4rem; border-bottom:1px solid #2a2a4a; padding-bottom:3px; }
+
+        /* Miniset toggle */
+        .miniset-toggle-wrap { display:flex; align-items:center; gap:8px;
+                               font-size:0.8rem; color:#aaa; margin-bottom:0.5rem; }
+        .miniset-toggle-wrap .form-check-input { cursor:pointer; }
     </style>
 </head>
 <body>
@@ -303,10 +332,306 @@
 
                 <!-- Set Completion (all tiers) -->
                 <div class="col-md-6">
+                    <!-- Minisets toggle (above the card) -->
+                    <div class="miniset-toggle-wrap">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="minisetToggle" checked>
+                            <label class="form-check-label" for="minisetToggle">Minisets ausblenden (&le;50 Karten)</label>
+                        </div>
+                    </div>
+
                     <div class="card">
                         <div class="card-header">
                             <h5 class="mb-0">Set Completion</h5>
                         </div>
+
+                        <!-- Shared thead macro via JS-rendered identical blocks; define once here -->
+                        <!-- thead columns: Set | Std. | % | Sonder | % | Gesamt | % | [icon] -->
+
+                        <!-- 100% Complete sets -->
+                        <div class="card-body pb-1" th:if="${!userStatistics.completeSets.isEmpty()}">
+                            <h6><span class="tier-badge tier-90">100%</span> Complete Sets</h6>
+                            <table class="table table-striped table-sm">
+                                <thead><tr>
+                                    <th>Set</th>
+                                    <th class="text-center col-sep">Std.</th>
+                                    <th class="text-center">%</th>
+                                    <th class="text-center col-sep">Sonder</th>
+                                    <th class="text-center">%</th>
+                                    <th class="text-center col-sep">Gesamt</th>
+                                    <th class="text-center">%</th>
+                                    <th class="col-sep"></th>
+                                </tr></thead>
+                                <tbody>
+                                    <tr th:each="set, stat : ${userStatistics.completeSets}"
+                                        th:if="${stat.index < 10}"
+                                        th:attr="data-total=${set.totalCards}"
+                                        class="miniset-row">
+                                        <td>
+                                            <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}" width="16" height="16" style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                            <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
+                                        </td>
+                                        <td class="text-center col-sep" th:text="${set.ownedStandardCards} + '/' + ${set.totalStandardCards}">0/0</td>
+                                        <td class="text-center" th:text="${#numbers.formatDecimal(set.percentageStandard, 1, 0)} + '%'">0%</td>
+                                        <td class="text-center col-sep" th:if="${set.totalSpecialFrames > 0}" th:text="${set.ownedSpecialFrames} + '/' + ${set.totalSpecialFrames}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalSpecialFrames > 0}" th:text="${#numbers.formatDecimal(set.percentageSpecialFrames, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center col-sep" th:if="${set.totalAllArtworks > 0}" th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalAllArtworks > 0}" th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center col-sep">
+                                            <button class="wizard-btn" th:attr="data-set=${set.setCode},data-user=${selectedUser}" title="Fehlende Karten anzeigen"><i class="bi bi-magic"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tbody class="collapse" id="more-complete-sets" th:if="${userStatistics.completeSets.size() > 10}">
+                                    <tr th:each="set, stat : ${userStatistics.completeSets}"
+                                        th:if="${stat.index >= 10}"
+                                        th:attr="data-total=${set.totalCards}"
+                                        class="miniset-row">
+                                        <td>
+                                            <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}" width="16" height="16" style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                            <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
+                                        </td>
+                                        <td class="text-center col-sep" th:text="${set.ownedStandardCards} + '/' + ${set.totalStandardCards}">0/0</td>
+                                        <td class="text-center" th:text="${#numbers.formatDecimal(set.percentageStandard, 1, 0)} + '%'">0%</td>
+                                        <td class="text-center col-sep" th:if="${set.totalSpecialFrames > 0}" th:text="${set.ownedSpecialFrames} + '/' + ${set.totalSpecialFrames}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalSpecialFrames > 0}" th:text="${#numbers.formatDecimal(set.percentageSpecialFrames, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center col-sep" th:if="${set.totalAllArtworks > 0}" th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalAllArtworks > 0}" th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center col-sep">
+                                            <button class="wizard-btn" th:attr="data-set=${set.setCode},data-user=${selectedUser}" title="Fehlende Karten anzeigen"><i class="bi bi-magic"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <button class="btn btn-sm btn-outline-secondary mb-2 btn-show-more"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#more-complete-sets"
+                                    th:if="${userStatistics.completeSets.size() > 10}" aria-expanded="false">Show more</button>
+                        </div>
+                        <div class="card-body pb-1" th:if="${userStatistics.completeSets.isEmpty()}">
+                            <p class="text-muted mb-2">No complete sets yet.</p>
+                        </div>
+
+                        <!-- 90%+ tier -->
+                        <div class="card-body py-1" th:if="${!userStatistics.nearCompleteSets.isEmpty()}">
+                            <h6><span class="tier-badge tier-90">90%+</span> Near Complete</h6>
+                            <table class="table table-striped table-sm">
+                                <thead><tr>
+                                    <th>Set</th>
+                                    <th class="text-center col-sep">Std.</th>
+                                    <th class="text-center">%</th>
+                                    <th class="text-center col-sep">Sonder</th>
+                                    <th class="text-center">%</th>
+                                    <th class="text-center col-sep">Gesamt</th>
+                                    <th class="text-center">%</th>
+                                    <th class="col-sep"></th>
+                                </tr></thead>
+                                <tbody>
+                                    <tr th:each="set : ${userStatistics.nearCompleteSets}"
+                                        th:attr="data-total=${set.totalCards}"
+                                        class="miniset-row">
+                                        <td>
+                                            <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}" width="16" height="16" style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                            <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
+                                        </td>
+                                        <td class="text-center col-sep" th:text="${set.ownedStandardCards} + '/' + ${set.totalStandardCards}">0/0</td>
+                                        <td class="text-center" th:text="${#numbers.formatDecimal(set.percentageStandard, 1, 0)} + '%'">0%</td>
+                                        <td class="text-center col-sep" th:if="${set.totalSpecialFrames > 0}" th:text="${set.ownedSpecialFrames} + '/' + ${set.totalSpecialFrames}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalSpecialFrames > 0}" th:text="${#numbers.formatDecimal(set.percentageSpecialFrames, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center col-sep" th:if="${set.totalAllArtworks > 0}" th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalAllArtworks > 0}" th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center col-sep">
+                                            <button class="wizard-btn" th:attr="data-set=${set.setCode},data-user=${selectedUser}" title="Fehlende Karten anzeigen"><i class="bi bi-magic"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 80%+ tier -->
+                        <div class="card-body py-1" th:if="${!userStatistics.nearComplete80.isEmpty()}">
+                            <h6><span class="tier-badge tier-80">80%+</span></h6>
+                            <table class="table table-striped table-sm">
+                                <thead><tr>
+                                    <th>Set</th>
+                                    <th class="text-center col-sep">Std.</th>
+                                    <th class="text-center">%</th>
+                                    <th class="text-center col-sep">Sonder</th>
+                                    <th class="text-center">%</th>
+                                    <th class="text-center col-sep">Gesamt</th>
+                                    <th class="text-center">%</th>
+                                    <th class="col-sep"></th>
+                                </tr></thead>
+                                <tbody>
+                                    <tr th:each="set : ${userStatistics.nearComplete80}"
+                                        th:attr="data-total=${set.totalCards}"
+                                        class="miniset-row">
+                                        <td>
+                                            <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}" width="16" height="16" style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                            <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
+                                        </td>
+                                        <td class="text-center col-sep" th:text="${set.ownedStandardCards} + '/' + ${set.totalStandardCards}">0/0</td>
+                                        <td class="text-center" th:text="${#numbers.formatDecimal(set.percentageStandard, 1, 0)} + '%'">0%</td>
+                                        <td class="text-center col-sep" th:if="${set.totalSpecialFrames > 0}" th:text="${set.ownedSpecialFrames} + '/' + ${set.totalSpecialFrames}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalSpecialFrames > 0}" th:text="${#numbers.formatDecimal(set.percentageSpecialFrames, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center col-sep" th:if="${set.totalAllArtworks > 0}" th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalAllArtworks > 0}" th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center col-sep">
+                                            <button class="wizard-btn" th:attr="data-set=${set.setCode},data-user=${selectedUser}" title="Fehlende Karten anzeigen"><i class="bi bi-magic"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 70%+ tier -->
+                        <div class="card-body py-1" th:if="${!userStatistics.nearComplete70.isEmpty()}">
+                            <h6><span class="tier-badge tier-70">70%+</span></h6>
+                            <table class="table table-striped table-sm">
+                                <thead><tr>
+                                    <th>Set</th>
+                                    <th class="text-center col-sep">Std.</th>
+                                    <th class="text-center">%</th>
+                                    <th class="text-center col-sep">Sonder</th>
+                                    <th class="text-center">%</th>
+                                    <th class="text-center col-sep">Gesamt</th>
+                                    <th class="text-center">%</th>
+                                    <th class="col-sep"></th>
+                                </tr></thead>
+                                <tbody>
+                                    <tr th:each="set : ${userStatistics.nearComplete70}"
+                                        th:attr="data-total=${set.totalCards}"
+                                        class="miniset-row">
+                                        <td>
+                                            <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}" width="16" height="16" style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                            <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
+                                        </td>
+                                        <td class="text-center col-sep" th:text="${set.ownedStandardCards} + '/' + ${set.totalStandardCards}">0/0</td>
+                                        <td class="text-center" th:text="${#numbers.formatDecimal(set.percentageStandard, 1, 0)} + '%'">0%</td>
+                                        <td class="text-center col-sep" th:if="${set.totalSpecialFrames > 0}" th:text="${set.ownedSpecialFrames} + '/' + ${set.totalSpecialFrames}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalSpecialFrames > 0}" th:text="${#numbers.formatDecimal(set.percentageSpecialFrames, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center col-sep" th:if="${set.totalAllArtworks > 0}" th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalAllArtworks > 0}" th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center col-sep">
+                                            <button class="wizard-btn" th:attr="data-set=${set.setCode},data-user=${selectedUser}" title="Fehlende Karten anzeigen"><i class="bi bi-magic"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 60%+ tier -->
+                        <div class="card-body py-1" th:if="${!userStatistics.nearComplete60.isEmpty()}">
+                            <h6><span class="tier-badge tier-60">60%+</span></h6>
+                            <table class="table table-striped table-sm">
+                                <thead><tr>
+                                    <th>Set</th>
+                                    <th class="text-center col-sep">Std.</th>
+                                    <th class="text-center">%</th>
+                                    <th class="text-center col-sep">Sonder</th>
+                                    <th class="text-center">%</th>
+                                    <th class="text-center col-sep">Gesamt</th>
+                                    <th class="text-center">%</th>
+                                    <th class="col-sep"></th>
+                                </tr></thead>
+                                <tbody>
+                                    <tr th:each="set : ${userStatistics.nearComplete60}"
+                                        th:attr="data-total=${set.totalCards}"
+                                        class="miniset-row">
+                                        <td>
+                                            <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}" width="16" height="16" style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                            <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
+                                        </td>
+                                        <td class="text-center col-sep" th:text="${set.ownedStandardCards} + '/' + ${set.totalStandardCards}">0/0</td>
+                                        <td class="text-center" th:text="${#numbers.formatDecimal(set.percentageStandard, 1, 0)} + '%'">0%</td>
+                                        <td class="text-center col-sep" th:if="${set.totalSpecialFrames > 0}" th:text="${set.ownedSpecialFrames} + '/' + ${set.totalSpecialFrames}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalSpecialFrames > 0}" th:text="${#numbers.formatDecimal(set.percentageSpecialFrames, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center col-sep" th:if="${set.totalAllArtworks > 0}" th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalAllArtworks > 0}" th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center col-sep">
+                                            <button class="wizard-btn" th:attr="data-set=${set.setCode},data-user=${selectedUser}" title="Fehlende Karten anzeigen"><i class="bi bi-magic"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 50%+ tier -->
+                        <div class="card-body py-1" th:if="${!userStatistics.nearComplete50.isEmpty()}">
+                            <h6><span class="tier-badge tier-50">50%+</span></h6>
+                            <table class="table table-striped table-sm">
+                                <thead><tr>
+                                    <th>Set</th>
+                                    <th class="text-center col-sep">Std.</th>
+                                    <th class="text-center">%</th>
+                                    <th class="text-center col-sep">Sonder</th>
+                                    <th class="text-center">%</th>
+                                    <th class="text-center col-sep">Gesamt</th>
+                                    <th class="text-center">%</th>
+                                    <th class="col-sep"></th>
+                                </tr></thead>
+                                <tbody>
+                                    <tr th:each="set : ${userStatistics.nearComplete50}"
+                                        th:attr="data-total=${set.totalCards}"
+                                        class="miniset-row">
+                                        <td>
+                                            <img th:if="${set.iconUrl != null}" th:src="${set.iconUrl}" width="16" height="16" style="filter:invert(0.7);vertical-align:middle;margin-right:4px;" alt="">
+                                            <a th:href="@{/show(set=${set.setCode},user=${selectedUser})}" class="set-code text-decoration-none" th:text="${set.setCode}">SET</a>
+                                        </td>
+                                        <td class="text-center col-sep" th:text="${set.ownedStandardCards} + '/' + ${set.totalStandardCards}">0/0</td>
+                                        <td class="text-center" th:text="${#numbers.formatDecimal(set.percentageStandard, 1, 0)} + '%'">0%</td>
+                                        <td class="text-center col-sep" th:if="${set.totalSpecialFrames > 0}" th:text="${set.ownedSpecialFrames} + '/' + ${set.totalSpecialFrames}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalSpecialFrames > 0}" th:text="${#numbers.formatDecimal(set.percentageSpecialFrames, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalSpecialFrames > 0}">—</td>
+                                        <td class="text-center col-sep" th:if="${set.totalAllArtworks > 0}" th:text="${set.ownedAllArtworks} + '/' + ${set.totalAllArtworks}">0/0</td>
+                                        <td class="text-muted text-center col-sep" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center" th:if="${set.totalAllArtworks > 0}" th:text="${#numbers.formatDecimal(set.percentageAllArtworks, 1, 0)} + '%'">0%</td>
+                                        <td class="text-muted text-center" th:unless="${set.totalAllArtworks > 0}">—</td>
+                                        <td class="text-center col-sep">
+                                            <button class="wizard-btn" th:attr="data-set=${set.setCode},data-user=${selectedUser}" title="Fehlende Karten anzeigen"><i class="bi bi-magic"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="card-body py-1"
+                             th:if="${userStatistics.nearCompleteSets.isEmpty()
+                                  and userStatistics.nearComplete80.isEmpty()
+                                  and userStatistics.nearComplete70.isEmpty()
+                                  and userStatistics.nearComplete60.isEmpty()
+                                  and userStatistics.nearComplete50.isEmpty()
+                                  and userStatistics.completeSets.isEmpty()}">
+                            <p class="text-muted">No sets at 50%+ completion yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
                         <!-- Complete sets -->
                         <div class="card-body pb-1" th:if="${!userStatistics.completeSets.isEmpty()}">
@@ -611,6 +936,31 @@
     <footer class="text-center py-3 mt-4">
         <p>MTG Collection Manager</p>
     </footer>
+    <!-- Missing Cards Modal -->
+    <div class="modal fade" id="missingCardsModal" tabindex="-1" aria-labelledby="missingCardsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="missingCardsModalLabel">
+                        <i class="bi bi-magic me-2 text-warning"></i>Fehlende Karten: <span id="modal-set-name" class="set-code ms-1"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-warning" role="status"><span class="visually-hidden">Loading...</span></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hover card preview -->
+    <div id="card-preview"><img src="" alt="Card Preview"></div>
+
     <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
     <script>
         // ── Show-more button text toggle ──────────────────────────────────────
@@ -639,7 +989,6 @@
         }
 
         // ── Sort the Most Expensive Cards table ───────────────────────────────
-        // Column indices: 0=Card 1=Set 2=Price 3=Total
         function sortExpensive(colIdx) {
             const table  = document.getElementById('expensive-table');
             const tbody  = document.getElementById('expensive-tbody');
@@ -648,7 +997,6 @@
 
             const rows = Array.from(tbody.querySelectorAll('tr'));
             rows.sort((a, b) => {
-                // Use data-price / data-total attributes for locale-independent parse
                 const key = colIdx === 2 ? 'price' : 'total';
                 const aVal = parseFloat(a.dataset[key]) || 0;
                 const bVal = parseFloat(b.dataset[key]) || 0;
@@ -656,20 +1004,105 @@
             });
             rows.forEach(r => tbody.appendChild(r));
 
-            // Reset all headers, then mark the sorted one
             table.querySelectorAll('thead th').forEach(h => delete h.dataset.dir);
             th.dataset.dir = asc ? 'asc' : 'desc';
 
             applyExpensiveVisibility();
         }
 
-        // Apply initial visibility (hide rows >10) after page load
         document.addEventListener('DOMContentLoaded', applyExpensiveVisibility);
+
+        // ── Miniset toggle ────────────────────────────────────────────────────
+        let minisetHidden = localStorage.getItem('minisetHidden') !== 'false'; // default: true
+
+        function applyMinisetFilter() {
+            document.querySelectorAll('.miniset-row').forEach(row => {
+                const total = parseInt(row.dataset.total) || 0;
+                row.style.display = (minisetHidden && total > 0 && total <= 50) ? 'none' : '';
+            });
+        }
+
+        const minisetToggle = document.getElementById('minisetToggle');
+        if (minisetToggle) {
+            minisetToggle.checked = minisetHidden;
+            minisetToggle.addEventListener('change', () => {
+                minisetHidden = minisetToggle.checked;
+                localStorage.setItem('minisetHidden', minisetHidden);
+                applyMinisetFilter();
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', applyMinisetFilter);
+
+        // ── Wizard / Missing Cards Modal ──────────────────────────────────────
+        const missingModal = new bootstrap.Modal(document.getElementById('missingCardsModal'));
+
+        document.querySelectorAll('.wizard-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const setCode = this.dataset.set;
+                const user    = this.dataset.user;
+                document.getElementById('modal-set-name').textContent = setCode;
+                document.getElementById('modal-body').innerHTML =
+                    '<div class="text-center py-4"><div class="spinner-border text-warning" role="status"></div></div>';
+                missingModal.show();
+                fetch('/statistics/missing-cards?set=' + encodeURIComponent(setCode) +
+                                                '&user=' + encodeURIComponent(user))
+                    .then(r => r.json())
+                    .then(data => renderMissingCards(data))
+                    .catch(() => {
+                        document.getElementById('modal-body').innerHTML =
+                            '<p class="text-danger">Fehler beim Laden der Karten.</p>';
+                    });
+            });
+        });
+
+        function rarityColor(rarity) {
+            switch ((rarity || '').toLowerCase()) {
+                case 'mythic':   return '#e07000';
+                case 'rare':     return '#c8a228';
+                case 'uncommon': return '#888';
+                default:         return '#555';
+            }
+        }
+
+        function renderMissingCards(data) {
+            const standard = data.standard || [];
+            const special  = data.special  || [];
+
+            if (standard.length === 0 && special.length === 0) {
+                document.getElementById('modal-body').innerHTML =
+                    '<p class="text-success text-center py-3"><i class="bi bi-check-circle me-2"></i>Alle Karten vorhanden!</p>';
+                return;
+            }
+
+            function buildGrid(cards) {
+                if (cards.length === 0) return '<p class="text-muted small">Keine fehlenden Karten in dieser Kategorie.</p>';
+                return '<div class="card-grid">' + cards.map(c => {
+                    const img = c.img
+                        ? '<img src="' + c.img + '" alt="' + (c.name || '') + '" loading="lazy">'
+                        : '<div style="width:72px;height:100px;background:#2a2a4a;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:0.55rem;color:#666;text-align:center;padding:4px;">' + (c.name || '?') + '</div>';
+                    const dot = '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + rarityColor(c.rarity) + ';margin-right:3px;vertical-align:middle;"></span>';
+                    return '<div class="mc-card"><span title="' + (c.name || '') + '">' + img + '</span>'
+                         + '<div class="mc-info">' + dot + '#' + (c.number || '?') + '<br>'
+                         + '<span title="' + (c.name || '') + '" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72px;">' + (c.name || '') + '</span></div></div>';
+                }).join('') + '</div>';
+            }
+
+            let html = '';
+            if (standard.length > 0) {
+                html += '<h6 class="section-label"><i class="bi bi-grid me-1"></i>Standard (' + standard.length + ' fehlend)</h6>';
+                html += buildGrid(standard);
+            }
+            if (special.length > 0) {
+                html += '<h6 class="section-label"><i class="bi bi-stars me-1"></i>Special Artwork (' + special.length + ' fehlend)</h6>';
+                html += buildGrid(special);
+            }
+
+            document.getElementById('modal-body').innerHTML = html;
+        }
 
     </script>
 
-    <!-- Hover card preview -->
-    <div id="card-preview"><img src="" alt="Card Preview"></div>
     <script>
         (function() {
             const preview    = document.getElementById('card-preview');

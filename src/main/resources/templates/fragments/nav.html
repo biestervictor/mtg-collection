@@ -22,10 +22,11 @@
                     <li class="nav-item"><a class="nav-link" th:classappend="${currentUri == '/price-watch' ? 'active' : ''}" th:href="@{/price-watch}">PriceWatch</a></li>
                 </ul>
                 <ul class="navbar-nav align-items-center gap-2">
-                    <!-- ENV badge — left of user menu -->
-                    <li class="nav-item">
+                    <!-- ENV badge + Version — left of user menu -->
+                    <li class="nav-item d-flex align-items-center gap-1">
                         <span th:if="${isProd}" class="env-badge env-badge-prod">PROD</span>
                         <span th:unless="${isProd}" class="env-badge env-badge-dev">DEV</span>
+                        <span class="version-info" th:text="'v' + ${appVersion}">v-</span>
                     </li>
                     <!-- User menu dropdown -->
                     <li class="nav-item dropdown">

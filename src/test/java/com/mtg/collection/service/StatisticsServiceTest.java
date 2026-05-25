@@ -582,4 +582,96 @@ class StatisticsServiceTest {
         sc.setFullArt(true);
         assertFalse(StatisticsService.isSpecialFrame(sc));
     }
+
+    // ── SetCompletion computed standard-card getters ──────────────────────────
+
+    @Test
+    void setCompletion_standardGetters_computedFromAllArtworksMinusSpecial() {
+        StatisticsService.SetCompletion sc = new StatisticsService.SetCompletion("TST", 5, 10, 50.0);
+        sc.setAllArtworksStats(12, 15);  // owned=12, total=15
+        sc.setSpecialFrameStats(3, 5);   // owned=3, total=5
+
+        // Standard = AllArtworks - Special
+        assertEquals(12 - 3, sc.getOwnedStandardCards(),  "ownedStandardCards = ownedAllArtworks - ownedSpecialFrames");
+        assertEquals(15 - 5, sc.getTotalStandardCards(),  "totalStandardCards = totalAllArtworks - totalSpecialFrames");
+        assertEquals(9.0 / 10.0 * 100.0, sc.getPercentageStandard(), 0.01, "percentageStandard = 90%");
+    }
+
+    @Test
+    void setCompletion_standardGetters_zeroTotalAllArtworks_returnsZeroPercent() {
+        StatisticsService.SetCompletion sc = new StatisticsService.SetCompletion("TST", 0, 5, 0.0);
+        // Neither setter called → both remain 0
+        assertEquals(0, sc.getOwnedStandardCards());
+        assertEquals(0, sc.getTotalStandardCards());
+        assertEquals(0.0, sc.getPercentageStandard(), 0.001, "Must not divide by zero");
+    }
+
+    @Test
+    void setCompletion_standardGetters_noSpecialFrames_equalsAllArtworks() {
+        StatisticsService.SetCompletion sc = new StatisticsService.SetCompletion("TST", 8, 10, 80.0);
+        sc.setAllArtworksStats(8, 10);
+        sc.setSpecialFrameStats(0, 0);  // no special frames
+
+        assertEquals(8, sc.getOwnedStandardCards());
+        assertEquals(10, sc.getTotalStandardCards());
+        assertEquals(80.0, sc.getPercentageStandard(), 0.01);
+    }
+
+    // ── getMissingCards tests ─────────────────────────────────────────────────
+
+    @Test
+    void getMissingCards_splitsByStandardAndSpecial() {
+        // User owns cn=1 (standard). Missing: cn=2 (standard) + cn=3 (showcase)
+        UserCard owned = new UserCard("victor", "Alpha", "MH2", "1", 1, false);
+        when(userCardRepository.findByUserAndSetCode("victor", "MH2")).thenReturn(List.of(owned));
+
+        ScryfallCard sc1 = new ScryfallCard(); sc1.setSetCode("MH2"); sc1.setCollectorNumber("1"); sc1.setName("Alpha");
+        ScryfallCard sc2 = new ScryfallCard(); sc2.setSetCode("MH2"); sc2.setCollectorNumber("2"); sc2.setName("Beta");
+        ScryfallCard sc3 = new ScryfallCard(); sc3.setSetCode("MH2"); sc3.setCollectorNumber("3"); sc3.setName("Alpha SC"); sc3.setFrameStatus("showcase");
+        when(scryfallCardRepository.findBySetCode("MH2")).thenReturn(List.of(sc1, sc2, sc3));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = statisticsService.getMissingCards("victor", "MH2");
+
+        List<?> standard = (List<?>) result.get("standard");
+        List<?> special  = (List<?>) result.get("special");
+
+        assertEquals(1, standard.size(), "Beta (cn=2) is missing standard");
+        assertEquals(1, special.size(),  "Alpha SC (cn=3) is missing special");
+    }
+
+    @Test
+    void getMissingCards_ownedCardNotInMissingList() {
+        UserCard owned = new UserCard("victor", "Alpha", "TST", "1", 1, false);
+        when(userCardRepository.findByUserAndSetCode("victor", "TST")).thenReturn(List.of(owned));
+
+        ScryfallCard sc1 = new ScryfallCard(); sc1.setSetCode("TST"); sc1.setCollectorNumber("1"); sc1.setName("Alpha");
+        when(scryfallCardRepository.findBySetCode("TST")).thenReturn(List.of(sc1));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = statisticsService.getMissingCards("victor", "TST");
+
+        assertEquals(0, ((List<?>) result.get("standard")).size(), "No missing standard cards");
+        assertEquals(0, ((List<?>) result.get("special")).size(),  "No missing special cards");
+    }
+
+    @Test
+    void getMissingCards_sortedByCollectorNumberNumeric() {
+        when(userCardRepository.findByUserAndSetCode("victor", "TST")).thenReturn(Collections.emptyList());
+
+        ScryfallCard sc10 = new ScryfallCard(); sc10.setSetCode("TST"); sc10.setCollectorNumber("10"); sc10.setName("Ten");
+        ScryfallCard sc2  = new ScryfallCard(); sc2.setSetCode("TST");  sc2.setCollectorNumber("2");  sc2.setName("Two");
+        ScryfallCard sc1  = new ScryfallCard(); sc1.setSetCode("TST");  sc1.setCollectorNumber("1");  sc1.setName("One");
+        when(scryfallCardRepository.findBySetCode("TST")).thenReturn(List.of(sc10, sc2, sc1));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = statisticsService.getMissingCards("victor", "TST");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> standard = (List<Map<String, Object>>) result.get("standard");
+
+        assertEquals("1",  standard.get(0).get("number"));
+        assertEquals("2",  standard.get(1).get("number"));
+        assertEquals("10", standard.get(2).get("number"));
+    }
 }

@@ -180,9 +180,11 @@ public class StatisticsService {
                         Collectors.summingInt(UserCard::getQuantity)
                 ));
 
-        // Unique card count per set (distinct collector numbers, foil/normal merged)
-        // Used for set-value display: card 1/453 … 453/453
+        // Unique card count per set – only cards with a ScryfallCard match (distinct collector
+        // numbers, foil/normal merged). Filtering to matched cards keeps this consistent with
+        // totalAllArtworks (which also counts ScryfallCard docs), preventing owned > total.
         Map<String, Integer> setUniqueCardCounts = userCards.stream()
+                .filter(uc -> sfMap.containsKey(uc.getSetCode() + "_" + uc.getCollectorNumber()))
                 .collect(Collectors.groupingBy(
                         UserCard::getSetCode,
                         Collectors.collectingAndThen(
@@ -190,10 +192,12 @@ public class StatisticsService {
                                 Set::size)
                 ));
 
-        // Unique card NAME count per set – used for set-completion:
-        // foil and non-foil of the same card, or different printings (extended art etc.)
-        // all count as ONE card toward completion.
+        // Unique card NAME count per set – used for set-completion tier classification.
+        // Only counts cards with a ScryfallCard match so the numerator is consistent with
+        // totalCardsInSet (Scryfall set cardCount). Unmatched UserCards (e.g. stale imports
+        // whose collector numbers are not in the Scryfall DB) are excluded to avoid >100%.
         Map<String, Integer> setUniqueNameCounts = userCards.stream()
+                .filter(uc -> sfMap.containsKey(uc.getSetCode() + "_" + uc.getCollectorNumber()))
                 .collect(Collectors.groupingBy(
                         UserCard::getSetCode,
                         Collectors.collectingAndThen(
@@ -512,26 +516,22 @@ public class StatisticsService {
             this.setCode    = setCode;
             this.ownedCards = ownedCards;
             this.totalCards = totalCards;
-            this.percentage = cap(percentage);
+            this.percentage = percentage;
         }
 
         /** Call after construction to attach the special-frame stats. */
         public void setSpecialFrameStats(int owned, int total) {
             this.ownedSpecialFrames      = owned;
             this.totalSpecialFrames      = total;
-            this.percentageSpecialFrames = total > 0 ? cap((owned * 100.0) / total) : 0;
+            this.percentageSpecialFrames = total > 0 ? (owned * 100.0) / total : 0;
         }
 
         /** Call after construction to attach the gesamt (all-printings) stats. */
         public void setAllArtworksStats(int owned, int total) {
             this.ownedAllArtworks      = owned;
             this.totalAllArtworks      = total;
-            this.percentageAllArtworks = total > 0 ? cap((owned * 100.0) / total) : 0;
+            this.percentageAllArtworks = total > 0 ? (owned * 100.0) / total : 0;
         }
-
-        /** Caps a completion percentage at 100.0 to avoid misleading >100% values
-         *  when user data contains collector numbers absent from the Scryfall cache. */
-        private static double cap(double pct) { return Math.min(100.0, pct); }
 
         public String getSetCode()               { return setCode; }
         public int    getOwnedCards()            { return ownedCards; }
@@ -553,7 +553,7 @@ public class StatisticsService {
         public int getTotalStandardCards() { return totalAllArtworks - totalSpecialFrames; }
         public double getPercentageStandard() {
             int total = getTotalStandardCards();
-            return total > 0 ? cap((getOwnedStandardCards() * 100.0) / total) : 0;
+            return total > 0 ? (getOwnedStandardCards() * 100.0) / total : 0;
         }
     }
 

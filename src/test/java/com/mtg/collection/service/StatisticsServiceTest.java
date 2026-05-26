@@ -64,6 +64,28 @@ class StatisticsServiceTest {
                 .thenReturn(Collections.emptyList());
     }
 
+    /**
+     * Mocks scryfallCardRepository.findBySetCodeIn() to return one ScryfallCard per
+     * unique (setCode, collectorNumber) pair found in {@code cards}.  This ensures
+     * that the Scryfall-filter in setUniqueCardCounts / setUniqueNameCounts lets the
+     * test cards pass through, just as they would in production when Scryfall data exists.
+     */
+    private void mockScryfallCards(List<UserCard> cards) {
+        Map<String, ScryfallCard> seen = new LinkedHashMap<>();
+        for (UserCard uc : cards) {
+            String key = uc.getSetCode() + "_" + uc.getCollectorNumber();
+            if (!seen.containsKey(key)) {
+                ScryfallCard sc = new ScryfallCard();
+                sc.setSetCode(uc.getSetCode());
+                sc.setCollectorNumber(uc.getCollectorNumber());
+                sc.setName(uc.getName());
+                seen.put(key, sc);
+            }
+        }
+        lenient().when(scryfallCardRepository.findBySetCodeIn(any()))
+                .thenReturn(new ArrayList<>(seen.values()));
+    }
+
     // ── existing tests ────────────────────────────────────────────────────────
 
     @Test
@@ -178,6 +200,7 @@ class StatisticsServiceTest {
         );
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("dmu", 10)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -199,6 +222,7 @@ class StatisticsServiceTest {
         );
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("neo", 5)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -221,6 +245,7 @@ class StatisticsServiceTest {
         );
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 3)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -260,6 +285,7 @@ class StatisticsServiceTest {
         }
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 10)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -278,6 +304,7 @@ class StatisticsServiceTest {
         }
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 10)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -337,6 +364,7 @@ class StatisticsServiceTest {
         }
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 10)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -355,6 +383,7 @@ class StatisticsServiceTest {
         }
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 10)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -586,6 +615,32 @@ class StatisticsServiceTest {
     // ── SetCompletion computed standard-card getters ──────────────────────────
 
     @Test
+    void setCompletion_unmatchedUserCards_notCountedTowardCompletion() {
+        // pw11-like scenario: user has 7 UserCards but only 2 have ScryfallCard matches.
+        // Scryfall knows 3 cards for the set → user is at 2/3 = 66%, NOT 7/3 = 233%.
+        List<UserCard> allUserCards = new ArrayList<>();
+        for (int i = 1; i <= 7; i++) {
+            allUserCards.add(card("PW11", String.valueOf(i), false, 1, 1.0));
+        }
+        when(userCardRepository.findByUser("testuser")).thenReturn(allUserCards);
+        noImports();
+        // Only CNs 1 and 2 have ScryfallCard matches (3 is missing, 4-7 unknown to Scryfall)
+        List<UserCard> matchedCards = allUserCards.subList(0, 2); // CN 1 and 2
+        mockScryfallCards(matchedCards);
+        when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("pw11", 3)));
+
+        UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
+
+        // Should be in 60%+ tier (2/3 = 66.7%), not in completeSets
+        assertTrue(stats.getCompleteSets().isEmpty(),    "2/3 matched must NOT appear in completeSets");
+        assertTrue(stats.getNearCompleteSets().isEmpty(),"2/3 must NOT appear in nearCompleteSets (90%+)");
+        assertTrue(stats.getNearComplete80().isEmpty(),  "2/3 must NOT appear in nearComplete80");
+        assertFalse(stats.getNearComplete60().isEmpty(), "2/3 = 66% must appear in nearComplete60");
+        assertEquals(2.0 / 3.0 * 100.0, stats.getNearComplete60().get(0).getPercentage(), 0.01,
+                "percentage must be 66.7%, not 233%");
+    }
+
+    @Test
     void setCompletion_standardGetters_computedFromAllArtworksMinusSpecial() {
         StatisticsService.SetCompletion sc = new StatisticsService.SetCompletion("TST", 5, 10, 50.0);
         sc.setAllArtworksStats(12, 15);  // owned=12, total=15
@@ -615,27 +670,6 @@ class StatisticsServiceTest {
         assertEquals(8, sc.getOwnedStandardCards());
         assertEquals(10, sc.getTotalStandardCards());
         assertEquals(80.0, sc.getPercentageStandard(), 0.01);
-    }
-
-    @Test
-    void setCompletion_percentages_cappedAt100_whenOwnedExceedsTotal() {
-        // Simulates pw11-like case: user owns 7 unique CNs but Scryfall DB only has 3 docs
-        StatisticsService.SetCompletion sc = new StatisticsService.SetCompletion("PW11", 7, 3, 233.3);
-        sc.setAllArtworksStats(7, 3);   // owned(7) > total(3) → would be 233% without cap
-        sc.setSpecialFrameStats(0, 0);  // no special frames
-
-        assertEquals(100.0, sc.getPercentage(),            0.001, "main percentage capped at 100%");
-        assertEquals(100.0, sc.getPercentageAllArtworks(), 0.001, "allArtworks percentage capped at 100%");
-        assertEquals(100.0, sc.getPercentageStandard(),    0.001, "standard percentage capped at 100%");
-    }
-
-    @Test
-    void setCompletion_specialFrames_cappedAt100_whenOwnedExceedsTotal() {
-        StatisticsService.SetCompletion sc = new StatisticsService.SetCompletion("TST", 5, 3, 166.7);
-        sc.setAllArtworksStats(5, 3);
-        sc.setSpecialFrameStats(4, 3); // owned(4) > total(3) → would be 133% without cap
-
-        assertEquals(100.0, sc.getPercentageSpecialFrames(), 0.001, "special-frame percentage capped at 100%");
     }
 
     // ── getMissingCards tests ─────────────────────────────────────────────────

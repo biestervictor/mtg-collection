@@ -617,6 +617,27 @@ class StatisticsServiceTest {
         assertEquals(80.0, sc.getPercentageStandard(), 0.01);
     }
 
+    @Test
+    void setCompletion_percentages_cappedAt100_whenOwnedExceedsTotal() {
+        // Simulates pw11-like case: user owns 7 unique CNs but Scryfall DB only has 3 docs
+        StatisticsService.SetCompletion sc = new StatisticsService.SetCompletion("PW11", 7, 3, 233.3);
+        sc.setAllArtworksStats(7, 3);   // owned(7) > total(3) → would be 233% without cap
+        sc.setSpecialFrameStats(0, 0);  // no special frames
+
+        assertEquals(100.0, sc.getPercentage(),            0.001, "main percentage capped at 100%");
+        assertEquals(100.0, sc.getPercentageAllArtworks(), 0.001, "allArtworks percentage capped at 100%");
+        assertEquals(100.0, sc.getPercentageStandard(),    0.001, "standard percentage capped at 100%");
+    }
+
+    @Test
+    void setCompletion_specialFrames_cappedAt100_whenOwnedExceedsTotal() {
+        StatisticsService.SetCompletion sc = new StatisticsService.SetCompletion("TST", 5, 3, 166.7);
+        sc.setAllArtworksStats(5, 3);
+        sc.setSpecialFrameStats(4, 3); // owned(4) > total(3) → would be 133% without cap
+
+        assertEquals(100.0, sc.getPercentageSpecialFrames(), 0.001, "special-frame percentage capped at 100%");
+    }
+
     // ── getMissingCards tests ─────────────────────────────────────────────────
 
     @Test

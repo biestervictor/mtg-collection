@@ -512,22 +512,26 @@ public class StatisticsService {
             this.setCode    = setCode;
             this.ownedCards = ownedCards;
             this.totalCards = totalCards;
-            this.percentage = percentage;
+            this.percentage = cap(percentage);
         }
 
         /** Call after construction to attach the special-frame stats. */
         public void setSpecialFrameStats(int owned, int total) {
             this.ownedSpecialFrames      = owned;
             this.totalSpecialFrames      = total;
-            this.percentageSpecialFrames = total > 0 ? (owned * 100.0) / total : 0;
+            this.percentageSpecialFrames = total > 0 ? cap((owned * 100.0) / total) : 0;
         }
 
         /** Call after construction to attach the gesamt (all-printings) stats. */
         public void setAllArtworksStats(int owned, int total) {
             this.ownedAllArtworks      = owned;
             this.totalAllArtworks      = total;
-            this.percentageAllArtworks = total > 0 ? (owned * 100.0) / total : 0;
+            this.percentageAllArtworks = total > 0 ? cap((owned * 100.0) / total) : 0;
         }
+
+        /** Caps a completion percentage at 100.0 to avoid misleading >100% values
+         *  when user data contains collector numbers absent from the Scryfall cache. */
+        private static double cap(double pct) { return Math.min(100.0, pct); }
 
         public String getSetCode()               { return setCode; }
         public int    getOwnedCards()            { return ownedCards; }
@@ -549,7 +553,7 @@ public class StatisticsService {
         public int getTotalStandardCards() { return totalAllArtworks - totalSpecialFrames; }
         public double getPercentageStandard() {
             int total = getTotalStandardCards();
-            return total > 0 ? (getOwnedStandardCards() * 100.0) / total : 0;
+            return total > 0 ? cap((getOwnedStandardCards() * 100.0) / total) : 0;
         }
     }
 

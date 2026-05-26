@@ -66,18 +66,26 @@ public class StatisticsService {
         List<Map<String, Object>> standard = new ArrayList<>();
         List<Map<String, Object>> special  = new ArrayList<>();
 
+        // Deduplicate by CN: Scryfall can store both a foil and non-foil entry for the
+        // same collector number (e.g. promo sets like pw11/pw12), which would produce
+        // doubled rows in the modal. Keep the first occurrence per CN.
+        Set<String> seenCns = new HashSet<>();
         for (ScryfallCard sc : allCards) {
-            if (!ownedCns.contains(sc.getCollectorNumber().toLowerCase())) {
-                Map<String, Object> card = new LinkedHashMap<>();
-                card.put("name",   sc.getName());
-                card.put("number", sc.getCollectorNumber());
-                card.put("img",    sc.getThumbnailFront());
-                card.put("rarity", sc.getRarity());
-                if (isSpecialFrame(sc)) {
-                    special.add(card);
-                } else {
-                    standard.add(card);
-                }
+            String cnKey = sc.getCollectorNumber().toLowerCase();
+            if (ownedCns.contains(cnKey) || !seenCns.add(cnKey)) {
+                continue; // owned or already emitted as a missing card
+            }
+            Map<String, Object> card = new LinkedHashMap<>();
+            card.put("name",      sc.getName());
+            card.put("number",    sc.getCollectorNumber());
+            card.put("img",       sc.getThumbnailFront());
+            card.put("rarity",    sc.getRarity());
+            card.put("priceReg",  sc.getPriceRegular());
+            card.put("priceFoil", sc.getPriceFoil());
+            if (isSpecialFrame(sc)) {
+                special.add(card);
+            } else {
+                standard.add(card);
             }
         }
 
@@ -180,9 +188,11 @@ public class StatisticsService {
                         Collectors.summingInt(UserCard::getQuantity)
                 ));
 
-        // Unique card count per set (distinct collector numbers, foil/normal merged)
-        // Used for set-value display: card 1/453 … 453/453
+        // Unique card count per set – only cards with a ScryfallCard match (distinct collector
+        // numbers, foil/normal merged). Filtering to matched cards keeps this consistent with
+        // totalAllArtworks (which also counts ScryfallCard docs), preventing owned > total.
         Map<String, Integer> setUniqueCardCounts = userCards.stream()
+                .filter(uc -> sfMap.containsKey(uc.getSetCode() + "_" + uc.getCollectorNumber()))
                 .collect(Collectors.groupingBy(
                         UserCard::getSetCode,
                         Collectors.collectingAndThen(
@@ -190,10 +200,12 @@ public class StatisticsService {
                                 Set::size)
                 ));
 
-        // Unique card NAME count per set – used for set-completion:
-        // foil and non-foil of the same card, or different printings (extended art etc.)
-        // all count as ONE card toward completion.
+        // Unique card NAME count per set – used for set-completion tier classification.
+        // Only counts cards with a ScryfallCard match so the numerator is consistent with
+        // totalCardsInSet (Scryfall set cardCount). Unmatched UserCards (e.g. stale imports
+        // whose collector numbers are not in the Scryfall DB) are excluded to avoid >100%.
         Map<String, Integer> setUniqueNameCounts = userCards.stream()
+                .filter(uc -> sfMap.containsKey(uc.getSetCode() + "_" + uc.getCollectorNumber()))
                 .collect(Collectors.groupingBy(
                         UserCard::getSetCode,
                         Collectors.collectingAndThen(

@@ -64,6 +64,28 @@ class StatisticsServiceTest {
                 .thenReturn(Collections.emptyList());
     }
 
+    /**
+     * Mocks scryfallCardRepository.findBySetCodeIn() to return one ScryfallCard per
+     * unique (setCode, collectorNumber) pair found in {@code cards}.  This ensures
+     * that the Scryfall-filter in setUniqueCardCounts / setUniqueNameCounts lets the
+     * test cards pass through, just as they would in production when Scryfall data exists.
+     */
+    private void mockScryfallCards(List<UserCard> cards) {
+        Map<String, ScryfallCard> seen = new LinkedHashMap<>();
+        for (UserCard uc : cards) {
+            String key = uc.getSetCode() + "_" + uc.getCollectorNumber();
+            if (!seen.containsKey(key)) {
+                ScryfallCard sc = new ScryfallCard();
+                sc.setSetCode(uc.getSetCode());
+                sc.setCollectorNumber(uc.getCollectorNumber());
+                sc.setName(uc.getName());
+                seen.put(key, sc);
+            }
+        }
+        lenient().when(scryfallCardRepository.findBySetCodeIn(any()))
+                .thenReturn(new ArrayList<>(seen.values()));
+    }
+
     // ── existing tests ────────────────────────────────────────────────────────
 
     @Test
@@ -178,6 +200,7 @@ class StatisticsServiceTest {
         );
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("dmu", 10)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -199,6 +222,7 @@ class StatisticsServiceTest {
         );
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("neo", 5)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -221,6 +245,7 @@ class StatisticsServiceTest {
         );
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 3)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -260,6 +285,7 @@ class StatisticsServiceTest {
         }
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 10)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -278,6 +304,7 @@ class StatisticsServiceTest {
         }
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 10)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -337,6 +364,7 @@ class StatisticsServiceTest {
         }
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 10)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -355,6 +383,7 @@ class StatisticsServiceTest {
         }
         when(userCardRepository.findByUser("testuser")).thenReturn(cards);
         noImports();
+        mockScryfallCards(cards);
         when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("tst", 10)));
 
         UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
@@ -586,6 +615,32 @@ class StatisticsServiceTest {
     // ── SetCompletion computed standard-card getters ──────────────────────────
 
     @Test
+    void setCompletion_unmatchedUserCards_notCountedTowardCompletion() {
+        // pw11-like scenario: user has 7 UserCards but only 2 have ScryfallCard matches.
+        // Scryfall knows 3 cards for the set → user is at 2/3 = 66%, NOT 7/3 = 233%.
+        List<UserCard> allUserCards = new ArrayList<>();
+        for (int i = 1; i <= 7; i++) {
+            allUserCards.add(card("PW11", String.valueOf(i), false, 1, 1.0));
+        }
+        when(userCardRepository.findByUser("testuser")).thenReturn(allUserCards);
+        noImports();
+        // Only CNs 1 and 2 have ScryfallCard matches (3 is missing, 4-7 unknown to Scryfall)
+        List<UserCard> matchedCards = allUserCards.subList(0, 2); // CN 1 and 2
+        mockScryfallCards(matchedCards);
+        when(scryfallService.getAllSets(false)).thenReturn(List.of(scryfallSet("pw11", 3)));
+
+        UserStatistics stats = statisticsService.getStatisticsForUser("testuser");
+
+        // Should be in 60%+ tier (2/3 = 66.7%), not in completeSets
+        assertTrue(stats.getCompleteSets().isEmpty(),    "2/3 matched must NOT appear in completeSets");
+        assertTrue(stats.getNearCompleteSets().isEmpty(),"2/3 must NOT appear in nearCompleteSets (90%+)");
+        assertTrue(stats.getNearComplete80().isEmpty(),  "2/3 must NOT appear in nearComplete80");
+        assertFalse(stats.getNearComplete60().isEmpty(), "2/3 = 66% must appear in nearComplete60");
+        assertEquals(2.0 / 3.0 * 100.0, stats.getNearComplete60().get(0).getPercentage(), 0.01,
+                "percentage must be 66.7%, not 233%");
+    }
+
+    @Test
     void setCompletion_standardGetters_computedFromAllArtworksMinusSpecial() {
         StatisticsService.SetCompletion sc = new StatisticsService.SetCompletion("TST", 5, 10, 50.0);
         sc.setAllArtworksStats(12, 15);  // owned=12, total=15
@@ -673,5 +728,46 @@ class StatisticsServiceTest {
         assertEquals("1",  standard.get(0).get("number"));
         assertEquals("2",  standard.get(1).get("number"));
         assertEquals("10", standard.get(2).get("number"));
+    }
+
+    @Test
+    void getMissingCards_duplicateCnInScryfall_deduplicatedInResult() {
+        // pw11/pw12-style: same CN stored twice (regular + foil entry) — must appear only once.
+        // Call with lowercase so the first findBySetCode("pw11") returns directly (no uppercase fallback).
+        when(userCardRepository.findByUserAndSetCode("victor", "pw11")).thenReturn(Collections.emptyList());
+
+        ScryfallCard sc1a = new ScryfallCard(); sc1a.setSetCode("pw11"); sc1a.setCollectorNumber("1"); sc1a.setName("Alpha"); sc1a.setPriceRegular(1.50);
+        ScryfallCard sc1b = new ScryfallCard(); sc1b.setSetCode("pw11"); sc1b.setCollectorNumber("1"); sc1b.setName("Alpha"); sc1b.setPriceFoil(4.00);
+        ScryfallCard sc2  = new ScryfallCard(); sc2.setSetCode("pw11");  sc2.setCollectorNumber("2");  sc2.setName("Beta");  sc2.setPriceRegular(0.50);
+        when(scryfallCardRepository.findBySetCode("pw11")).thenReturn(List.of(sc1a, sc1b, sc2));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = statisticsService.getMissingCards("victor", "pw11");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> standard = (List<Map<String, Object>>) result.get("standard");
+
+        assertEquals(2, standard.size(), "CN duplicates must be collapsed: only 2 distinct cards");
+        // Price must be present on the first card (priceReg from sc1a)
+        assertNotNull(standard.get(0).get("priceReg"), "priceReg should be set");
+    }
+
+    @Test
+    void getMissingCards_priceFieldsIncludedInResult() {
+        when(userCardRepository.findByUserAndSetCode("victor", "TST")).thenReturn(Collections.emptyList());
+
+        ScryfallCard sc = new ScryfallCard();
+        sc.setSetCode("TST"); sc.setCollectorNumber("1"); sc.setName("Alpha");
+        sc.setPriceRegular(2.75); sc.setPriceFoil(9.99);
+        when(scryfallCardRepository.findBySetCode("TST")).thenReturn(List.of(sc));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = statisticsService.getMissingCards("victor", "TST");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> standard = (List<Map<String, Object>>) result.get("standard");
+        assertEquals(1, standard.size());
+        assertEquals(2.75, (Double) standard.get(0).get("priceReg"),  0.001);
+        assertEquals(9.99, (Double) standard.get(0).get("priceFoil"), 0.001);
     }
 }

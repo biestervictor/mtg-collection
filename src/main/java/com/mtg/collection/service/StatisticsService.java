@@ -66,18 +66,26 @@ public class StatisticsService {
         List<Map<String, Object>> standard = new ArrayList<>();
         List<Map<String, Object>> special  = new ArrayList<>();
 
+        // Deduplicate by CN: Scryfall can store both a foil and non-foil entry for the
+        // same collector number (e.g. promo sets like pw11/pw12), which would produce
+        // doubled rows in the modal. Keep the first occurrence per CN.
+        Set<String> seenCns = new HashSet<>();
         for (ScryfallCard sc : allCards) {
-            if (!ownedCns.contains(sc.getCollectorNumber().toLowerCase())) {
-                Map<String, Object> card = new LinkedHashMap<>();
-                card.put("name",   sc.getName());
-                card.put("number", sc.getCollectorNumber());
-                card.put("img",    sc.getThumbnailFront());
-                card.put("rarity", sc.getRarity());
-                if (isSpecialFrame(sc)) {
-                    special.add(card);
-                } else {
-                    standard.add(card);
-                }
+            String cnKey = sc.getCollectorNumber().toLowerCase();
+            if (ownedCns.contains(cnKey) || !seenCns.add(cnKey)) {
+                continue; // owned or already emitted as a missing card
+            }
+            Map<String, Object> card = new LinkedHashMap<>();
+            card.put("name",      sc.getName());
+            card.put("number",    sc.getCollectorNumber());
+            card.put("img",       sc.getThumbnailFront());
+            card.put("rarity",    sc.getRarity());
+            card.put("priceReg",  sc.getPriceRegular());
+            card.put("priceFoil", sc.getPriceFoil());
+            if (isSpecialFrame(sc)) {
+                special.add(card);
+            } else {
+                standard.add(card);
             }
         }
 

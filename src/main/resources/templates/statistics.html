@@ -882,27 +882,50 @@
                 return;
             }
 
-            function buildGrid(cards) {
+            function fmtPrice(val) {
+                return (val != null && val > 0) ? '€' + val.toFixed(2) : null;
+            }
+
+            function cardPrice(c, usesFoil) {
+                // For special arts prefer foil price; fall back to regular.
+                // For standard always use regular price.
+                if (usesFoil && c.priceFoil != null && c.priceFoil > 0) return c.priceFoil;
+                return (c.priceReg != null && c.priceReg > 0) ? c.priceReg : null;
+            }
+
+            function sumPrices(cards, usesFoil) {
+                const total = cards.reduce((acc, c) => acc + (cardPrice(c, usesFoil) || 0), 0);
+                return total > 0 ? fmtPrice(total) : null;
+            }
+
+            function buildGrid(cards, usesFoil) {
                 if (cards.length === 0) return '<p class="text-muted small">Keine fehlenden Karten in dieser Kategorie.</p>';
                 return '<div class="card-grid">' + cards.map(c => {
                     const img = c.img
                         ? '<img src="' + c.img + '" alt="' + (c.name || '') + '" loading="lazy">'
                         : '<div style="width:72px;height:100px;background:#2a2a4a;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:0.55rem;color:#666;text-align:center;padding:4px;">' + (c.name || '?') + '</div>';
                     const dot = '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + rarityColor(c.rarity) + ';margin-right:3px;vertical-align:middle;"></span>';
+                    const p = cardPrice(c, usesFoil);
+                    const priceHtml = p ? '<span style="color:#4caf50;font-size:0.6rem;">€' + p.toFixed(2) + '</span>' : '';
                     return '<div class="mc-card"><span title="' + (c.name || '') + '">' + img + '</span>'
                          + '<div class="mc-info">' + dot + '#' + (c.number || '?') + '<br>'
-                         + '<span title="' + (c.name || '') + '" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72px;">' + (c.name || '') + '</span></div></div>';
+                         + '<span title="' + (c.name || '') + '" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72px;">' + (c.name || '') + '</span>'
+                         + priceHtml + '</div></div>';
                 }).join('') + '</div>';
             }
 
             let html = '';
             if (standard.length > 0) {
-                html += '<h6 class="section-label"><i class="bi bi-grid me-1"></i>Standard (' + standard.length + ' fehlend)</h6>';
-                html += buildGrid(standard);
+                const total = sumPrices(standard, false);
+                const totalStr = total ? ' <span style="color:#4caf50;font-weight:600;">' + total + '</span>' : '';
+                html += '<h6 class="section-label"><i class="bi bi-grid me-1"></i>Standard (' + standard.length + ' fehlend)' + totalStr + '</h6>';
+                html += buildGrid(standard, false);
             }
             if (special.length > 0) {
-                html += '<h6 class="section-label"><i class="bi bi-stars me-1"></i>Special Artwork (' + special.length + ' fehlend)</h6>';
-                html += buildGrid(special);
+                const total = sumPrices(special, true);
+                const totalStr = total ? ' <span style="color:#4caf50;font-weight:600;">' + total + '</span>' : '';
+                html += '<h6 class="section-label"><i class="bi bi-stars me-1"></i>Special Artwork (' + special.length + ' fehlend)' + totalStr + '</h6>';
+                html += buildGrid(special, true);
             }
 
             document.getElementById('modal-body').innerHTML = html;

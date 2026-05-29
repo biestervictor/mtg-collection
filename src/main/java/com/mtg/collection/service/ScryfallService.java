@@ -40,20 +40,20 @@ public class ScryfallService {
 
     public List<ScryfallSet> getAllSets(boolean forceRefresh) {
         List<ScryfallSet> sets = setRepository.findAll();
-        
+
         if (sets.isEmpty() || forceRefresh) {
             try {
                 List<ScryfallSet> fetchedSets = fetchSetsFromApi();
                 if (!fetchedSets.isEmpty()) {
                     setRepository.deleteAll();
                     setRepository.saveAll(fetchedSets);
-                    return fetchedSets;
+                    sets = fetchedSets;
                 }
             } catch (Exception e) {
                 log.error("Failed to fetch sets from API", e);
             }
         }
-        
+
         // Filter out digital sets and token sets (token sets are stored in DB for the
         // "Show Tokens" section but must not appear in the set selection dropdown)
         return sets.stream()
@@ -380,7 +380,8 @@ return sets;
     
     public void clearAllCache() {
         cardRepository.deleteAll();
-        log.info("Cleared all Scryfall card cache");
+        setRepository.deleteAll();
+        log.info("Cleared all Scryfall card and set cache");
     }
 
     /**

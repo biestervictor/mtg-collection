@@ -235,4 +235,164 @@ class CardFilterServiceTest {
 
         assertEquals(1, result.size());
     }
+
+    // ── filterByState – tradable ──────────────────────────────────────────────
+
+    @Test
+    void testFilterTradable_ReturnsCardsWithMoreThanOne() {
+        // qty=2 → tradable (1 copy kept)
+        List<CardWithUserData> result = filterService.filterCards(testCards, "tradable", null, null, null, null, null, null);
+
+        // card1 has qty=2 → tradable; card4 has foilQty=2 → tradable
+        assertEquals(2, result.size());
+        // tradable quantities are qty-1
+        result.forEach(c -> assertTrue(c.getQuantity() < 2 || c.getFoilQuantity() < 2));
+    }
+
+    @Test
+    void testFilterTradable_FoilPrinting_OnlyFoilTradable() {
+        List<CardWithUserData> result = filterService.filterCards(testCards, "tradable", "foil", null, null, null, null, null);
+
+        // Only card4 has foilQty=2
+        assertEquals(1, result.size());
+        assertEquals(1, result.get(0).getFoilQuantity()); // 2-1=1 tradable
+    }
+
+    @Test
+    void testFilterOwned_FoilPrinting_OnlyFoilOwned() {
+        // card1 has foilQty=1, card4 has foilQty=2
+        List<CardWithUserData> result = filterService.filterCards(testCards, "owned", "foil", null, null, null, null, null);
+
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    void testFilterMissing_FoilPrinting_MissingFoil() {
+        // card2 qty=0 foilQty=0, card3 qty=1 foilQty=0
+        List<CardWithUserData> result = filterService.filterCards(testCards, "missing", "foil", null, null, null, null, null);
+
+        // missing foil = foilQty == 0 → card2 and card3
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    void testFilterState_DefaultWithFoil_DelegatesToPrintingFilter() {
+        // state="unknown" (default branch) + printing="foil" → returns foil-owned cards
+        List<CardWithUserData> result = filterService.filterCards(testCards, "unknown", "foil", null, null, null, null, null);
+
+        // card1 foilQty=1, card4 foilQty=2
+        assertEquals(2, result.size());
+    }
+
+    // ── filterByPrinting – no state filter ───────────────────────────────────
+
+    @Test
+    void testPrintingFoil_NoState_ReturnsOnlyFoilOwned() {
+        List<CardWithUserData> result = filterService.filterCards(testCards, "all", "foil", null, null, null, null, null);
+
+        // card1 foilQty=1, card4 foilQty=2
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    void testPrintingNonFoil_ReturnsAllCards() {
+        List<CardWithUserData> result = filterService.filterCards(testCards, "all", "normal", null, null, null, null, null);
+
+        assertEquals(4, result.size());
+    }
+
+    // ── filterBySearch – numeric (collector number) ───────────────────────────
+
+    @Test
+    void testFilterBySearchNumber_MatchesCollectorNumber() {
+        List<CardWithUserData> result = filterService.filterCards(testCards, "all", null, null, "2", null, null, null);
+
+        assertEquals(1, result.size());
+        assertEquals("2", result.get(0).getCard().getCollectorNumber());
+    }
+
+    // ── frameStyle – retroframe ───────────────────────────────────────────────
+
+    @Test
+    void testFrameStyle_RetroFrame_Returns1997And1993() {
+        ScryfallCard retro97 = createCard("40", "Old Bolt", "uncommon");
+        retro97.setFrame("1997");
+        ScryfallCard retro93 = createCard("41", "Older Bolt", "uncommon");
+        retro93.setFrame("1993");
+        ScryfallCard modern = createCard("42", "New Bolt", "uncommon");
+        modern.setFrame("2015");
+
+        List<CardWithUserData> cards = Arrays.asList(
+                createCardWithUserData(retro97, 1, 0),
+                createCardWithUserData(retro93, 1, 0),
+                createCardWithUserData(modern,  1, 0)
+        );
+
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "retroframe", null);
+
+        assertEquals(2, result.size());
+    }
+
+    // ── frameStyle – multiple comma-separated styles ──────────────────────────
+
+    @Test
+    void testFrameStyle_MultipleStyles_ReturnsUnion() {
+        ScryfallCard showcase   = createCard("50", "Showcase",   "rare"); showcase.setFrameStatus("showcase");
+        ScryfallCard borderless = createCard("51", "Borderless", "rare"); borderless.setBorderColor("borderless");
+        ScryfallCard normal     = createCard("52", "Normal",     "rare");
+
+        List<CardWithUserData> cards = Arrays.asList(
+                createCardWithUserData(showcase,   1, 0),
+                createCardWithUserData(borderless, 1, 0),
+                createCardWithUserData(normal,     1, 0)
+        );
+
+        List<CardWithUserData> result = filterService.filterCards(cards, "all", null, null, null, null, "showcase,borderless", null);
+
+        assertEquals(2, result.size());
+    }
+
+    // ── getOnlyInLeft ─────────────────────────────────────────────────────────
+
+    @Test
+    void testGetOnlyInLeft_ReturnsCardsNotInRight() {
+        ScryfallCard sc1 = createCard("1", "Alpha", "rare");
+        ScryfallCard sc2 = createCard("2", "Beta",  "rare");
+        ScryfallCard sc3 = createCard("3", "Gamma", "rare");
+
+        List<CardWithUserData> left  = Arrays.asList(
+                createCardWithUserData(sc1, 1, 0),
+                createCardWithUserData(sc2, 1, 0)
+        );
+        List<CardWithUserData> right = Arrays.asList(
+                createCardWithUserData(sc2, 1, 0),
+                createCardWithUserData(sc3, 1, 0)
+        );
+
+        List<CardWithUserData> result = filterService.getOnlyInLeft(left, right);
+
+        assertEquals(1, result.size());
+        assertEquals("1", result.get(0).getCard().getCollectorNumber());
+    }
+
+    @Test
+    void testGetOnlyInLeft_EmptyRight_ReturnsAllLeft() {
+        ScryfallCard sc1 = createCard("1", "Alpha", "rare");
+        List<CardWithUserData> left  = Arrays.asList(createCardWithUserData(sc1, 1, 0));
+        List<CardWithUserData> right = Collections.emptyList();
+
+        List<CardWithUserData> result = filterService.getOnlyInLeft(left, right);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void testGetOnlyInLeft_EmptyLeft_ReturnsEmpty() {
+        ScryfallCard sc1 = createCard("1", "Alpha", "rare");
+        List<CardWithUserData> result = filterService.getOnlyInLeft(
+                Collections.emptyList(),
+                Arrays.asList(createCardWithUserData(sc1, 1, 0)));
+
+        assertTrue(result.isEmpty());
+    }
 }

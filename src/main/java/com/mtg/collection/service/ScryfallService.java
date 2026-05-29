@@ -54,8 +54,12 @@ public class ScryfallService {
             }
         }
         
-        // Filter out digital sets that may have been cached before this check was added
-        return sets.stream().filter(s -> !s.isDigital()).collect(Collectors.toList());
+        // Filter out digital sets and token sets (token sets are stored in DB for the
+        // "Show Tokens" section but must not appear in the set selection dropdown)
+        return sets.stream()
+                .filter(s -> !s.isDigital())
+                .filter(s -> !"token".equals(s.getSetType()))
+                .collect(Collectors.toList());
     }
 
     private List<ScryfallSet> fetchSetsFromApi() throws Exception {

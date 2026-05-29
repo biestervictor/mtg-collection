@@ -46,7 +46,7 @@ public class CollectionController {
                                 @RequestParam(required = false) String search,
                                 @RequestParam(required = false) String showBasics,
                                 @RequestParam(required = false) String frameStyle,
-                                @RequestParam(required = false) String hideTokens) {
+                                @RequestParam(required = false) String showTokens) {
         
         List<ScryfallSet> sets = scryfallService.getAllSets(false);
         model.addAttribute("sets", sets);
@@ -57,11 +57,11 @@ public class CollectionController {
         model.addAttribute("search", search);
         model.addAttribute("showBasics", showBasics);
         model.addAttribute("frameStyle", frameStyle);
-        model.addAttribute("hideTokens", hideTokens);
+        model.addAttribute("showTokens", showTokens);
 
         if (set != null && !set.isEmpty() && user != null && !user.isEmpty()) {
             List<CardWithUserData> cards = collectionService.getCardsWithUserData(user, set, null);
-            List<CardWithUserData> filteredCards = cardFilterService.filterCards(cards, state, printing, rarity, search, showBasics, frameStyle, hideTokens);
+            List<CardWithUserData> filteredCards = cardFilterService.filterCards(cards, state, printing, rarity, search, showBasics, frameStyle, null);
 
             // Sort filtered results by treatment group so Normal comes first, then Showcase, etc.
             List<CardWithUserData> sortedCards = sortByTreatmentGroup(filteredCards);
@@ -70,6 +70,16 @@ public class CollectionController {
             // shows the set-wide total and missing count, regardless of active filters.
             Map<Integer, TreatmentGroupStat> groupDividers = computeGroupDividers(sortedCards, cards);
 
+            // Load token set (e.g. "ttdm" for "tdm") when "Show Tokens" is active
+            List<CardWithUserData> tokenCards = new ArrayList<>();
+            if ("true".equals(showTokens)) {
+                String tokenSetCode = "t" + set;
+                List<ScryfallCard> tokenSetCards = scryfallService.getCardsBySet(tokenSetCode, null);
+                if (!tokenSetCards.isEmpty()) {
+                    tokenCards = collectionService.getCardsWithUserData(user, tokenSetCode, null);
+                }
+            }
+
             model.addAttribute("selectedSet", set);
             model.addAttribute("selectedUser", user);
             model.addAttribute("cards", cards);
@@ -77,6 +87,7 @@ public class CollectionController {
             model.addAttribute("groupDividers", groupDividers);
             model.addAttribute("filteredCount", sortedCards.size());
             model.addAttribute("totalCount", cards.size());
+            model.addAttribute("tokenCards", tokenCards);
         } else {
             model.addAttribute("selectedSet", set);
             model.addAttribute("selectedUser", user);

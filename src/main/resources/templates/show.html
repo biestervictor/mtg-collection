@@ -271,6 +271,10 @@
         .set-info-card .si-name { font-size: 0.65rem; color: #ccc; line-height: 1.2; }
         .set-info-card .si-price { font-size: 0.72rem; color: #4caf50; font-weight: 600; }
         .set-info-card .si-foil-price { font-size: 0.65rem; color: #ffd700; }
+        .set-info-card .si-owned { font-size: 0.68rem; color: #7ecbff; margin-top: 2px; display: flex; gap: 4px; justify-content: center; }
+        .set-info-card .si-owned-foil { color: #ffd700; }
+        .set-info-card .si-tradable { font-size: 0.68rem; color: #81c784; display: flex; gap: 4px; justify-content: center; }
+        .set-info-card .si-tradable-foil { color: #ffe082; }
         .spinner-border { width: 2.5rem; height: 2.5rem; }
 
         /* ── Misc ────────────────────────────────────────────── */
@@ -1051,8 +1055,9 @@
         }
         setInfoBsModal.show();
 
-        // Fetch data
-        fetch('/api/set/' + encodeURIComponent(setCode) + '/top-cards')
+        // Fetch data — include current user so the API can return owned/tradable quantities
+        var userParam = initialUser ? '&user=' + encodeURIComponent(initialUser) : '';
+        fetch('/api/set/' + encodeURIComponent(setCode) + '/top-cards?_=1' + userParam)
             .then(function (r) {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.json();
@@ -1069,10 +1074,10 @@
     }
 
     var RARITY_CONFIG = {
-        mythic:   { label: 'Mythic',        color: '#e8871a' },
-        rare:     { label: 'Rare',          color: '#d4af37' },
-        uncommon: { label: 'Uncommon',      color: '#8a9ba8' },
-        common:   { label: 'Common',        color: '#c8c8c8' }
+        mythic:   { label: 'Mythic',   color: '#e8871a' },
+        rare:     { label: 'Rare',     color: '#d4af37' },
+        uncommon: { label: 'Uncommon', color: '#b0c4d8' },
+        common:   { label: 'Common',   color: '#e0e0e0' }
     };
 
     function renderSetInfo(data) {
@@ -1083,14 +1088,12 @@
             var cards = data[rarity];
             if (!cards || cards.length === 0) return;
 
-            var cfg   = RARITY_CONFIG[rarity] || { label: rarity, color: '#fff' };
-            var isLight = ['#d4af37', '#8a9ba8', '#c8c8c8'].indexOf(cfg.color) !== -1;
+            var cfg = RARITY_CONFIG[rarity] || { label: rarity, color: '#fff' };
 
             html += '<div class="mb-4">';
             html += '<div class="rarity-section-header" style="color:' + cfg.color + '; border-color:' + cfg.color + ';">';
-            html += '<span style="' + (isLight ? 'color:#1a1a1a;' : '') + '">';
-            html += '&#9670; ' + cfg.label + ' <small class="text-muted ms-2" style="font-size:0.8rem; color:#888 !important;">Top ' + cards.length + '</small>';
-            html += '</span></div>';
+            html += '&#9670; ' + cfg.label + ' <small style="font-size:0.8rem; color:#888; margin-left:8px;">Top ' + cards.length + '</small>';
+            html += '</div>';
             html += '<div style="display:flex; flex-wrap:wrap; gap:10px;">';
 
             cards.forEach(function (card) {
@@ -1108,10 +1111,30 @@
                     ? '<img src="' + thumb + '" onerror="this.style.display=\'none\'">'
                     : '<div style="width:110px;height:154px;background:#222;border-radius:5px;"></div>';
 
+                // Owned / tradable badge
+                var ownedHtml = '';
+                var qtyReg  = card.qtyRegular  || 0;
+                var qtyFoil = card.qtyFoil     || 0;
+                var trReg   = card.tradableRegular  || 0;
+                var trFoil  = card.tradableFoil     || 0;
+                if (qtyReg > 0 || qtyFoil > 0) {
+                    ownedHtml += '<div class="si-owned">';
+                    if (qtyReg  > 0) ownedHtml += '<span>' + qtyReg  + 'x</span>';
+                    if (qtyFoil > 0) ownedHtml += '<span class="si-owned-foil">' + qtyFoil + '&#10024;</span>';
+                    ownedHtml += '</div>';
+                }
+                if (trReg > 0 || trFoil > 0) {
+                    ownedHtml += '<div class="si-tradable">';
+                    if (trReg  > 0) ownedHtml += '<span>+' + trReg  + 'x</span>';
+                    if (trFoil > 0) ownedHtml += '<span class="si-tradable-foil">+' + trFoil + '&#10024;</span>';
+                    ownedHtml += '</div>';
+                }
+
                 html += '<div class="set-info-card">';
                 html += imgTag;
                 html += '<div class="si-name">' + escapeHtml(card.name) + '</div>';
                 html += priceHtml;
+                html += ownedHtml;
                 html += '</div>';
             });
 

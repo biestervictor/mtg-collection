@@ -46,8 +46,9 @@ public class CollectionController {
                                 @RequestParam(required = false) String search,
                                 @RequestParam(required = false) String showBasics,
                                 @RequestParam(required = false) String frameStyle,
-                                @RequestParam(required = false) String showTokens) {
-        
+                                @RequestParam(required = false) String showTokens,
+                                @RequestParam(required = false) String showPromos) {
+
         List<ScryfallSet> sets = scryfallService.getAllSets(false);
         model.addAttribute("sets", sets);
 
@@ -58,6 +59,7 @@ public class CollectionController {
         model.addAttribute("showBasics", showBasics);
         model.addAttribute("frameStyle", frameStyle);
         model.addAttribute("showTokens", showTokens);
+        model.addAttribute("showPromos", showPromos);
 
         if (set != null && !set.isEmpty() && user != null && !user.isEmpty()) {
             List<CardWithUserData> cards = collectionService.getCardsWithUserData(user, set, null);
@@ -80,6 +82,16 @@ public class CollectionController {
                 }
             }
 
+            // Load promo set (e.g. "pmom" for "mom") when "Show Promos" is active
+            List<CardWithUserData> promoCards = new ArrayList<>();
+            if ("true".equals(showPromos)) {
+                String promoSetCode = "p" + set;
+                List<ScryfallCard> promoSetCards = scryfallService.getCardsBySet(promoSetCode, null);
+                if (!promoSetCards.isEmpty()) {
+                    promoCards = collectionService.getCardsWithUserData(user, promoSetCode, null);
+                }
+            }
+
             model.addAttribute("selectedSet", set);
             model.addAttribute("selectedUser", user);
             model.addAttribute("cards", cards);
@@ -88,6 +100,7 @@ public class CollectionController {
             model.addAttribute("filteredCount", sortedCards.size());
             model.addAttribute("totalCount", cards.size());
             model.addAttribute("tokenCards", tokenCards);
+            model.addAttribute("promoCards", promoCards);
         } else {
             model.addAttribute("selectedSet", set);
             model.addAttribute("selectedUser", user);

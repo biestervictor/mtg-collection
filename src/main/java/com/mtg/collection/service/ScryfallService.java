@@ -54,11 +54,12 @@ public class ScryfallService {
             }
         }
 
-        // Filter out digital sets and token sets (token sets are stored in DB for the
-        // "Show Tokens" section but must not appear in the set selection dropdown)
+        // Filter out digital, token and promo sets — they are stored in DB for the
+        // "Show Tokens" / "Show Promos" sections but must not appear in the set dropdown
         return sets.stream()
                 .filter(s -> !s.isDigital())
                 .filter(s -> !"token".equals(s.getSetType()))
+                .filter(s -> !"promo".equals(s.getSetType()))
                 .collect(Collectors.toList());
     }
 

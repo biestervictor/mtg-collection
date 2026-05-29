@@ -335,8 +335,8 @@ class ScryfallServiceTest {
         String apiResponse = """
                 {
                   "data": [
-                    {"name":"Empty","code":"emp","set_type":"promo","digital":false,"card_count":0},
-                    {"name":"HasCards","code":"hsc","set_type":"promo","digital":false,"card_count":5}
+                    {"name":"Empty","code":"emp","set_type":"expansion","digital":false,"card_count":0},
+                    {"name":"HasCards","code":"hsc","set_type":"expansion","digital":false,"card_count":5}
                   ]
                 }
                 """;
@@ -348,6 +348,23 @@ class ScryfallServiceTest {
 
         assertEquals(1, result.size());
         assertEquals("hsc", result.get(0).getSetCode());
+    }
+
+    @Test
+    void getAllSets_tokenAndPromoSetsFiltered() {
+        ScryfallSet token = new ScryfallSet();
+        token.setSetCode("ttla"); token.setSetType("token");
+        ScryfallSet promo = new ScryfallSet();
+        promo.setSetCode("ptla"); promo.setSetType("promo");
+        ScryfallSet regular = new ScryfallSet();
+        regular.setSetCode("tla"); regular.setSetType("expansion");
+
+        when(setRepository.findAll()).thenReturn(List.of(token, promo, regular));
+
+        List<ScryfallSet> result = scryfallService.getAllSets(false);
+
+        assertEquals(1, result.size());
+        assertEquals("tla", result.get(0).getSetCode());
     }
 
     @Test

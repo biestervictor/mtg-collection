@@ -138,6 +138,16 @@
                     body: formData
                 });
 
+                // If the response was redirected to the login page (session expired),
+                // resp.url will point to an external login domain or the response is
+                // an opaque cross-origin redirect (status 0).
+                if (resp.redirected || resp.status === 0 ||
+                        !resp.url.startsWith(window.location.origin)) {
+                    showNavToast('warning', 'Sitzung abgelaufen',
+                        'Deine Sitzung ist abgelaufen. Bitte die Seite neu laden und erneut einloggen.');
+                    return;
+                }
+
                 if (!resp.ok) {
                     const err = await resp.json().catch(() => ({ error: 'Upload fehlgeschlagen' }));
                     showNavToast('danger', 'Upload fehlgeschlagen', err.error || 'Unbekannter Fehler');
@@ -161,7 +171,14 @@
                     localStorage.getItem('navActiveUser') || 'Victor';
 
             } catch (err) {
-                showNavToast('danger', 'Upload fehlgeschlagen', String(err));
+                // A TypeError typically means the browser blocked a cross-origin
+                // redirect (e.g. session expired → OAuth2 login page).
+                if (err instanceof TypeError) {
+                    showNavToast('warning', 'Sitzung abgelaufen',
+                        'Deine Sitzung ist abgelaufen. Bitte die Seite neu laden und erneut einloggen.');
+                } else {
+                    showNavToast('danger', 'Upload fehlgeschlagen', String(err));
+                }
             } finally {
                 submitBtn.disabled = false;
                 spinner.classList.add('d-none');

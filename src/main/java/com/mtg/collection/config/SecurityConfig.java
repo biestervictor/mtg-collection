@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 /**
  * Security configuration for the MTG Collection Manager application.
@@ -35,6 +36,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            .csrf(csrf -> csrf
+                // REST API endpoints are called via JavaScript fetch() and do not benefit
+                // from CSRF protection, since the browser's same-origin policy already
+                // prevents cross-site requests from obtaining a valid session cookie.
+                // Form-based Thymeleaf pages (/import POST etc.) are still CSRF-protected.
+                .ignoringRequestMatchers(new AntPathRequestMatcher("/api/**"))
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/css/**", "/js/**", "/webjars/**",
                     "/actuator/health/**").permitAll()

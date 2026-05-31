@@ -149,8 +149,24 @@ public class CollectionController {
 
     @GetMapping("/api/set/{setCode}/top-cards")
     @ResponseBody
-    public Map<String, List<Map<String, Object>>> getTopCardsForSet(@PathVariable String setCode) {
+    public Map<String, List<Map<String, Object>>> getTopCardsForSet(
+            @PathVariable String setCode,
+            @RequestParam(required = false) String user) {
+
         List<ScryfallCard> allCards = scryfallService.getCardsBySet(setCode, null);
+
+        // Build ownership map (collectorNumber → qty) when a user is supplied
+        Map<String, Integer> ownedRegular = new HashMap<>();
+        Map<String, Integer> ownedFoil    = new HashMap<>();
+        if (user != null && !user.isBlank()) {
+            for (UserCard uc : userCardRepository.findByUserAndSetCode(user, setCode)) {
+                if (uc.isFoil()) {
+                    ownedFoil.merge(uc.getCollectorNumber(), Math.max(0, uc.getQuantity()), Integer::sum);
+                } else {
+                    ownedRegular.merge(uc.getCollectorNumber(), Math.max(0, uc.getQuantity()), Integer::sum);
+                }
+            }
+        }
 
         String[] rarities = {"mythic", "rare", "uncommon", "common"};
         Map<String, List<ScryfallCard>> byRarity = new LinkedHashMap<>();
@@ -180,11 +196,17 @@ public class CollectionController {
             List<Map<String, Object>> cardList = byRarity.get(rarity).stream()
                     .limit(limit)
                     .map(c -> {
+                        int qtyReg  = ownedRegular.getOrDefault(c.getCollectorNumber(), 0);
+                        int qtyFoil = ownedFoil.getOrDefault(c.getCollectorNumber(), 0);
                         Map<String, Object> m = new LinkedHashMap<>();
-                        m.put("name", c.getName());
-                        m.put("thumbnail", c.getThumbnailFront());
-                        m.put("priceRegular", c.getPriceRegular());
-                        m.put("priceFoil", c.getPriceFoil());
+                        m.put("name",            c.getName());
+                        m.put("thumbnail",        c.getThumbnailFront());
+                        m.put("priceRegular",     c.getPriceRegular());
+                        m.put("priceFoil",        c.getPriceFoil());
+                        m.put("qtyRegular",       qtyReg);
+                        m.put("qtyFoil",          qtyFoil);
+                        m.put("tradableRegular",  Math.max(0, qtyReg  - 1));
+                        m.put("tradableFoil",     Math.max(0, qtyFoil - 1));
                         return m;
                     })
                     .collect(Collectors.toList());

@@ -22,6 +22,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -127,6 +128,41 @@ class CollectionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("compare"))
                 .andExpect(model().attribute("selectedSet", "tst"));
+    }
+
+    @Test
+    void compareCollection_zeroQtyCards_filteredBeforeDiff() throws Exception {
+        // Bug regression: getCardsWithUserData returns ALL set cards including qty=0.
+        // The compare must filter to owned cards before calling getOnlyInLeft,
+        // otherwise every card matches by collectorNumber and results are always empty.
+        ScryfallCard sc1 = cardSc("1");
+        ScryfallCard sc2 = cardSc("2");
+        ScryfallCard sc3 = cardSc("3");
+
+        // Victor owns card 1; card 2 is in the set but unowned (qty=0)
+        CardWithUserData victorOwns   = new CardWithUserData(sc1, 2, 0);
+        CardWithUserData victorZero   = new CardWithUserData(sc2, 0, 0);
+        // Andre owns card 3; card 1 is in the set but unowned (qty=0)
+        CardWithUserData andreOwns    = new CardWithUserData(sc3, 1, 0);
+        CardWithUserData andreZero    = new CardWithUserData(sc1, 0, 0);
+
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("victor", "tst", null))
+                .thenReturn(List.of(victorOwns, victorZero));
+        when(collectionService.getCardsWithUserData("andre",  "tst", null))
+                .thenReturn(List.of(andreOwns, andreZero));
+        when(cardFilterService.getOnlyInLeft(any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/compare")
+                        .param("set", "tst")
+                        .param("user", "victor")
+                        .param("compareUser", "andre"))
+                .andExpect(status().isOk());
+
+        // getOnlyInLeft must be called only with the OWNED subset (qty > 0)
+        verify(cardFilterService).getOnlyInLeft(
+                argThat(l -> l.size() == 1 && l.get(0).getQuantity() == 2),   // only victorOwns
+                argThat(l -> l.size() == 1 && l.get(0).getQuantity() == 1));  // only andreOwns
     }
 
     // ── POST /api/cache/clear ────────────────────────────────────────────────

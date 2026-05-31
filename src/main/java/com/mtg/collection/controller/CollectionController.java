@@ -123,9 +123,18 @@ public class CollectionController {
             
             List<CardWithUserData> userCards = collectionService.getCardsWithUserData(user, set, null);
             List<CardWithUserData> compareCards = collectionService.getCardsWithUserData(compareUser, set, null);
-            
-            List<CardWithUserData> onlyUser = cardFilterService.getOnlyInLeft(userCards, compareCards);
-            List<CardWithUserData> onlyCompare = cardFilterService.getOnlyInLeft(compareCards, userCards);
+
+            // getCardsWithUserData returns ALL set cards (including qty=0).
+            // Only cards actually owned (qty > 0) are relevant for the diff.
+            List<CardWithUserData> userOwned = userCards.stream()
+                    .filter(c -> c.getQuantity() > 0 || c.getFoilQuantity() > 0)
+                    .collect(Collectors.toList());
+            List<CardWithUserData> compareOwned = compareCards.stream()
+                    .filter(c -> c.getQuantity() > 0 || c.getFoilQuantity() > 0)
+                    .collect(Collectors.toList());
+
+            List<CardWithUserData> onlyUser = cardFilterService.getOnlyInLeft(userOwned, compareOwned);
+            List<CardWithUserData> onlyCompare = cardFilterService.getOnlyInLeft(compareOwned, userOwned);
             
             model.addAttribute("selectedSet", set);
             model.addAttribute("compareUser", compareUser);

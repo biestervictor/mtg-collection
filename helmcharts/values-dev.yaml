@@ -19,4 +19,4 @@ mongodb:
   auth: false
 
 externalSecrets:
-  enabled: false
+  enabled: true

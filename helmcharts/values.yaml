@@ -30,9 +30,6 @@ mtgcollection:
   upload:
     maxFileSize: "50MB"
     maxRequestSize: "50MB"
-  userEmails:
-    Victor: ""
-    Andre: ""
 
 secretstore:
   name: azure-kv

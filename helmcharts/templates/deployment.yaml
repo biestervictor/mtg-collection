@@ -47,10 +47,6 @@ spec:
               value: "{{ .Values.mtgcollection.upload.maxFileSize }}"
             - name: SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE
               value: "{{ .Values.mtgcollection.upload.maxRequestSize }}"
-            - name: APP_USER_EMAIL_VICTOR
-              value: "{{ .Values.mtgcollection.userEmails.Victor }}"
-            - name: APP_USER_EMAIL_ANDRE
-              value: "{{ .Values.mtgcollection.userEmails.Andre }}"
           ports:
             - containerPort: {{ .Values.mtgcollection.deployment.port }}
           startupProbe:

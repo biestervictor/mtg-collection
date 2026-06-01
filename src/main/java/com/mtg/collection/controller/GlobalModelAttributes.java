@@ -1,6 +1,8 @@
 package com.mtg.collection.controller;
 
+import com.mtg.collection.repository.UserEmailMappingRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
@@ -12,6 +14,9 @@ public class GlobalModelAttributes {
 
     private static final String DEV_HOST = "mongodb-service.treasury.svc.cluster.local";
 
+    @Autowired
+    private UserEmailMappingRepository mappingRepository;
+
     @Value("${app.version:-}")
     private String appVersion;
 
@@ -21,13 +26,7 @@ public class GlobalModelAttributes {
     @Value("${spring.data.mongodb.uri:}")
     private String mongoUri;
 
-    /** Email address bound to the app user "Victor" — set via APP_USER_EMAIL_VICTOR env var. */
-    @Value("${app.user-email.Victor:}")
-    private String victorEmail;
-
-    /** Email address bound to the app user "Andre" — set via APP_USER_EMAIL_ANDRE env var. */
-    @Value("${app.user-email.Andre:}")
-    private String andreEmail;
+    // ── Standard model attributes ─────────────────────────────────────────────
 
     @ModelAttribute("appVersion")
     public String appVersion() {
@@ -55,30 +54,53 @@ public class GlobalModelAttributes {
         return request != null ? request.getRequestURI() : "";
     }
 
+    // ── App-user resolution via DB ────────────────────────────────────────────
+
     /**
-     * Resolves the logged-in Azure AD user to an app-level username ("Victor" / "Andre").
-     * Matching uses the {@code email} OIDC claim (case-insensitive).
-     * Returns {@code null} when no email mapping is configured or the user is not authenticated.
+     * Resolves the logged-in OIDC user to an app-level username ("Victor" / "Andre")
+     * by looking up the email in the {@code user_email_mappings} collection.
+     * Returns {@code null} when no mapping exists yet.
      */
     @ModelAttribute("currentAppUser")
     public String currentAppUser(Authentication auth) {
+        String email = extractOidcEmail(auth);
+        if (email == null) return null;
+        return mappingRepository.findById(email)
+                .map(m -> m.getAppUser())
+                .orElse(null);
+    }
+
+    /**
+     * Returns {@code true} when the authenticated OIDC user has no email mapping yet
+     * and needs to select their app username.
+     */
+    @ModelAttribute("userMappingRequired")
+    public boolean userMappingRequired(Authentication auth) {
+        String email = extractOidcEmail(auth);
+        if (email == null) return false;
+        return mappingRepository.findById(email).isEmpty();
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Extracts the lowercased email from the authenticated OIDC principal.
+     * Falls back to the {@code preferred_username} claim when the {@code email} claim is absent.
+     * Returns {@code null} for unauthenticated or non-OIDC principals.
+     */
+    String extractOidcEmail(Authentication auth) {
         if (auth == null || !auth.isAuthenticated()) return null;
         if (!(auth.getPrincipal() instanceof OidcUser oidcUser)) return null;
-
         String email = oidcUser.getEmail();
         if (email == null) email = oidcUser.<String>getAttribute("preferred_username");
         if (email == null) return null;
-
-        String emailLower = email.toLowerCase();
-        if (!victorEmail.isEmpty() && victorEmail.toLowerCase().equals(emailLower)) return "Victor";
-        if (!andreEmail.isEmpty()  && andreEmail.toLowerCase().equals(emailLower))  return "Andre";
-        return null;
+        return email.toLowerCase();
     }
 
     String extractHost(String uri) {
         if (uri == null || uri.isBlank()) return "";
         String work = uri;
-        if (work.startsWith("mongodb://"))      work = work.substring("mongodb://".length());
+        if (work.startsWith("mongodb://"))         work = work.substring("mongodb://".length());
         else if (work.startsWith("mongodb+srv://")) work = work.substring("mongodb+srv://".length());
         int atIdx = work.indexOf('@');
         if (atIdx >= 0) work = work.substring(atIdx + 1);

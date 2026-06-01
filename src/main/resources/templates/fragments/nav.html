@@ -178,6 +178,59 @@
         </style>
         <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:11000"></div>
 
+        <!-- ── User mapping required modal ───────────────────────────────────
+             Shown automatically when the logged-in OIDC user has no DB mapping yet.
+             Not dismissable — the user MUST select an app username once.            -->
+        <div th:if="${userMappingRequired}"
+             class="modal fade" id="userMappingModal" tabindex="-1"
+             data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="background:#16213e;border:1px solid #2a2a4a;color:#f1f1f1;">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title">
+                            <i class="bi bi-person-badge me-2"></i> Wer bist du?
+                        </h5>
+                        <!-- no close button — choice is mandatory -->
+                    </div>
+                    <div class="modal-body text-center py-4">
+                        <p class="mb-1" style="color:rgba(255,255,255,.75);">
+                            Dein Login (<code style="color:#e94560;"
+                                th:text="${#authentication?.principal?.email
+                                         ?: #authentication?.principal?.getAttribute('preferred_username')
+                                         ?: '?'}">?</code>)
+                            ist noch keinem App-Benutzer zugeordnet.
+                        </p>
+                        <p class="mb-4" style="color:rgba(255,255,255,.55);font-size:.88em;">
+                            Diese Zuordnung wird in der Datenbank gespeichert und
+                            <span th:if="${isProd}" class="text-warning fw-bold">kann in PROD nicht mehr geändert werden.</span>
+                            <span th:unless="${isProd}" class="text-success">kann im DEV-Modus jederzeit geändert werden.</span>
+                        </p>
+                        <div class="d-flex justify-content-center gap-4">
+                            <form th:action="@{/api/user/map}" method="post">
+                                <input type="hidden" name="appUser" value="Victor">
+                                <button type="submit" class="btn btn-lg px-5"
+                                        style="background:#0f3460;border:2px solid #e94560;color:#f1f1f1;">
+                                    <i class="bi bi-person-fill me-2"></i>Victor
+                                </button>
+                            </form>
+                            <form th:action="@{/api/user/map}" method="post">
+                                <input type="hidden" name="appUser" value="Andre">
+                                <button type="submit" class="btn btn-lg px-5"
+                                        style="background:#0f3460;border:2px solid #533483;color:#f1f1f1;">
+                                    <i class="bi bi-person-fill me-2"></i>Andre
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script th:if="${userMappingRequired}">
+            document.addEventListener('DOMContentLoaded', function () {
+                new bootstrap.Modal(document.getElementById('userMappingModal')).show();
+            });
+        </script>
+
         <!-- Remove User Data confirmation modal -->
         <div class="modal fade" id="navRemoveUserModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">

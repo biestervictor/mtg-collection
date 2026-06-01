@@ -10,6 +10,9 @@ metadata:
     {{- if eq .Values.ingress.className "traefik" }}
     traefik.ingress.kubernetes.io/router.middlewares: "{{ .Values.mtgcollection.nameSpace }}-upload-limit@kubernetescrd"
     {{- end }}
+    {{- if .Values.certManager.enabled }}
+    cert-manager.io/cluster-issuer: {{ .Values.certManager.clusterIssuer | quote }}
+    {{- end }}
 spec:
   tls:
     - hosts:

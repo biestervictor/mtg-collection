@@ -39,6 +39,10 @@ secretstore:
 externalSecrets:
   enabled: true
 
+certManager:
+  enabled: true
+  clusterIssuer: letsencrypt-prod
+
 mongodb:
   host: 192.168.178.141
   port: 27017

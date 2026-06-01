@@ -1,4 +1,4 @@
-{{- if .Values.externalSecrets.enabled }}
+{{- if and .Values.externalSecrets.enabled (not .Values.certManager.enabled) }}
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:

@@ -39,21 +39,29 @@
                             <span id="navImportBadge" style="display:none;"></span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="min-width:260px;">
-                            <li><h6 class="dropdown-header">Active User</h6></li>
-                            <li>
-                                <a class="dropdown-item d-flex align-items-center gap-2" href="#"
-                                   onclick="setNavUser('Victor'); return false;">
-                                    <i class="bi bi-person"></i> Victor
-                                    <i class="bi bi-check ms-auto text-success" id="nav-check-Victor"></i>
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item d-flex align-items-center gap-2" href="#"
-                                   onclick="setNavUser('Andre'); return false;">
-                                    <i class="bi bi-person"></i> Andre
-                                    <i class="bi bi-check ms-auto text-success" id="nav-check-Andre"></i>
-                                </a>
-                            </li>
+                             <li><h6 class="dropdown-header">Active User</h6></li>
+                             <!-- Auto-detected from Entra ID login -->
+                             <li th:if="${currentAppUser != null}">
+                                 <span class="dropdown-item-text d-flex align-items-center gap-2" style="font-size:.85em;color:rgba(255,255,255,.6);">
+                                     <i class="bi bi-magic"></i>
+                                     Auto: <strong style="color:#f1f1f1;" th:text="${currentAppUser}">-</strong>
+                                 </span>
+                             </li>
+                             <li th:if="${currentAppUser != null}"><hr class="dropdown-divider my-1"></li>
+                             <li>
+                                 <a class="dropdown-item d-flex align-items-center gap-2" href="#"
+                                    onclick="setNavUser('Victor'); return false;">
+                                     <i class="bi bi-person"></i> Victor
+                                     <i class="bi bi-check ms-auto text-success" id="nav-check-Victor"></i>
+                                 </a>
+                             </li>
+                             <li>
+                                 <a class="dropdown-item d-flex align-items-center gap-2" href="#"
+                                    onclick="setNavUser('Andre'); return false;">
+                                     <i class="bi bi-person"></i> Andre
+                                     <i class="bi bi-check ms-auto text-success" id="nav-check-Andre"></i>
+                                 </a>
+                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <!-- Import notification entry — shown when import is running or has a result -->
                             <li id="navImportRunningLi" style="display:none">
@@ -227,7 +235,14 @@
 
         <script>
             // ── Nav user menu ─────────────────────────────────────────────────
+            // Server-detected app user from Entra ID (null if not mapped)
+            const _serverAppUser = /*[[${currentAppUser}]]*/ null;
+
             function initNavUserMenu() {
+                // Auto-sync localStorage with the server-detected user on login
+                if (_serverAppUser) {
+                    localStorage.setItem('navActiveUser', _serverAppUser);
+                }
                 const user = localStorage.getItem('navActiveUser') || 'Victor';
                 _applyNavUser(user);
                 _restoreImportNotification();

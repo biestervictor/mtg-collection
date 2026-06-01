@@ -113,14 +113,20 @@ public class CollectionController {
     public String compareCollection(Model model,
                                    @RequestParam(required = false) String set,
                                    @RequestParam(required = false) String user,
-                                   @RequestParam(required = false) String compareUser) {
-        
+                                   @RequestParam(required = false) String compareUser,
+                                   @RequestParam(required = false, defaultValue = "true") boolean onlyTradableUser,
+                                   @RequestParam(required = false, defaultValue = "true") boolean onlyTradableCompare,
+                                   @RequestParam(required = false, defaultValue = "normal") String viewMode) {
+
         List<ScryfallSet> sets = scryfallService.getAllSets(false);
         model.addAttribute("sets", sets);
+        model.addAttribute("onlyTradableUser", onlyTradableUser);
+        model.addAttribute("onlyTradableCompare", onlyTradableCompare);
+        model.addAttribute("viewMode", viewMode);
 
-        if (set != null && !set.isEmpty() && user != null && !user.isEmpty() && 
+        if (set != null && !set.isEmpty() && user != null && !user.isEmpty() &&
             compareUser != null && !compareUser.isEmpty()) {
-            
+
             List<CardWithUserData> userCards = collectionService.getCardsWithUserData(user, set, null);
             List<CardWithUserData> compareCards = collectionService.getCardsWithUserData(compareUser, set, null);
 
@@ -135,6 +141,9 @@ public class CollectionController {
 
             List<CardWithUserData> onlyUser = cardFilterService.getOnlyInLeft(userOwned, compareOwned);
             List<CardWithUserData> onlyCompare = cardFilterService.getOnlyInLeft(compareOwned, userOwned);
+
+            if (onlyTradableUser)    onlyUser    = cardFilterService.filterTradable(onlyUser);
+            if (onlyTradableCompare) onlyCompare = cardFilterService.filterTradable(onlyCompare);
             
             model.addAttribute("selectedSet", set);
             model.addAttribute("compareUser", compareUser);

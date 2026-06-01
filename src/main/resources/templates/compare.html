@@ -19,11 +19,6 @@
         .form-control, .form-select { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
         .form-control-sm { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
         footer { background-color: var(--primary-color); color: #888; }
-        .card-list { display: flex; flex-wrap: wrap; gap: 1rem; }
-        .card-item { width: 150px; }
-        .badge-quantity { background-color: #333 !important; }
-        .badge-foil { background-color: gold !important; color: black; }
-        .card-image { width: 100%; border-radius: 5px; }
         .select2-container--default .select2-selection--single { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); height: 38px; }
         .select2-container--default .select2-selection--single .select2-selection__rendered { color: var(--text-light); line-height: 38px; }
         .select2-container--default .select2-selection--single .select2-selection__arrow { height: 36px; }
@@ -31,113 +26,324 @@
         .select2-container--default .select2-results__option { color: var(--text-light); }
         .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: var(--accent-color); }
         .select2-container--default .select2-search--dropdown .select2-search__field { background-color: var(--secondary-color); color: var(--text-light); border: 1px solid #2a2a4a; }
+
+        /* Card grid — normal mode */
+        .card-list         { display: flex; flex-wrap: wrap; gap: .75rem; }
+        .card-item         { width: 150px; cursor: default; }
+        .card-item.small   { width: 80px; }
+        .card-item img     { width: 100%; border-radius: 5px; display: block; }
+        .card-item .name   { font-size: .7rem; color: #ccc; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-item .price  { font-size: .68rem; color: #f4c430; }
+        .badge-qty  { background: #333 !important; font-size:.65rem; }
+        .badge-foil { background: gold !important; color: #000; font-size:.65rem; }
+
+        /* Text table */
+        .text-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+        .text-table th { color: #888; font-weight: 600; padding: 4px 8px; border-bottom: 1px solid #2a2a4a; white-space: nowrap; }
+        .text-table td { padding: 4px 8px; border-bottom: 1px solid #1a1a2e; vertical-align: middle; }
+        .text-table tr:hover td { background: rgba(255,255,255,.04); }
+        .col-header { background: var(--primary-color); border-bottom: 2px solid var(--accent-color) !important; padding: 8px 12px !important; }
+        .price-col { color: #f4c430; white-space: nowrap; }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark" th:replace="~{fragments/nav :: main-nav}"></nav>
     <div th:replace="~{fragments/nav :: price-update-utils}"></div>
 
-    <main class="container py-4">
-        <h1 class="mb-4"><i class="bi bi-arrow-left-right"></i> Compare Collection</h1>
-        
-        <div class="card mb-4">
-            <div class="card-body">
-                <form method="get" th:action="@{/compare}">
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">Your User</label>
-                            <select class="form-select" name="user" required>
-                                <option value="">-- Select User --</option>
-                                <option value="Andre">Andre</option>
-                                <option value="Victor" selected>Victor</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Compare with</label>
-                            <select class="form-select" name="compareUser" required>
-                                <option value="">-- Select User --</option>
-                                <option value="Andre">Andre</option>
-                                <option value="Victor">Victor</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Set</label>
-                            <select class="form-select select2-set" name="set" required>
-                                <option value="">-- Select Set --</option>
-                                <option th:each="s : ${sets}" th:value="${s.setCode}" th:text="${s.name} + ' (' + ${s.setCode} + ')'"></option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Compare</button>
-                        </div>
+    <main class="container-fluid py-4 px-4">
+        <h1 class="mb-4 container"><i class="bi bi-arrow-left-right"></i> Compare Collection</h1>
+
+        <!-- ── Filter / options bar ───────────────────────────────────────── -->
+        <div class="container mb-3">
+          <div class="card">
+            <div class="card-body py-3">
+              <form method="get" th:action="@{/compare}" id="compareForm">
+                <div class="row g-3 align-items-end">
+
+                  <!-- Your User -->
+                  <div class="col-md-2">
+                    <label class="form-label small mb-1">Your User</label>
+                    <select class="form-select form-select-sm" name="user" id="cmpUserSel" required>
+                      <option value="">-- User --</option>
+                      <option value="Victor" th:selected="${user == 'Victor'}">Victor</option>
+                      <option value="Andre"  th:selected="${user == 'Andre'}">Andre</option>
+                    </select>
+                  </div>
+
+                  <!-- Compare with -->
+                  <div class="col-md-2">
+                    <label class="form-label small mb-1">Compare with</label>
+                    <select class="form-select form-select-sm" name="compareUser" id="cmpCompareSel" required>
+                      <option value="">-- User --</option>
+                      <option value="Victor" th:selected="${compareUser == 'Victor'}">Victor</option>
+                      <option value="Andre"  th:selected="${compareUser == 'Andre'}">Andre</option>
+                    </select>
+                  </div>
+
+                  <!-- Set -->
+                  <div class="col-md-4">
+                    <label class="form-label small mb-1">Set</label>
+                    <select class="form-select form-select-sm select2-set" name="set" required>
+                      <option value="">-- Select Set --</option>
+                      <option th:each="s : ${sets}"
+                              th:value="${s.setCode}"
+                              th:text="${s.name} + ' (' + ${s.setCode} + ')'"
+                              th:selected="${selectedSet == s.setCode}"></option>
+                    </select>
+                  </div>
+
+                  <!-- Submit -->
+                  <div class="col-md-auto">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                      <i class="bi bi-search"></i> Compare
+                    </button>
+                  </div>
+
+                  <!-- Divider -->
+                  <div class="col-12 d-none d-md-block border-top border-secondary mt-1 mb-1"></div>
+
+                  <!-- Only tradable — Your User -->
+                  <div class="col-auto d-flex align-items-center gap-2">
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" name="onlyTradableUser"
+                             value="true" id="chkTradableUser"
+                             th:checked="${onlyTradableUser}">
+                      <label class="form-check-label small" for="chkTradableUser">
+                        Only tradable <span class="text-muted">(Your User, ≥2)</span>
+                      </label>
                     </div>
-                </form>
-            </div>
-        </div>
-        
-        <div th:if="${onlyUser != null}">
-            <div class="row">
-                <div class="col-md-6 mb-4">
-                    <div class="card">
-                        <div class="card-header"><h5 class="mb-0">Your Cards (unique)</h5></div>
-                        <div class="card-body">
-                            <div class="card-list" th:if="${onlyUser != null and not #lists.isEmpty(onlyUser)}">
-                                <div th:each="cardData : ${onlyUser}" class="card-item">
-                                    <div style="position: relative;">
-                                        <span class="badge badge-quantity" th:if="${cardData.quantity > 0}" th:text="${cardData.quantity}">1</span>
-                                        <span class="badge badge-foil" th:if="${cardData.foilQuantity > 0}" th:text="${cardData.foilQuantity}">F</span>
-                                        <img th:src="${cardData.card.thumbnailFront}" class="card-image" alt="Card" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3Ctext x=\'75\' y=\'105\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'10\'%3ENo Image%3C/text%3E%3C/svg%3E'">
-                                    </div>
-                                    <small th:text="${cardData.card.name}">Card Name</small>
-                                </div>
-                            </div>
-                            <p th:if="${onlyUser == null or #lists.isEmpty(onlyUser)}" class="text-center">No unique cards</p>
-                        </div>
+                  </div>
+
+                  <!-- Only tradable — Compare User -->
+                  <div class="col-auto d-flex align-items-center gap-2">
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" name="onlyTradableCompare"
+                             value="true" id="chkTradableCompare"
+                             th:checked="${onlyTradableCompare}">
+                      <label class="form-check-label small" for="chkTradableCompare">
+                        Only tradable <span class="text-muted">(Compare, ≥2)</span>
+                      </label>
                     </div>
+                  </div>
+
+                  <!-- View mode -->
+                  <div class="col-auto ms-md-auto">
+                    <div class="btn-group btn-group-sm" role="group">
+                      <input type="radio" class="btn-check" name="viewMode" id="vmNormal" value="normal"
+                             th:checked="${viewMode == 'normal'}">
+                      <label class="btn btn-outline-secondary" for="vmNormal"><i class="bi bi-grid-3x3-gap"></i> Normal</label>
+
+                      <input type="radio" class="btn-check" name="viewMode" id="vmSmall" value="small"
+                             th:checked="${viewMode == 'small'}">
+                      <label class="btn btn-outline-secondary" for="vmSmall"><i class="bi bi-grid-fill"></i> Small</label>
+
+                      <input type="radio" class="btn-check" name="viewMode" id="vmText" value="text"
+                             th:checked="${viewMode == 'text'}">
+                      <label class="btn btn-outline-secondary" for="vmText"><i class="bi bi-list-ul"></i> Text</label>
+                    </div>
+                  </div>
+
+                  <!-- Hidden: keep checkbox state (unchecked = absent in GET → needs false sentinel) -->
+                  <!-- Handled in JS below -->
                 </div>
-                <div class="col-md-6 mb-4">
-                    <div class="card">
-                        <div class="card-header"><h5 class="mb-0" th:text="${compareUser} + ' Cards (unique)'">Compare User's Cards (unique)</h5></div>
-                        <div class="card-body">
-                            <div class="card-list" th:if="${onlyCompare != null and not #lists.isEmpty(onlyCompare)}">
-                                <div th:each="cardData : ${onlyCompare}" class="card-item">
-                                    <div style="position: relative;">
-                                        <span class="badge badge-quantity" th:if="${cardData.quantity > 0}" th:text="${cardData.quantity}">1</span>
-                                        <span class="badge badge-foil" th:if="${cardData.foilQuantity > 0}" th:text="${cardData.foilQuantity}">F</span>
-                                        <img th:src="${cardData.card.thumbnailFront}" class="card-image" alt="Card" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3Ctext x=\'75\' y=\'105\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'10\'%3ENo Image%3C/text%3E%3C/svg%3E'">
-                                    </div>
-                                    <small th:text="${cardData.card.name}">Card Name</small>
-                                </div>
-                            </div>
-                            <p th:if="${onlyCompare == null or #lists.isEmpty(onlyCompare)}" class="text-center">No unique cards</p>
-                        </div>
-                    </div>
-                </div>
+              </form>
             </div>
+          </div>
         </div>
+
+        <!-- ── Results ────────────────────────────────────────────────────── -->
+        <div th:if="${onlyUser != null}" class="row gx-3">
+
+          <!-- Left column: Your User -->
+          <div class="col-md-6 mb-4">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                  <i class="bi bi-person-fill me-1"></i>
+                  <span th:text="${user}">Your User</span>
+                  <span class="text-muted small ms-1">— only here</span>
+                </h5>
+                <span class="badge bg-secondary" th:text="${#lists.size(onlyUser)} + ' cards'">0 cards</span>
+              </div>
+              <div class="card-body">
+
+                <!-- Normal / Small image grid -->
+                <th:block th:if="${viewMode != 'text'}">
+                  <div th:if="${not #lists.isEmpty(onlyUser)}"
+                       th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
+                    <div th:each="c : ${onlyUser}"
+                         th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
+                      <div style="position:relative;">
+                        <span class="badge badge-qty position-absolute top-0 start-0 m-1"
+                              th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
+                        <span class="badge badge-foil position-absolute top-0 end-0 m-1"
+                              th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                        <img th:src="${c.card.thumbnailFront}" alt="Card"
+                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
+                      </div>
+                      <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
+                      <div class="price" th:if="${viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
+                        <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
+                        <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                      </div>
+                    </div>
+                  </div>
+                  <p th:if="${#lists.isEmpty(onlyUser)}" class="text-center text-muted mb-0">No unique cards</p>
+                </th:block>
+
+                <!-- Text table -->
+                <th:block th:if="${viewMode == 'text'}">
+                  <div th:if="${not #lists.isEmpty(onlyUser)}" class="table-responsive">
+                    <table class="text-table">
+                      <thead>
+                        <tr>
+                          <th>Card Name</th>
+                          <th>Set#</th>
+                          <th>Qty</th>
+                          <th>Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr th:each="c : ${onlyUser}">
+                          <td th:text="${c.card.name}">Name</td>
+                          <td style="color:#888;" th:text="${c.card.setCode?.toUpperCase()} + ' #' + ${c.card.collectorNumber}">SET #1</td>
+                          <td>
+                            <span th:if="${c.quantity > 0}"    th:text="${c.quantity} + '×'">1×</span>
+                            <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="'F' + ${c.foilQuantity}">F1</span>
+                          </td>
+                          <td class="price-col">
+                            <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
+                            <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p th:if="${#lists.isEmpty(onlyUser)}" class="text-center text-muted mb-0">No unique cards</p>
+                </th:block>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right column: Compare User -->
+          <div class="col-md-6 mb-4">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                  <i class="bi bi-person me-1"></i>
+                  <span th:text="${compareUser}">Compare User</span>
+                  <span class="text-muted small ms-1">— only here</span>
+                </h5>
+                <span class="badge bg-secondary" th:text="${#lists.size(onlyCompare)} + ' cards'">0 cards</span>
+              </div>
+              <div class="card-body">
+
+                <!-- Normal / Small image grid -->
+                <th:block th:if="${viewMode != 'text'}">
+                  <div th:if="${not #lists.isEmpty(onlyCompare)}"
+                       th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
+                    <div th:each="c : ${onlyCompare}"
+                         th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
+                      <div style="position:relative;">
+                        <span class="badge badge-qty position-absolute top-0 start-0 m-1"
+                              th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
+                        <span class="badge badge-foil position-absolute top-0 end-0 m-1"
+                              th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                        <img th:src="${c.card.thumbnailFront}" alt="Card"
+                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
+                      </div>
+                      <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
+                      <div class="price" th:if="${viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
+                        <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
+                        <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                      </div>
+                    </div>
+                  </div>
+                  <p th:if="${#lists.isEmpty(onlyCompare)}" class="text-center text-muted mb-0">No unique cards</p>
+                </th:block>
+
+                <!-- Text table -->
+                <th:block th:if="${viewMode == 'text'}">
+                  <div th:if="${not #lists.isEmpty(onlyCompare)}" class="table-responsive">
+                    <table class="text-table">
+                      <thead>
+                        <tr>
+                          <th>Card Name</th>
+                          <th>Set#</th>
+                          <th>Qty</th>
+                          <th>Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr th:each="c : ${onlyCompare}">
+                          <td th:text="${c.card.name}">Name</td>
+                          <td style="color:#888;" th:text="${c.card.setCode?.toUpperCase()} + ' #' + ${c.card.collectorNumber}">SET #1</td>
+                          <td>
+                            <span th:if="${c.quantity > 0}"    th:text="${c.quantity} + '×'">1×</span>
+                            <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="'F' + ${c.foilQuantity}">F1</span>
+                          </td>
+                          <td class="price-col">
+                            <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
+                            <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p th:if="${#lists.isEmpty(onlyCompare)}" class="text-center text-muted mb-0">No unique cards</p>
+                </th:block>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /results row -->
     </main>
 
     <footer class="text-center py-3 mt-4"><p>MTG Collection Manager</p></footer>
+
     <script th:src="@{/webjars/jquery/3.7.1/jquery.min.js}"></script>
     <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script>
+    <script th:inline="javascript">
+        const _serverAppUser = /*[[${currentAppUser}]]*/ null;
+        const _selectedUser  = /*[[${user}]]*/ null;
+
         $(document).ready(function() {
+            // ── Select2 for set picker ────────────────────────────────────
             $('.select2-set').select2({
                 placeholder: '-- Select Set --',
                 allowClear: true,
                 matcher: function(params, data) {
-                    if ($.trim(params.term) === '') {
-                        return data;
-                    }
-                    var term = params.term.toLowerCase();
-                    var text = data.text.toLowerCase();
-                    var code = data.id.toLowerCase();
-                    if (text.indexOf(term) > -1 || code.indexOf(term) > -1) {
-                        return data;
-                    }
+                    if ($.trim(params.term) === '') return data;
+                    const term = params.term.toLowerCase();
+                    if (data.text.toLowerCase().includes(term) || data.id.toLowerCase().includes(term)) return data;
                     return null;
                 }
+            });
+
+            // ── Auto-fill user from server (Entra ID) ────────────────────
+            if (_serverAppUser && !_selectedUser) {
+                const sel = document.getElementById('cmpUserSel');
+                if (sel && sel.querySelector('option[value="' + _serverAppUser + '"]')) {
+                    sel.value = _serverAppUser;
+                }
+            }
+
+            // ── Checkbox: unchecked must submit "false" explicitly ────────
+            // GET forms don't send unchecked checkboxes, but the controller
+            // defaults absent params to true. We fix this by appending a hidden
+            // input with value=false before submit, then removing it if checked.
+            document.getElementById('compareForm').addEventListener('submit', function() {
+                ['onlyTradableUser', 'onlyTradableCompare'].forEach(function(name) {
+                    const cb = document.querySelector('input[name="' + name + '"]');
+                    if (cb && !cb.checked) {
+                        const hidden = document.createElement('input');
+                        hidden.type  = 'hidden';
+                        hidden.name  = name;
+                        hidden.value = 'false';
+                        document.getElementById('compareForm').appendChild(hidden);
+                    }
+                });
             });
         });
     </script>

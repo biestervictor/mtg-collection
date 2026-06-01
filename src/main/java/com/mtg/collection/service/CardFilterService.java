@@ -177,6 +177,16 @@ public class CardFilterService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Filters to cards that are "tradable": the user owns at least 2 copies
+     * (regular or foil), so they can trade 1 and keep 1.
+     */
+    public List<CardWithUserData> filterTradable(List<CardWithUserData> cards) {
+        return cards.stream()
+                .filter(c -> c.getQuantity() > 1 || c.getFoilQuantity() > 1)
+                .collect(Collectors.toList());
+    }
+
     private CardWithUserData createWithFoilMinusOne(CardWithUserData c) {
         CardWithUserData result = new CardWithUserData(
                 c.getCard(),

@@ -395,4 +395,52 @@ class CardFilterServiceTest {
 
         assertTrue(result.isEmpty());
     }
+
+    // ── filterTradable (standalone – used by compare) ─────────────────────────
+
+    @Test
+    void filterTradable_returnsOnlyCardsWithMoreThanOneRegular() {
+        ScryfallCard sc1 = createCard("1", "Card A", "rare"); // qty=2 → tradable
+        ScryfallCard sc2 = createCard("2", "Card B", "rare"); // qty=1 → not tradable
+        ScryfallCard sc3 = createCard("3", "Card C", "rare"); // foilQty=3 → tradable
+
+        List<CardWithUserData> cards = Arrays.asList(
+                createCardWithUserData(sc1, 2, 0),
+                createCardWithUserData(sc2, 1, 0),
+                createCardWithUserData(sc3, 0, 3)
+        );
+
+        List<CardWithUserData> result = filterService.filterTradable(cards);
+
+        assertEquals(2, result.size());
+        assertTrue(result.stream().anyMatch(c -> "1".equals(c.getCard().getCollectorNumber())));
+        assertTrue(result.stream().anyMatch(c -> "3".equals(c.getCard().getCollectorNumber())));
+    }
+
+    @Test
+    void filterTradable_exactlyOneOfEach_returnsEmpty() {
+        List<CardWithUserData> cards = Arrays.asList(
+                createCardWithUserData(createCard("1", "Solo", "rare"), 1, 0),
+                createCardWithUserData(createCard("2", "SoloFoil", "rare"), 0, 1)
+        );
+        assertTrue(filterService.filterTradable(cards).isEmpty());
+    }
+
+    @Test
+    void filterTradable_emptyInput_returnsEmpty() {
+        assertTrue(filterService.filterTradable(Collections.emptyList()).isEmpty());
+    }
+
+    @Test
+    void filterTradable_twoFoilOnlyRegular_included() {
+        CardWithUserData c = createCardWithUserData(createCard("1", "Shiny", "mythic"), 0, 2);
+        List<CardWithUserData> result = filterService.filterTradable(Arrays.asList(c));
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void filterTradable_zeroQuantity_excluded() {
+        CardWithUserData c = createCardWithUserData(createCard("1", "Empty", "common"), 0, 0);
+        assertTrue(filterService.filterTradable(Arrays.asList(c)).isEmpty());
+    }
 }

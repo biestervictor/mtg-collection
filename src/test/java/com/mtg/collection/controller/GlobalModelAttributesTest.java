@@ -2,6 +2,8 @@ package com.mtg.collection.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -131,5 +133,79 @@ class GlobalModelAttributesTest {
         GlobalModelAttributes advice = new GlobalModelAttributes();
 
         assertEquals("", advice.currentUri(null));
+    }
+
+    // ── currentAppUser ────────────────────────────────────────────────────────
+
+    private GlobalModelAttributes adviceWithEmails(String victor, String andre) {
+        GlobalModelAttributes advice = new GlobalModelAttributes();
+        ReflectionTestUtils.setField(advice, "victorEmail", victor);
+        ReflectionTestUtils.setField(advice, "andreEmail", andre);
+        return advice;
+    }
+
+    private Authentication authenticatedAs(String email, String preferred) {
+        OidcUser oidcUser = mock(OidcUser.class);
+        when(oidcUser.getEmail()).thenReturn(email);
+        if (email == null) when(oidcUser.<String>getAttribute("preferred_username")).thenReturn(preferred);
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getPrincipal()).thenReturn(oidcUser);
+        return auth;
+    }
+
+    @Test
+    void currentAppUser_returnsVictorForMatchingEmail() {
+        GlobalModelAttributes advice = adviceWithEmails("victor@example.com", "andre@example.com");
+        assertEquals("Victor", advice.currentAppUser(authenticatedAs("VICTOR@EXAMPLE.COM", null)));
+    }
+
+    @Test
+    void currentAppUser_returnsAndreForMatchingEmail() {
+        GlobalModelAttributes advice = adviceWithEmails("victor@example.com", "andre@example.com");
+        assertEquals("Andre", advice.currentAppUser(authenticatedAs("Andre@Example.COM", null)));
+    }
+
+    @Test
+    void currentAppUser_returnsNullForUnknownEmail() {
+        GlobalModelAttributes advice = adviceWithEmails("victor@example.com", "andre@example.com");
+        assertNull(advice.currentAppUser(authenticatedAs("stranger@example.com", null)));
+    }
+
+    @Test
+    void currentAppUser_returnsNullWhenUnauthenticated() {
+        GlobalModelAttributes advice = adviceWithEmails("victor@example.com", "andre@example.com");
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(false);
+        assertNull(advice.currentAppUser(auth));
+    }
+
+    @Test
+    void currentAppUser_returnsNullWhenAuthIsNull() {
+        GlobalModelAttributes advice = adviceWithEmails("victor@example.com", "andre@example.com");
+        assertNull(advice.currentAppUser(null));
+    }
+
+    @Test
+    void currentAppUser_returnsNullForNonOidcPrincipal() {
+        GlobalModelAttributes advice = adviceWithEmails("victor@example.com", "");
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getPrincipal()).thenReturn("not-an-oidc-user");
+        assertNull(advice.currentAppUser(auth));
+    }
+
+    @Test
+    void currentAppUser_fallsBackToPreferredUsernameWhenEmailNull() {
+        GlobalModelAttributes advice = adviceWithEmails("victor@example.com", "");
+        // email claim is null → fall back to preferred_username
+        Authentication auth = authenticatedAs(null, "victor@example.com");
+        assertEquals("Victor", advice.currentAppUser(auth));
+    }
+
+    @Test
+    void currentAppUser_returnsNullWhenEmailsNotConfigured() {
+        GlobalModelAttributes advice = adviceWithEmails("", "");
+        assertNull(advice.currentAppUser(authenticatedAs("victor@example.com", null)));
     }
 }

@@ -421,4 +421,92 @@ class CollectionControllerTest {
         List<WizardGroup> result = collectionController.getMissingWizard("tst", "Victor");
         assertEquals(3.0, result.get(0).getTotalCost(), 0.001);
     }
+
+    // ── GET /compare – onlyTradable + viewMode params ────────────────────────
+
+    @Test
+    void compareCollection_defaultParams_onlyTradableModelAttributesAreTrue() throws Exception {
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+
+        mockMvc.perform(get("/compare"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("onlyTradableUser",    true))
+                .andExpect(model().attribute("onlyTradableCompare", true))
+                .andExpect(model().attribute("viewMode",            "normal"));
+    }
+
+    @Test
+    void compareCollection_explicitViewMode_passedToModel() throws Exception {
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+
+        mockMvc.perform(get("/compare").param("viewMode", "text"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("viewMode", "text"));
+    }
+
+    @Test
+    void compareCollection_onlyTradableUserTrue_callsFilterTradableForUser() throws Exception {
+        CardWithUserData tradable = new CardWithUserData(cardSc("1"), 2, 0);
+
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("victor", "tst", null)).thenReturn(List.of(tradable));
+        when(collectionService.getCardsWithUserData("alice",  "tst", null)).thenReturn(List.of());
+        when(cardFilterService.getOnlyInLeft(any(), any())).thenReturn(List.of(tradable), List.of());
+        when(cardFilterService.filterTradable(any())).thenReturn(List.of(tradable));
+
+        mockMvc.perform(get("/compare")
+                        .param("set",         "tst")
+                        .param("user",        "victor")
+                        .param("compareUser", "alice")
+                        .param("onlyTradableUser",    "true")
+                        .param("onlyTradableCompare", "false"))
+                .andExpect(status().isOk());
+
+        // filterTradable called exactly once (for the user side), not for compare
+        verify(cardFilterService, times(1)).filterTradable(any());
+    }
+
+    @Test
+    void compareCollection_onlyTradableCompareFalse_filterTradableNotCalledForCompare() throws Exception {
+        CardWithUserData card = new CardWithUserData(cardSc("5"), 1, 0);
+
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("victor", "tst", null)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("alice",  "tst", null)).thenReturn(List.of(card));
+        when(cardFilterService.getOnlyInLeft(any(), any())).thenReturn(List.of(), List.of(card));
+
+        mockMvc.perform(get("/compare")
+                        .param("set",         "tst")
+                        .param("user",        "victor")
+                        .param("compareUser", "alice")
+                        .param("onlyTradableUser",    "false")
+                        .param("onlyTradableCompare", "false"))
+                .andExpect(status().isOk());
+
+        // neither side requests tradable filtering → filterTradable never invoked
+        verify(cardFilterService, never()).filterTradable(any());
+    }
+
+    @Test
+    void compareCollection_bothTradableTrue_filterTradableCalledTwice() throws Exception {
+        CardWithUserData userCard    = new CardWithUserData(cardSc("1"), 2, 0);
+        CardWithUserData compareCard = new CardWithUserData(cardSc("2"), 3, 0);
+
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("victor", "tst", null)).thenReturn(List.of(userCard));
+        when(collectionService.getCardsWithUserData("alice",  "tst", null)).thenReturn(List.of(compareCard));
+        when(cardFilterService.getOnlyInLeft(any(), any()))
+                .thenReturn(List.of(userCard), List.of(compareCard));
+        when(cardFilterService.filterTradable(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/compare")
+                        .param("set",         "tst")
+                        .param("user",        "victor")
+                        .param("compareUser", "alice")
+                        .param("onlyTradableUser",    "true")
+                        .param("onlyTradableCompare", "true"))
+                .andExpect(status().isOk());
+
+        verify(cardFilterService, times(2)).filterTradable(any());
+    }
 }

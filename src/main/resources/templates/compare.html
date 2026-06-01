@@ -107,7 +107,8 @@
                     <div class="form-check form-switch mb-0">
                       <input class="form-check-input" type="checkbox" name="onlyTradableUser"
                              value="true" id="chkTradableUser"
-                             th:checked="${onlyTradableUser}">
+                             th:checked="${onlyTradableUser}"
+                             onchange="submitCompareForm()">
                       <label class="form-check-label small" for="chkTradableUser">
                         Only tradable <span class="text-muted">(Your User, ≥2)</span>
                       </label>
@@ -119,7 +120,8 @@
                     <div class="form-check form-switch mb-0">
                       <input class="form-check-input" type="checkbox" name="onlyTradableCompare"
                              value="true" id="chkTradableCompare"
-                             th:checked="${onlyTradableCompare}">
+                             th:checked="${onlyTradableCompare}"
+                             onchange="submitCompareForm()">
                       <label class="form-check-label small" for="chkTradableCompare">
                         Only tradable <span class="text-muted">(Compare, ≥2)</span>
                       </label>
@@ -130,15 +132,18 @@
                   <div class="col-auto ms-md-auto">
                     <div class="btn-group btn-group-sm" role="group">
                       <input type="radio" class="btn-check" name="viewMode" id="vmNormal" value="normal"
-                             th:checked="${viewMode == 'normal'}">
+                             th:checked="${viewMode == 'normal'}"
+                             onchange="submitCompareForm()">
                       <label class="btn btn-outline-secondary" for="vmNormal"><i class="bi bi-grid-3x3-gap"></i> Normal</label>
 
                       <input type="radio" class="btn-check" name="viewMode" id="vmSmall" value="small"
-                             th:checked="${viewMode == 'small'}">
+                             th:checked="${viewMode == 'small'}"
+                             onchange="submitCompareForm()">
                       <label class="btn btn-outline-secondary" for="vmSmall"><i class="bi bi-grid-fill"></i> Small</label>
 
                       <input type="radio" class="btn-check" name="viewMode" id="vmText" value="text"
-                             th:checked="${viewMode == 'text'}">
+                             th:checked="${viewMode == 'text'}"
+                             onchange="submitCompareForm()">
                       <label class="btn btn-outline-secondary" for="vmText"><i class="bi bi-list-ul"></i> Text</label>
                     </div>
                   </div>
@@ -333,18 +338,36 @@
             // GET forms don't send unchecked checkboxes, but the controller
             // defaults absent params to true. We fix this by appending a hidden
             // input with value=false before submit, then removing it if checked.
-            document.getElementById('compareForm').addEventListener('submit', function() {
+            function _fixCheckboxes() {
+                const form = document.getElementById('compareForm');
                 ['onlyTradableUser', 'onlyTradableCompare'].forEach(function(name) {
+                    // Remove any previously injected sentinel
+                    form.querySelectorAll('input[type="hidden"][name="' + name + '"]')
+                        .forEach(function(el) { el.remove(); });
                     const cb = document.querySelector('input[name="' + name + '"]');
                     if (cb && !cb.checked) {
                         const hidden = document.createElement('input');
                         hidden.type  = 'hidden';
                         hidden.name  = name;
                         hidden.value = 'false';
-                        document.getElementById('compareForm').appendChild(hidden);
+                        form.appendChild(hidden);
                     }
                 });
-            });
+            }
+
+            // Auto-submit when viewMode or tradable toggles change —
+            // but only when set + both users are already selected.
+            function submitCompareForm() {
+                const set         = $('.select2-set').val();
+                const user        = document.getElementById('cmpUserSel').value;
+                const compareUser = document.getElementById('cmpCompareSel').value;
+                if (!set || !user || !compareUser) return;
+                _fixCheckboxes();
+                document.getElementById('compareForm').submit();
+            }
+
+            // Regular "Compare" button click also needs the checkbox fix.
+            document.getElementById('compareForm').addEventListener('submit', _fixCheckboxes);
         });
     </script>
 </body>

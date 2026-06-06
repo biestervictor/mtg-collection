@@ -6,26 +6,58 @@
     <title>Compare Collection - MTG</title>
     <link th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
     <style>
-        :root { --primary-color: #1a1a2e; --secondary-color: #16213e; --accent-color: #e94560; --text-light: #f1f1f1; }
+        :root { --primary-color: #1a1a2e; --secondary-color: #16213e; --accent-color: #e94560; --text-light: #f1f1f1; --border-color: #2a2a4a; }
         body { background-color: #0f0f23; color: var(--text-light); min-height: 100vh; }
         .navbar { background-color: var(--primary-color) !important; }
         .navbar-brand { font-weight: bold; color: var(--accent-color) !important; }
         .nav-link { color: var(--text-light) !important; }
         .nav-link.active { color: var(--accent-color) !important; border-bottom: 2px solid var(--accent-color); }
-        .card { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
+        .card { background-color: var(--secondary-color); border: 1px solid var(--border-color); color: var(--text-light); }
         .btn-primary { background-color: var(--accent-color); border-color: var(--accent-color); }
-        .form-control, .form-select { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
-        .form-control-sm { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); }
+        .form-control, .form-select { background-color: var(--secondary-color); border: 1px solid var(--border-color); color: var(--text-light); }
+        .form-control-sm { background-color: var(--secondary-color); border: 1px solid var(--border-color); color: var(--text-light); }
         footer { background-color: var(--primary-color); color: #888; }
-        .select2-container--default .select2-selection--single { background-color: var(--secondary-color); border: 1px solid #2a2a4a; color: var(--text-light); height: 38px; }
-        .select2-container--default .select2-selection--single .select2-selection__rendered { color: var(--text-light); line-height: 38px; }
-        .select2-container--default .select2-selection--single .select2-selection__arrow { height: 36px; }
-        .select2-dropdown { background-color: var(--secondary-color); border: 1px solid #2a2a4a; }
-        .select2-container--default .select2-results__option { color: var(--text-light); }
-        .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: var(--accent-color); }
-        .select2-container--default .select2-search--dropdown .select2-search__field { background-color: var(--secondary-color); color: var(--text-light); border: 1px solid #2a2a4a; }
+
+        /* ── Set Search ─────────────────────────────────────── */
+        .set-search-wrapper { position: relative; }
+        .set-input-row {
+            display: flex; align-items: center;
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0 10px;
+            min-height: 34px;
+            cursor: text;
+            transition: border-color 0.15s;
+        }
+        .set-input-row:focus-within { border-color: var(--accent-color); }
+        .set-icon-current { width: 16px; height: 16px; filter: invert(0.7); margin-right: 8px; flex-shrink: 0; }
+        .set-text-input {
+            flex: 1; border: none; background: transparent;
+            color: var(--text-light); outline: none; font-size: 0.85rem;
+            min-width: 0;
+        }
+        .set-text-input::placeholder { color: #777; }
+        .set-drop-arrow { color: #888; font-size: 0.75rem; margin-left: 6px; flex-shrink: 0; }
+        .set-options-dropdown {
+            display: none;
+            position: absolute; top: calc(100% + 2px); left: 0; right: 0;
+            z-index: 2000;
+            max-height: 320px; overflow-y: auto;
+            background-color: #1e2a45;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        }
+        .set-option-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 12px; cursor: pointer; color: var(--text-light);
+            font-size: 0.82rem;
+        }
+        .set-option-item:hover { background-color: var(--accent-color); color: #fff; }
+        .set-option-item.active { background-color: rgba(233,69,96,0.25); }
+        .set-opt-icon { width: 16px; height: 16px; filter: invert(0.7); flex-shrink: 0; }
 
         /* Card grid — normal mode */
         .card-list         { display: flex; flex-wrap: wrap; gap: .75rem; }
@@ -83,13 +115,27 @@
                   <!-- Set -->
                   <div class="col-md-4">
                     <label class="form-label small mb-1">Set</label>
-                    <select class="form-select form-select-sm select2-set" name="set" required>
-                      <option value="">-- Select Set --</option>
-                      <option th:each="s : ${sets}"
-                              th:value="${s.setCode}"
-                              th:text="${s.name} + ' (' + ${s.setCode} + ')'"
-                              th:selected="${selectedSet == s.setCode}"></option>
-                    </select>
+                    <div class="set-search-wrapper" id="setSearchWrapper">
+                        <div class="set-input-row">
+                            <img id="setCurrentIcon" class="set-icon-current" src="" style="display:none" alt="">
+                            <input type="text" id="setSearchInput" class="set-text-input"
+                                   placeholder="-- Set suchen und auswählen --"
+                                   autocomplete="off">
+                            <i class="bi bi-chevron-down set-drop-arrow"></i>
+                        </div>
+                        <input type="hidden" name="set" id="setHiddenInput" th:value="${selectedSet}">
+                        <div class="set-options-dropdown" id="setOptionsDropdown">
+                            <div th:each="s : ${sets}"
+                                 class="set-option-item"
+                                 th:data-value="${s.setCode}"
+                                 th:data-label="${s.setCode + ' - ' + s.name}"
+                                 th:data-icon="${s.icon}"
+                                 onclick="selectSetOption(this)">
+                                <img th:src="${s.icon}" class="set-opt-icon" alt="" onerror="this.style.display='none'">
+                                <span th:text="${s.setCode + ' - ' + s.name}"></span>
+                            </div>
+                        </div>
+                    </div>
                   </div>
 
                   <!-- Submit -->
@@ -306,24 +352,60 @@
 
     <footer class="text-center py-3 mt-4"><p>MTG Collection Manager</p></footer>
 
-    <script th:src="@{/webjars/jquery/3.7.1/jquery.min.js}"></script>
     <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script th:inline="javascript">
-        const _serverAppUser = /*[[${currentAppUser}]]*/ null;
+        // _serverAppUser is already declared by the price-update-utils fragment
         const _selectedUser  = /*[[${user}]]*/ null;
+        const _initialSet    = /*[[${selectedSet}]]*/ null;
 
-        $(document).ready(function() {
-            // ── Select2 for set picker ────────────────────────────────────
-            $('.select2-set').select2({
-                placeholder: '-- Select Set --',
-                allowClear: true,
-                matcher: function(params, data) {
-                    if ($.trim(params.term) === '') return data;
-                    const term = params.term.toLowerCase();
-                    if (data.text.toLowerCase().includes(term) || data.id.toLowerCase().includes(term)) return data;
-                    return null;
-                }
+        // ── Set Search ──────────────────────────────────────────────
+        var setData = [];
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Collect set data from rendered DOM options
+            document.querySelectorAll('.set-option-item').forEach(function (el) {
+                setData.push({
+                    value: el.dataset.value,
+                    label: el.dataset.label,
+                    icon:  el.dataset.icon || '',
+                    el:    el
+                });
+            });
+
+            // Restore selected set display
+            if (_initialSet) {
+                var found = setData.find(function (s) { return s.value === _initialSet; });
+                if (found) applySetSelection(found);
+            }
+
+            // Set search input events
+            var input    = document.getElementById('setSearchInput');
+            var dropdown = document.getElementById('setOptionsDropdown');
+
+            input.addEventListener('focus', function () {
+                this.select();
+                filterSetOptions('');
+                dropdown.style.display = 'block';
+            });
+
+            input.addEventListener('input', function () {
+                filterSetOptions(this.value);
+                dropdown.style.display = 'block';
+            });
+
+            input.addEventListener('blur', function () {
+                setTimeout(function () {
+                    dropdown.style.display = 'none';
+                    // Restore displayed label
+                    var currentVal = document.getElementById('setHiddenInput').value;
+                    if (currentVal) {
+                        var s = setData.find(function (x) { return x.value === currentVal; });
+                        if (s) applySetSelection(s);
+                    } else {
+                        input.value = '';
+                        document.getElementById('setCurrentIcon').style.display = 'none';
+                    }
+                }, 200);
             });
 
             // ── Auto-fill user from server (Entra ID) ────────────────────
@@ -335,40 +417,66 @@
             }
 
             // ── Checkbox: unchecked must submit "false" explicitly ────────
-            // GET forms don't send unchecked checkboxes, but the controller
-            // defaults absent params to true. We fix this by appending a hidden
-            // input with value=false before submit, then removing it if checked.
-            function _fixCheckboxes() {
-                const form = document.getElementById('compareForm');
-                ['onlyTradableUser', 'onlyTradableCompare'].forEach(function(name) {
-                    // Remove any previously injected sentinel
-                    form.querySelectorAll('input[type="hidden"][name="' + name + '"]')
-                        .forEach(function(el) { el.remove(); });
-                    const cb = document.querySelector('input[name="' + name + '"]');
-                    if (cb && !cb.checked) {
-                        const hidden = document.createElement('input');
-                        hidden.type  = 'hidden';
-                        hidden.name  = name;
-                        hidden.value = 'false';
-                        form.appendChild(hidden);
-                    }
-                });
-            }
-
-            // Auto-submit when viewMode or tradable toggles change —
-            // but only when set + both users are already selected.
-            function submitCompareForm() {
-                const set         = $('.select2-set').val();
-                const user        = document.getElementById('cmpUserSel').value;
-                const compareUser = document.getElementById('cmpCompareSel').value;
-                if (!set || !user || !compareUser) return;
-                _fixCheckboxes();
-                document.getElementById('compareForm').submit();
-            }
-
-            // Regular "Compare" button click also needs the checkbox fix.
             document.getElementById('compareForm').addEventListener('submit', _fixCheckboxes);
         });
+
+        function filterSetOptions(query) {
+            var q = query.toLowerCase();
+            setData.forEach(function (s) {
+                var visible = s.label.toLowerCase().includes(q) || s.value.toLowerCase().includes(q);
+                s.el.style.display = visible ? 'flex' : 'none';
+            });
+        }
+
+        function selectSetOption(el) {
+            var s = setData.find(function (x) { return x.value === el.dataset.value; });
+            if (!s) return;
+            applySetSelection(s);
+            document.getElementById('setOptionsDropdown').style.display = 'none';
+        }
+
+        function applySetSelection(s) {
+            document.getElementById('setHiddenInput').value = s.value;
+            document.getElementById('setSearchInput').value = s.label;
+            var iconEl = document.getElementById('setCurrentIcon');
+            if (s.icon) {
+                iconEl.src = s.icon;
+                iconEl.style.display = 'inline';
+            } else {
+                iconEl.style.display = 'none';
+            }
+            // Highlight active option
+            document.querySelectorAll('.set-option-item').forEach(function (el) {
+                el.classList.toggle('active', el.dataset.value === s.value);
+            });
+        }
+
+        // ── Checkbox fix for GET forms ───────────────────────────────
+        function _fixCheckboxes() {
+            const form = document.getElementById('compareForm');
+            ['onlyTradableUser', 'onlyTradableCompare'].forEach(function(name) {
+                form.querySelectorAll('input[type="hidden"][name="' + name + '"]')
+                    .forEach(function(el) { el.remove(); });
+                const cb = document.querySelector('input[name="' + name + '"]');
+                if (cb && !cb.checked) {
+                    const hidden = document.createElement('input');
+                    hidden.type  = 'hidden';
+                    hidden.name  = name;
+                    hidden.value = 'false';
+                    form.appendChild(hidden);
+                }
+            });
+        }
+
+        // Auto-submit when viewMode or tradable toggles change
+        function submitCompareForm() {
+            const set         = document.getElementById('setHiddenInput').value;
+            const user        = document.getElementById('cmpUserSel').value;
+            const compareUser = document.getElementById('cmpCompareSel').value;
+            if (!set || !user || !compareUser) return;
+            _fixCheckboxes();
+            document.getElementById('compareForm').submit();
+        }
     </script>
 </body>
 </html>

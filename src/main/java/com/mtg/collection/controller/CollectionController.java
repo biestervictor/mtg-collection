@@ -120,6 +120,7 @@ public class CollectionController {
 
         List<ScryfallSet> sets = scryfallService.getAllSets(false);
         model.addAttribute("sets", sets);
+        model.addAttribute("selectedSet", set);
         model.addAttribute("onlyTradableUser", onlyTradableUser);
         model.addAttribute("onlyTradableCompare", onlyTradableCompare);
         model.addAttribute("viewMode", viewMode);
@@ -145,7 +146,6 @@ public class CollectionController {
             if (onlyTradableUser)    onlyUser    = cardFilterService.filterTradable(onlyUser);
             if (onlyTradableCompare) onlyCompare = cardFilterService.filterTradable(onlyCompare);
             
-            model.addAttribute("selectedSet", set);
             model.addAttribute("compareUser", compareUser);
             model.addAttribute("onlyUser", onlyUser);
             model.addAttribute("onlyCompare", onlyCompare);
@@ -163,6 +163,12 @@ public class CollectionController {
             scryfallService.clearAllCache();
             return "redirect:/show";
         }
+    }
+
+    @PostMapping("/api/sets/refresh")
+    public String refreshSets() {
+        scryfallService.getAllSets(true);
+        return "redirect:/show";
     }
 
     @GetMapping("/api/set/{setCode}/top-cards")

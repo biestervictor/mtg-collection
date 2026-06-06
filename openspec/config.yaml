@@ -1,0 +1,32 @@
+project:
+  name: MTG Collection Manager
+  description: >
+    Spring Boot 3 / Java 17 application for managing Magic: The Gathering card
+    collections. Server-side rendering with Thymeleaf, MongoDB as data store,
+    Microsoft Entra ID (Azure AD) authentication via OAuth2/OIDC.
+    Deployed on a Raspberry Pi 4 ARM64 cluster (MicroK8s) via ArgoCD.
+
+  tech_stack:
+    - Spring Boot 3
+    - Java 17
+    - Thymeleaf
+    - MongoDB (Spring Data)
+    - Spring Security OAuth2 / OIDC (Microsoft Entra ID)
+    - Spring Session MongoDB
+    - Bootstrap 5
+    - Scryfall API
+
+  domains:
+    - collection   # Kartensammlung anzeigen und verwalten
+    - import       # CSV-Import (DragonShield-Format)
+    - compare      # Sammlungsvergleich zweier User
+    - statistics   # Preisverlauf und Sammlungsstatistiken
+    - deck-suggest # Deck-Vorschläge
+    - my-decks     # Deck-Verwaltung
+    - sell         # Verkaufsvorschläge
+    - price-watch  # Preisbeobachtung
+    - search       # Kartensuche
+    - auth         # Benutzer-Mapping (Email → AppUser)
+    - scryfall     # API-Integration und Set-Typen
+
+schema: spec-driven

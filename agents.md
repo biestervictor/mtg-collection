@@ -12,6 +12,11 @@
 6. **Bei Fehler** – Logs/Exception analysieren, Fix implementieren, Schleife ab Schritt 1 wiederholen
 7. **Produktion** – nach erfolgreichem Dev-Test: `dev` → `main` mergen. ArgoCD erkennt den Merge auf `main` und aktualisiert das Produktions-Deployment automatisch
 
+> **Wichtig:** Der CI-Workflow (`.github/workflows/maven.yml`) läuft **nur auf `dev`**, nicht auf `main`.
+> Er baut das Docker-Image, bumpt die Version in `pom.xml` und trägt den neuen Tag in `helmcharts/values.yaml` ein.
+> Nach dem Merge `dev → main` muss daher zuerst `git pull origin dev` (um den CI-Commit zu holen)
+> und dann `main` mit `origin/dev` zusammengeführt werden, damit `values.yaml` den richtigen Image-Tag enthält.
+
 ### Produktions-URL
 - **Prod:** `https://mtg-kubitos.biester.vip`
 - **Dev:** `https://mtg-dev.biester.vip`
@@ -21,6 +26,141 @@
 1. Write tests for new functionality
 2. Run tests locally: `mvn test`
 3. Tests must pass before push
+
+### Kostenerfassung (Pflicht)
+**Bei JEDER Aenderung MUSS die Datei `costs.md` im Projekt-Root aktualisiert werden.**
+
+1. Aktuellen Spend aus der OpenCode-Anzeige ablesen
+2. Delta seit dem letzten Eintrag berechnen
+3. Neue Zeile in die Tabelle der aktuellen Session einfuegen
+
+**Format:**
+```markdown
+## Session: <session-id> | Kosten = <delta-seit-letztem-eintrag>
+
+| # | Change / Task | Summary | Delta | Session gesamt | Modell | Datum |
+|---|---------------|---------|-------|----------------|--------|-------|
+| 1 | <change-name> | <kurze Beschreibung> | $X.XX | $X.XX | <modell> | YYYY-MM-DD |
+```
+
+**Regeln:**
+- Session-ID: Die ersten 6 Zeichen der OpenCode-Session-ID
+- Delta: Differenz zwischen aktuellem Spend und letztem dokumentierten Wert
+- Session gesamt: Kumulierte Kosten aller Eintraege der Session
+- Neue Session = neuer H2-Abschnitt
+- Mehrere Tasks in einer Session = fortlaufende Nummerierung unter gleichem Header
+
+---
+
+## Anwendungsarchitektur
+
+### Stack
+- **Backend:** Spring Boot 3, Java 17
+- **Templates:** Thymeleaf (server-side rendering)
+- **Datenbank:** MongoDB (Spring Data)
+- **Auth:** Microsoft Entra ID (Azure AD) via OAuth2/OIDC (`spring-security-oauth2-client`)
+- **Sessions:** Spring Session MongoDB – Sessions überleben Pod-Restarts; Timeout 7 Tage
+- **CSS/JS:** Bootstrap 5, Bootstrap Icons, Select2 (compare-Seite), jQuery (webjars)
+
+### Seiten
+| Route | Beschreibung |
+|-------|-------------|
+| `/show` | Zeigt die Kartensammlung eines Users für ein gewähltes Set |
+| `/compare` | Vergleicht zwei Sammlungen (diff: nur User, nur Compare) |
+| `/import` | CSV-Import (Dragonshield-Format) |
+| `/statistics` | Sammlungsstatistiken mit Preisverlauf |
+| `/deck-suggest` | Deck-Vorschläge basierend auf der Sammlung |
+| `/my-decks` | Eigene Decks verwalten |
+| `/sell-suggestions` | Verkaufsvorschläge |
+| `/price-watch` | Preisbeobachtung |
+| `/search` | Kartensuche |
+
+### Benutzer-System
+- **App-User:** `Victor` und `Andre` (feste Strings, case-sensitiv)
+- **Mapping Email → App-User:** persistiert in MongoDB, Collection `user_email_mappings`
+  - `_id`: lowercase Email (aus OIDC-Claim `email`, Fallback `preferred_username`)
+  - `appUser`: `"Victor"` oder `"Andre"`
+  - `createdAt`: Timestamp
+- **Prod-Lock:** In Produktion kann ein bestehendes Mapping nicht überschrieben werden
+  (`POST /api/user/map` prüft `isProd() && findById(email).isPresent()`)
+- **Erkennung in Thymeleaf:** `${currentAppUser}` – gesetzt von `GlobalModelAttributes`
+- **Erstes Login ohne Mapping:** `${userMappingRequired} = true` → nicht-schließbares Bootstrap-Modal erscheint
+
+### CSRF
+- CSRF ist **nur für `/api/**` deaktiviert** (fetch()-POST-Aufrufe aus JS)
+- Alle Thymeleaf-Formular-Endpoints (`/show`, `/import`, etc.) behalten CSRF-Schutz
+
+---
+
+## Token / Promo Set Handling
+
+### Konzept
+Scryfall kennt neben regulären Sets auch **Token-Sets** (z.B. `ttdm` für das Token-Set zu `tdm`)
+und **Promo-Sets** (z.B. `pdmu` für Promo-Karten zu `dmu`).
+Diese sollen **nicht im Set-Dropdown** erscheinen, sondern als **Extra-Sektion** unterhalb der
+regulären Karten auf der Show-Seite anzeigbar sein.
+
+### Set-Code-Konvention (Scryfall-Standard)
+- Token-Set-Code: `"t" + mainSetCode` → z.B. `tdm` → `ttdm`
+- Promo-Set-Code: `"p" + mainSetCode` → z.B. `dmu` → `pdmu`
+
+### Implementierung
+
+**1. DB-Speicherung (ScryfallService.fetchSetsFromApi):**
+Token- und Promo-Sets werden in MongoDB gespeichert (sie bestehen den API-Fetch-Filter, der nur
+`alchemy, minigame, memorabilia, vanguard, digital` ausschließt).
+
+**2. Dropdown-Filter (ScryfallService.getAllSets):**
+```java
+return sets.stream()
+    .filter(s -> !s.isDigital())
+    .filter(s -> !"token".equals(s.getSetType()))   // Token-Sets raus
+    .filter(s -> !"promo".equals(s.getSetType()))    // Promo-Sets raus
+    .collect(Collectors.toList());
+```
+Dieser Filter gilt für **alle** Seiten (show, compare, statistics, …) – `getAllSets(false)` wird
+überall verwendet. Token- und Promo-Sets erscheinen in **keinem** Set-Dropdown.
+
+**3. Extra-Sektion auf der Show-Seite (CollectionController.showCollection):**
+```java
+// Token-Set laden, wenn "Show Tokens" aktiv
+if ("true".equals(showTokens)) {
+    String tokenSetCode = "t" + set;                // Konvention: "t" + Code
+    List<ScryfallCard> tokenSetCards = scryfallService.getCardsBySet(tokenSetCode, null);
+    if (!tokenSetCards.isEmpty()) {
+        tokenCards = collectionService.getCardsWithUserData(user, tokenSetCode, null);
+    }
+}
+// Analog für Promo-Set mit "p" + set
+```
+Die Token-/Promo-Karten werden als separate Model-Attribute `tokenCards` / `promoCards` übergeben
+und in `show.html` in eigenen Sektionen am Ende der Seite gerendert.
+
+**4. Compare-Seite:** Hat **keine** Token/Promo-Sektionen – nur die regulären Set-Karten.
+
+### Was NICHT geändert werden darf
+- Die `getAllSets`-Filter dürfen **nicht entfernt** werden, sonst erscheinen Token-/Promo-Sets im Dropdown
+- Das Set-Code-Präfix `"t"` / `"p"` ist Scryfall-Standard – nicht ändern
+- Token/Promo-Cards sind in MongoDB vorhanden (für den Show-Feature nötig) – `deleteAll()` im
+  Cache-Clear darf diese nicht löschen
+
+---
+
+## Scryfall-Set-Typen (Referenz)
+| setType | Beschreibung | Im Dropdown |
+|---------|-------------|-------------|
+| `expansion` | Reguläres Erweiterungs-Set | ✅ |
+| `core` | Core Set | ✅ |
+| `masters` | Masters-Set (Reprints) | ✅ |
+| `commander` | Commander-Precon | ✅ |
+| `draft_innovation` | Draft-Innovation (z.B. Conspiracy) | ✅ |
+| `token` | Token-Karten zum Haupt-Set | ❌ (Extra-Sektion) |
+| `promo` | Promo-Karten zum Haupt-Set | ❌ (Extra-Sektion) |
+| `alchemy` | Digitale Alchemy-Varianten | ❌ (nicht in DB) |
+| `memorabilia` | Sammlerstücke ohne Spielwert | ❌ (nicht in DB) |
+| `digital` | Rein digital (Arena) | ❌ (nicht in DB) |
+
+---
 
 ## External Tools Location
 

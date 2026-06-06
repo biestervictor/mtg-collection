@@ -185,6 +185,19 @@ class CollectionControllerTest {
         verify(scryfallService).clearAllCache();
     }
 
+    // ── POST /api/sets/refresh ───────────────────────────────────────────────
+
+    @Test
+    void testRefreshSets_callsGetAllSetsWithForceRefresh() throws Exception {
+        when(scryfallService.getAllSets(true)).thenReturn(List.of());
+
+        mockMvc.perform(post("/api/sets/refresh"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/show"));
+
+        verify(scryfallService).getAllSets(true);
+    }
+
     // ── GET /api/set/{setCode}/top-cards ──────────────────────────────────────
 
     @Test

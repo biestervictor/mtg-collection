@@ -17,6 +17,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -365,6 +366,72 @@ class ScryfallServiceTest {
 
         assertEquals(1, result.size());
         assertEquals("tla", result.get(0).getSetCode());
+    }
+
+    @Test
+    void getAllSets_tokenWithoutSetType_filteredByCodeConvention() {
+        // Bug-Regression: alte DB-Eintraege haben setType=null. Der Filter muss
+        // trotzdem greifen, wenn der Code-Konvention "t" + Haupt-Code folgt.
+        ScryfallSet token = new ScryfallSet();
+        token.setSetCode("ttdm");   // Token zu "tdm" — setType absichtlich null
+        ScryfallSet main = new ScryfallSet();
+        main.setSetCode("tdm"); main.setSetType("expansion");
+
+        when(setRepository.findAll()).thenReturn(List.of(token, main));
+
+        List<ScryfallSet> result = scryfallService.getAllSets(false);
+
+        assertEquals(1, result.size());
+        assertEquals("tdm", result.get(0).getSetCode());
+    }
+
+    @Test
+    void getAllSets_promoWithoutSetType_filteredByCodeConvention() {
+        ScryfallSet promo = new ScryfallSet();
+        promo.setSetCode("pdmu");   // Promo zu "dmu" — setType null
+        ScryfallSet main = new ScryfallSet();
+        main.setSetCode("dmu"); main.setSetType("expansion");
+
+        when(setRepository.findAll()).thenReturn(List.of(promo, main));
+
+        List<ScryfallSet> result = scryfallService.getAllSets(false);
+
+        assertEquals(1, result.size());
+        assertEquals("dmu", result.get(0).getSetCode());
+    }
+
+    @Test
+    void getAllSets_legitimateSetsStartingWithTorP_notFiltered() {
+        // Reale Sets die mit "t" oder "p" beginnen duerfen NICHT ausgefiltert werden.
+        // Test: "tor" (Torment), "tsp" (Time Spiral), "pls" (Planeshift)
+        ScryfallSet tor = new ScryfallSet(); tor.setSetCode("tor"); tor.setSetType("expansion");
+        ScryfallSet tsp = new ScryfallSet(); tsp.setSetCode("tsp"); tsp.setSetType("expansion");
+        ScryfallSet pls = new ScryfallSet(); pls.setSetCode("pls"); pls.setSetType("expansion");
+
+        when(setRepository.findAll()).thenReturn(List.of(tor, tsp, pls));
+
+        List<ScryfallSet> result = scryfallService.getAllSets(false);
+
+        assertEquals(3, result.size());
+    }
+
+    @Test
+    void isTokenOrPromoByCodeConvention_helperLogic() {
+        Set<String> codes = Set.of("tdm", "dmu", "tor", "tsp");
+
+        // Token: "t" + bekannter Code
+        assertTrue(ScryfallService.isTokenOrPromoByCodeConvention("ttdm", codes));
+        // Promo: "p" + bekannter Code
+        assertTrue(ScryfallService.isTokenOrPromoByCodeConvention("pdmu", codes));
+        // Legit: "t" + unbekannter Rest
+        assertFalse(ScryfallService.isTokenOrPromoByCodeConvention("tor", codes));
+        assertFalse(ScryfallService.isTokenOrPromoByCodeConvention("tsp", codes));
+        // Edge cases
+        assertFalse(ScryfallService.isTokenOrPromoByCodeConvention(null, codes));
+        assertFalse(ScryfallService.isTokenOrPromoByCodeConvention("", codes));
+        assertFalse(ScryfallService.isTokenOrPromoByCodeConvention("a", codes));
+        // Code beginnt nicht mit t/p
+        assertFalse(ScryfallService.isTokenOrPromoByCodeConvention("xdm", codes));
     }
 
     @Test

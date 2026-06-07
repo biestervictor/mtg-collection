@@ -55,12 +55,36 @@ public class ScryfallService {
         }
 
         // Filter out digital, token and promo sets — they are stored in DB for the
-        // "Show Tokens" / "Show Promos" sections but must not appear in the set dropdown
+        // "Show Tokens" / "Show Promos" sections but must not appear in the set dropdown.
+        //
+        // Defense in depth: zusätzlich zur setType-Prüfung wird die Scryfall-Code-Konvention
+        // ausgewertet (Token = "t" + mainCode, Promo = "p" + mainCode). Das fängt alte DB-
+        // Einträge ohne setType ab, in denen der API-Pull vor Einführung des Feldes lief.
+        Set<String> existingCodes = sets.stream()
+                .map(ScryfallSet::getSetCode)
+                .filter(c -> c != null)
+                .collect(Collectors.toSet());
+
         return sets.stream()
                 .filter(s -> !s.isDigital())
                 .filter(s -> !"token".equals(s.getSetType()))
                 .filter(s -> !"promo".equals(s.getSetType()))
+                .filter(s -> !isTokenOrPromoByCodeConvention(s.getSetCode(), existingCodes))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Heuristik: Set-Code beginnt mit "t" oder "p" UND der Rest des Codes ist selbst
+     * ein bekanntes Set → wahrscheinlich ein Token- bzw. Promo-Set.
+     * Verhindert false-positives für reguläre Sets wie "tor" (Torment), "tsp" (Time Spiral),
+     * "pls" (Planeshift) — diese sind kein "X + bekannter Code".
+     */
+    static boolean isTokenOrPromoByCodeConvention(String code, Set<String> allCodes) {
+        if (code == null || code.length() < 2) return false;
+        char prefix = code.charAt(0);
+        if (prefix != 't' && prefix != 'p') return false;
+        String mainCode = code.substring(1);
+        return allCodes.contains(mainCode);
     }
 
     private List<ScryfallSet> fetchSetsFromApi() throws Exception {

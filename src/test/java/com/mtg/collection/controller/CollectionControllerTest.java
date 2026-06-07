@@ -522,4 +522,107 @@ class CollectionControllerTest {
 
         verify(cardFilterService, times(2)).filterTradable(any());
     }
+
+    // ── GET /compare – token-filter + treatment dividers ─────────────────────
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void compareCollection_tokenCardsFilteredOut() throws Exception {
+        // Token-Karte (typeLine enthaelt "Token") soll NICHT auf der Compare-Seite landen
+        ScryfallCard token = cardSc("99");
+        token.setTypeLine("Token Creature - Soldier");
+        ScryfallCard normal = cardSc("1");
+        normal.setTypeLine("Creature - Human");
+
+        CardWithUserData tokenCard  = new CardWithUserData(token,  1, 0);
+        CardWithUserData normalCard = new CardWithUserData(normal, 1, 0);
+
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("victor", "tst", null))
+                .thenReturn(List.of(tokenCard, normalCard));
+        when(collectionService.getCardsWithUserData("alice",  "tst", null)).thenReturn(List.of());
+        // getOnlyInLeft gibt beide zurueck (token + normal); danach muss der Controller
+        // den Token via filterOutTokens entfernen.
+        when(cardFilterService.getOnlyInLeft(any(), any()))
+                .thenReturn(List.of(tokenCard, normalCard), List.of());
+
+        var result = mockMvc.perform(get("/compare")
+                        .param("set",         "tst")
+                        .param("user",        "victor")
+                        .param("compareUser", "alice")
+                        .param("onlyTradableUser",    "false")
+                        .param("onlyTradableCompare", "false"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        List<CardWithUserData> onlyUser = (List<CardWithUserData>)
+                result.getModelAndView().getModel().get("onlyUser");
+        assertNotNull(onlyUser);
+        assertEquals(1, onlyUser.size(), "Token-Karte muss herausgefiltert worden sein");
+        assertEquals("1", onlyUser.get(0).getCard().getCollectorNumber());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void compareCollection_dividersAddedToModel() throws Exception {
+        // Zwei Karten in unterschiedlichen Treatment-Gruppen → 2 Divider erwartet
+        ScryfallCard normal = cardSc("1");
+        normal.setTypeLine("Creature");
+        ScryfallCard showcase = cardSc("2");
+        showcase.setTypeLine("Creature");
+        showcase.setFrameStatus("showcase");
+
+        CardWithUserData c1 = new CardWithUserData(normal,   1, 0);
+        CardWithUserData c2 = new CardWithUserData(showcase, 1, 0);
+
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("victor", "tst", null))
+                .thenReturn(List.of(c1, c2));
+        when(collectionService.getCardsWithUserData("alice",  "tst", null)).thenReturn(List.of());
+        when(cardFilterService.getOnlyInLeft(any(), any()))
+                .thenReturn(List.of(c1, c2), List.of());
+
+        var result = mockMvc.perform(get("/compare")
+                        .param("set",         "tst")
+                        .param("user",        "victor")
+                        .param("compareUser", "alice")
+                        .param("onlyTradableUser",    "false")
+                        .param("onlyTradableCompare", "false"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("userDividers"))
+                .andExpect(model().attributeExists("compareDividers"))
+                .andReturn();
+
+        java.util.Map<Integer, ?> userDividers = (java.util.Map<Integer, ?>)
+                result.getModelAndView().getModel().get("userDividers");
+        // Zwei Gruppen → zwei Divider-Eintraege bei Index 0 und 1
+        assertEquals(2, userDividers.size());
+        assertTrue(userDividers.containsKey(0));
+        assertTrue(userDividers.containsKey(1));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void compareCollection_emptyResults_dividersEmptyMaps() throws Exception {
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("victor", "tst", null)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("alice",  "tst", null)).thenReturn(List.of());
+        when(cardFilterService.getOnlyInLeft(any(), any())).thenReturn(List.of());
+
+        var result = mockMvc.perform(get("/compare")
+                        .param("set",         "tst")
+                        .param("user",        "victor")
+                        .param("compareUser", "alice")
+                        .param("onlyTradableUser",    "false")
+                        .param("onlyTradableCompare", "false"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        java.util.Map<Integer, ?> userDividers = (java.util.Map<Integer, ?>)
+                result.getModelAndView().getModel().get("userDividers");
+        java.util.Map<Integer, ?> compareDividers = (java.util.Map<Integer, ?>)
+                result.getModelAndView().getModel().get("compareDividers");
+        assertTrue(userDividers.isEmpty());
+        assertTrue(compareDividers.isEmpty());
+    }
 }

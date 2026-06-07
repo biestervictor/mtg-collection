@@ -145,13 +145,64 @@ public class CollectionController {
 
             if (onlyTradableUser)    onlyUser    = cardFilterService.filterTradable(onlyUser);
             if (onlyTradableCompare) onlyCompare = cardFilterService.filterTradable(onlyCompare);
-            
+
+            // Tokens sollen auf der Compare-Seite nie erscheinen — sie gehören in das
+            // separate Token-Set (z.B. "ttdm" zu "tdm") und werden nur auf der Show-Seite
+            // als Extra-Sektion angezeigt. Manche Karten haben "Token" in der typeLine,
+            // auch wenn sie im Hauptset einsortiert sind (Dragonshield-Import-Artefakte).
+            onlyUser    = filterOutTokens(onlyUser);
+            onlyCompare = filterOutTokens(onlyCompare);
+
+            // Sort by treatment group (Normal → Showcase → Extended Art → Borderless → …)
+            // und Divider-Map berechnen, damit das Template zwischen den Gruppen Striche zieht.
+            onlyUser    = sortByTreatmentGroup(onlyUser);
+            onlyCompare = sortByTreatmentGroup(onlyCompare);
+
+            Map<Integer, TreatmentGroupStat> userDividers    = computeCompareDividers(onlyUser);
+            Map<Integer, TreatmentGroupStat> compareDividers = computeCompareDividers(onlyCompare);
+
             model.addAttribute("compareUser", compareUser);
             model.addAttribute("onlyUser", onlyUser);
             model.addAttribute("onlyCompare", onlyCompare);
+            model.addAttribute("userDividers", userDividers);
+            model.addAttribute("compareDividers", compareDividers);
         }
 
         return "compare";
+    }
+
+    /** Filtert Karten heraus, deren typeLine "token" enthaelt (case-insensitive). */
+    private List<CardWithUserData> filterOutTokens(List<CardWithUserData> cards) {
+        return cards.stream()
+                .filter(c -> c.getCard() == null || c.getCard().getTypeLine() == null ||
+                            !c.getCard().getTypeLine().toLowerCase().contains("token"))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Wie {@link #computeGroupDividers}, aber fuer die Compare-Seite: zeigt nur die
+     * Anzahl der Karten pro Gruppe in der diff-Liste, nicht "X von Y fehlen".
+     * Die "missing"-Property wird auf 0 gesetzt; das Template prueft das und blendet
+     * den missing-Text aus.
+     */
+    private Map<Integer, TreatmentGroupStat> computeCompareDividers(List<CardWithUserData> sortedCards) {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (CardWithUserData c : sortedCards) {
+            if (c.getCard() == null) continue;
+            String g = treatmentGroup(c.getCard());
+            counts.merge(g, 1, Integer::sum);
+        }
+
+        Map<Integer, TreatmentGroupStat> dividers = new LinkedHashMap<>();
+        String currentGroup = null;
+        for (int i = 0; i < sortedCards.size(); i++) {
+            String g = treatmentGroup(sortedCards.get(i).getCard());
+            if (!g.equals(currentGroup)) {
+                currentGroup = g;
+                dividers.put(i, new TreatmentGroupStat(g, counts.getOrDefault(g, 0), 0));
+            }
+        }
+        return dividers;
     }
     
     @PostMapping("/api/cache/clear")

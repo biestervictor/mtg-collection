@@ -69,6 +69,49 @@
         .badge-qty  { background: #333 !important; font-size:.65rem; }
         .badge-foil { background: gold !important; color: #000; font-size:.65rem; }
 
+        /* ── Treatment-group divider (identisch zu show.html) ────── */
+        .treatment-divider {
+            width: 100%;                   /* forces a new flex row */
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 18px 0 6px;
+            font-size: 0.78rem;
+            color: rgba(255,255,255,.55);
+        }
+        .treatment-divider:first-child { margin-top: 4px; }
+        .divider-line {
+            flex: 1;
+            height: 1px;
+            background: rgba(255,255,255,.15);
+        }
+        .divider-label {
+            white-space: nowrap;
+            color: rgba(255,255,255,.75);
+            font-weight: 600;
+            letter-spacing: .3px;
+        }
+        .divider-label .divider-count {
+            font-weight: 400;
+            color: rgba(255,255,255,.45);
+            margin-left: 6px;
+        }
+        /* Text-Mode: Divider als Tabellenzeile */
+        .text-table tr.divider-row td {
+            border-bottom: none;
+            padding: 14px 8px 4px;
+            color: rgba(255,255,255,.75);
+            font-weight: 600;
+            font-size: .78rem;
+            letter-spacing: .3px;
+            background: transparent;
+        }
+        .text-table tr.divider-row td .divider-count {
+            font-weight: 400;
+            color: rgba(255,255,255,.45);
+            margin-left: 6px;
+        }
+
         /* Text table */
         .text-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
         .text-table th { color: #888; font-weight: 600; padding: 4px 8px; border-bottom: 1px solid #2a2a4a; white-space: nowrap; }
@@ -222,22 +265,34 @@
                 <th:block th:if="${viewMode != 'text'}">
                   <div th:if="${not #lists.isEmpty(onlyUser)}"
                        th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
-                    <div th:each="c : ${onlyUser}"
-                         th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
-                      <div style="position:relative;">
-                        <span class="badge badge-qty position-absolute top-0 start-0 m-1"
-                              th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
-                        <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                              th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
-                        <img th:src="${c.card.thumbnailFront}" alt="Card"
-                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
+                    <th:block th:each="c, iter : ${onlyUser}">
+                      <!-- Treatment-group divider -->
+                      <div th:if="${userDividers != null and userDividers.containsKey(iter.index)}"
+                           th:with="grp=${userDividers.get(iter.index)}"
+                           class="treatment-divider">
+                          <span class="divider-line"></span>
+                          <span class="divider-label">
+                              <span th:text="${grp.label}">Normal</span>
+                              <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
+                          </span>
+                          <span class="divider-line"></span>
                       </div>
-                      <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
-                      <div class="price" th:if="${viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
-                        <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
-                        <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                      <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
+                        <div style="position:relative;">
+                          <span class="badge badge-qty position-absolute top-0 start-0 m-1"
+                                th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
+                          <span class="badge badge-foil position-absolute top-0 end-0 m-1"
+                                th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                          <img th:src="${c.card.thumbnailFront}" alt="Card"
+                               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
+                        </div>
+                        <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
+                        <div class="price" th:if="${viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
+                          <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
+                          <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                        </div>
                       </div>
-                    </div>
+                    </th:block>
                   </div>
                   <p th:if="${#lists.isEmpty(onlyUser)}" class="text-center text-muted mb-0">No unique cards</p>
                 </th:block>
@@ -255,18 +310,28 @@
                         </tr>
                       </thead>
                       <tbody>
-                        <tr th:each="c : ${onlyUser}">
-                          <td th:text="${c.card.name}">Name</td>
-                          <td style="color:#888;" th:text="${c.card.setCode?.toUpperCase()} + ' #' + ${c.card.collectorNumber}">SET #1</td>
-                          <td>
-                            <span th:if="${c.quantity > 0}"    th:text="${c.quantity} + '×'">1×</span>
-                            <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="'F' + ${c.foilQuantity}">F1</span>
-                          </td>
-                          <td class="price-col">
-                            <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
-                            <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
-                          </td>
-                        </tr>
+                        <th:block th:each="c, iter : ${onlyUser}">
+                          <tr th:if="${userDividers != null and userDividers.containsKey(iter.index)}"
+                              th:with="grp=${userDividers.get(iter.index)}"
+                              class="divider-row">
+                            <td colspan="4">
+                              <span th:text="${grp.label}">Normal</span>
+                              <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td th:text="${c.card.name}">Name</td>
+                            <td style="color:#888;" th:text="${c.card.setCode?.toUpperCase()} + ' #' + ${c.card.collectorNumber}">SET #1</td>
+                            <td>
+                              <span th:if="${c.quantity > 0}"    th:text="${c.quantity} + '×'">1×</span>
+                              <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="'F' + ${c.foilQuantity}">F1</span>
+                            </td>
+                            <td class="price-col">
+                              <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
+                              <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                            </td>
+                          </tr>
+                        </th:block>
                       </tbody>
                     </table>
                   </div>
@@ -293,22 +358,34 @@
                 <th:block th:if="${viewMode != 'text'}">
                   <div th:if="${not #lists.isEmpty(onlyCompare)}"
                        th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
-                    <div th:each="c : ${onlyCompare}"
-                         th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
-                      <div style="position:relative;">
-                        <span class="badge badge-qty position-absolute top-0 start-0 m-1"
-                              th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
-                        <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                              th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
-                        <img th:src="${c.card.thumbnailFront}" alt="Card"
-                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
+                    <th:block th:each="c, iter : ${onlyCompare}">
+                      <!-- Treatment-group divider -->
+                      <div th:if="${compareDividers != null and compareDividers.containsKey(iter.index)}"
+                           th:with="grp=${compareDividers.get(iter.index)}"
+                           class="treatment-divider">
+                          <span class="divider-line"></span>
+                          <span class="divider-label">
+                              <span th:text="${grp.label}">Normal</span>
+                              <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
+                          </span>
+                          <span class="divider-line"></span>
                       </div>
-                      <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
-                      <div class="price" th:if="${viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
-                        <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
-                        <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                      <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
+                        <div style="position:relative;">
+                          <span class="badge badge-qty position-absolute top-0 start-0 m-1"
+                                th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
+                          <span class="badge badge-foil position-absolute top-0 end-0 m-1"
+                                th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                          <img th:src="${c.card.thumbnailFront}" alt="Card"
+                               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
+                        </div>
+                        <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
+                        <div class="price" th:if="${viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
+                          <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
+                          <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                        </div>
                       </div>
-                    </div>
+                    </th:block>
                   </div>
                   <p th:if="${#lists.isEmpty(onlyCompare)}" class="text-center text-muted mb-0">No unique cards</p>
                 </th:block>
@@ -326,18 +403,28 @@
                         </tr>
                       </thead>
                       <tbody>
-                        <tr th:each="c : ${onlyCompare}">
-                          <td th:text="${c.card.name}">Name</td>
-                          <td style="color:#888;" th:text="${c.card.setCode?.toUpperCase()} + ' #' + ${c.card.collectorNumber}">SET #1</td>
-                          <td>
-                            <span th:if="${c.quantity > 0}"    th:text="${c.quantity} + '×'">1×</span>
-                            <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="'F' + ${c.foilQuantity}">F1</span>
-                          </td>
-                          <td class="price-col">
-                            <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
-                            <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
-                          </td>
-                        </tr>
+                        <th:block th:each="c, iter : ${onlyCompare}">
+                          <tr th:if="${compareDividers != null and compareDividers.containsKey(iter.index)}"
+                              th:with="grp=${compareDividers.get(iter.index)}"
+                              class="divider-row">
+                            <td colspan="4">
+                              <span th:text="${grp.label}">Normal</span>
+                              <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td th:text="${c.card.name}">Name</td>
+                            <td style="color:#888;" th:text="${c.card.setCode?.toUpperCase()} + ' #' + ${c.card.collectorNumber}">SET #1</td>
+                            <td>
+                              <span th:if="${c.quantity > 0}"    th:text="${c.quantity} + '×'">1×</span>
+                              <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="'F' + ${c.foilQuantity}">F1</span>
+                            </td>
+                            <td class="price-col">
+                              <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
+                              <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                            </td>
+                          </tr>
+                        </th:block>
                       </tbody>
                     </table>
                   </div>

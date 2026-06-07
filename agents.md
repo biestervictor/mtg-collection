@@ -30,9 +30,18 @@
 ### Kostenerfassung (Pflicht)
 **Bei JEDER Aenderung MUSS die Datei `costs.md` im Projekt-Root aktualisiert werden.**
 
-1. Aktuellen Spend aus der OpenCode-Anzeige ablesen
+1. Aktuellen Spend aus der OpenCode-SQLite-DB lesen (siehe unten) oder aus der UI-Anzeige
 2. Delta seit dem letzten Eintrag berechnen
 3. Neue Zeile in die Tabelle der aktuellen Session einfuegen
+
+**Spend programmatisch ermitteln (bevorzugt):**
+```bash
+# Aktuelle Session-ID + Spend (sortiert nach time_updated)
+sqlite3 ~/.local/share/opencode/opencode.db \
+  "SELECT id, cost FROM session ORDER BY time_updated DESC LIMIT 1;"
+```
+Die SQLite-DB `~/.local/share/opencode/opencode.db` enthaelt die `session`-Tabelle mit Spalte
+`cost` (REAL, in USD). Das ist die zuverlaessige Quelle — kein Raten oder Schaetzen mehr noetig.
 
 **Format:**
 ```markdown
@@ -44,9 +53,9 @@
 ```
 
 **Regeln:**
-- Session-ID: Die ersten 6 Zeichen der OpenCode-Session-ID
-- Delta: Differenz zwischen aktuellem Spend und letztem dokumentierten Wert
-- Session gesamt: Kumulierte Kosten aller Eintraege der Session
+- Session-ID: Die ersten 6 Zeichen der OpenCode-Session-ID (z.B. `1624e5` aus `ses_1624e5f...`)
+- Delta: Differenz zwischen aktuellem Spend (DB-Wert) und letztem dokumentierten Wert
+- Session gesamt: Kumulierte Kosten aller Eintraege der Session (= aktueller DB-Wert)
 - Neue Session = neuer H2-Abschnitt
 - Mehrere Tasks in einer Session = fortlaufende Nummerierung unter gleichem Header
 

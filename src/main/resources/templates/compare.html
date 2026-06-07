@@ -67,7 +67,7 @@
         .card-item .name   { font-size: .7rem; color: #ccc; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-item .price  { font-size: .68rem; color: #f4c430; }
         .badge-qty  { background: #333 !important; font-size:.65rem; }
-        .badge-foil { background: gold !important; color: #000; font-size:.65rem; }
+        .badge-foil { background: #000 !important; color: #ffd700; font-size:.65rem; }
 
         /* ── Treatment-group divider (identisch zu show.html) ────── */
         .treatment-divider {
@@ -308,7 +308,7 @@
                           <span class="badge badge-qty position-absolute top-0 start-0 m-1"
                                 th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
                           <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                                th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                                th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
                           <img th:src="${c.card.thumbnailFront}" alt="Card"
                                onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
                         </div>
@@ -350,7 +350,7 @@
                             <td style="color:#888;" th:text="${c.card.setCode?.toUpperCase()} + ' #' + ${c.card.collectorNumber}">SET #1</td>
                             <td>
                               <span th:if="${c.quantity > 0}"    th:text="${c.quantity} + '×'">1×</span>
-                              <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="'F' + ${c.foilQuantity}">F1</span>
+                              <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="${c.foilQuantity} + '✨'">1✨</span>
                             </td>
                             <td class="price-col">
                               <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
@@ -401,7 +401,7 @@
                           <span class="badge badge-qty position-absolute top-0 start-0 m-1"
                                 th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
                           <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                                th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                                th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
                           <img th:src="${c.card.thumbnailFront}" alt="Card"
                                onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
                         </div>
@@ -443,7 +443,7 @@
                             <td style="color:#888;" th:text="${c.card.setCode?.toUpperCase()} + ' #' + ${c.card.collectorNumber}">SET #1</td>
                             <td>
                               <span th:if="${c.quantity > 0}"    th:text="${c.quantity} + '×'">1×</span>
-                              <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="'F' + ${c.foilQuantity}">F1</span>
+                              <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="${c.foilQuantity} + '✨'">1✨</span>
                             </td>
                             <td class="price-col">
                               <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
@@ -497,7 +497,7 @@
                           <span class="badge badge-qty position-absolute top-0 start-0 m-1"
                                 th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
                           <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                                th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                                th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
                           <img th:src="${c.card.thumbnailFront}" alt="Token"
                                onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
                         </div>
@@ -536,7 +536,7 @@
                           <span class="badge badge-qty position-absolute top-0 start-0 m-1"
                                 th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
                           <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                                th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                                th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
                           <img th:src="${c.card.thumbnailFront}" alt="Token"
                                onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
                         </div>
@@ -586,7 +586,7 @@
                           <span class="badge badge-qty position-absolute top-0 start-0 m-1"
                                 th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
                           <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                                th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                                th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
                           <img th:src="${c.card.thumbnailFront}" alt="Promo"
                                onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
                         </div>
@@ -629,7 +629,7 @@
                           <span class="badge badge-qty position-absolute top-0 start-0 m-1"
                                 th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
                           <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                                th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                                th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
                           <img th:src="${c.card.thumbnailFront}" alt="Promo"
                                onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
                         </div>

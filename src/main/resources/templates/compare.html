@@ -217,6 +217,32 @@
                     </div>
                   </div>
 
+                  <!-- Show Tokens -->
+                  <div class="col-auto d-flex align-items-center gap-2">
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" name="showTokens"
+                             value="true" id="chkShowTokens"
+                             th:checked="${showTokens == 'true'}"
+                             onchange="submitCompareForm()">
+                      <label class="form-check-label small" for="chkShowTokens">
+                        <i class="bi bi-stars"></i> Show Tokens
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Show Promos -->
+                  <div class="col-auto d-flex align-items-center gap-2">
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" name="showPromos"
+                             value="true" id="chkShowPromos"
+                             th:checked="${showPromos == 'true'}"
+                             onchange="submitCompareForm()">
+                      <label class="form-check-label small" for="chkShowPromos">
+                        <i class="bi bi-gem"></i> Show Promos
+                      </label>
+                    </div>
+                  </div>
+
                   <!-- View mode -->
                   <div class="col-auto ms-md-auto">
                     <div class="btn-group btn-group-sm" role="group">
@@ -435,6 +461,192 @@
           </div>
 
         </div><!-- /results row -->
+
+        <!-- ── Token Section (visible when "Show Tokens" is checked) ─────── -->
+        <div th:if="${showTokens == 'true' and tokenOnlyUser != null}" class="mt-4">
+          <div class="d-flex align-items-center mb-2">
+            <hr class="flex-grow-1 border-secondary">
+            <h5 class="mx-3 mb-0 text-warning"><i class="bi bi-stars"></i> Token-Karten Diff</h5>
+            <hr class="flex-grow-1 border-secondary">
+          </div>
+
+          <div class="row gx-3">
+            <!-- Token: only in user -->
+            <div class="col-md-6">
+              <div class="card bg-dark border-secondary mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-person-fill"></i> Tokens nur bei <strong th:text="${user}">User</strong></span>
+                  <span class="badge bg-secondary" th:text="${#lists.size(tokenOnlyUser)} + ' cards'">0 cards</span>
+                </div>
+                <div class="card-body">
+                  <div th:if="${not #lists.isEmpty(tokenOnlyUser)}"
+                       th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
+                    <th:block th:each="c, iter : ${tokenOnlyUser}">
+                      <div th:if="${tokenUserDividers != null and tokenUserDividers.containsKey(iter.index)}"
+                           th:with="grp=${tokenUserDividers.get(iter.index)}"
+                           class="treatment-divider">
+                        <span class="divider-line"></span>
+                        <span class="divider-label">
+                          <span th:text="${grp.label}">Normal</span>
+                          <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
+                        </span>
+                        <span class="divider-line"></span>
+                      </div>
+                      <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
+                        <div style="position:relative;">
+                          <span class="badge badge-qty position-absolute top-0 start-0 m-1"
+                                th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
+                          <span class="badge badge-foil position-absolute top-0 end-0 m-1"
+                                th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                          <img th:src="${c.card.thumbnailFront}" alt="Token"
+                               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
+                        </div>
+                        <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
+                      </div>
+                    </th:block>
+                  </div>
+                  <p th:if="${#lists.isEmpty(tokenOnlyUser)}" class="text-center text-muted mb-0">Keine einzigartigen Tokens</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Token: only in compare -->
+            <div class="col-md-6">
+              <div class="card bg-dark border-secondary mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-people-fill"></i> Tokens nur bei <strong th:text="${compareUser}">Compare</strong></span>
+                  <span class="badge bg-secondary" th:text="${#lists.size(tokenOnlyCompare)} + ' cards'">0 cards</span>
+                </div>
+                <div class="card-body">
+                  <div th:if="${not #lists.isEmpty(tokenOnlyCompare)}"
+                       th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
+                    <th:block th:each="c, iter : ${tokenOnlyCompare}">
+                      <div th:if="${tokenCompareDividers != null and tokenCompareDividers.containsKey(iter.index)}"
+                           th:with="grp=${tokenCompareDividers.get(iter.index)}"
+                           class="treatment-divider">
+                        <span class="divider-line"></span>
+                        <span class="divider-label">
+                          <span th:text="${grp.label}">Normal</span>
+                          <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
+                        </span>
+                        <span class="divider-line"></span>
+                      </div>
+                      <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
+                        <div style="position:relative;">
+                          <span class="badge badge-qty position-absolute top-0 start-0 m-1"
+                                th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
+                          <span class="badge badge-foil position-absolute top-0 end-0 m-1"
+                                th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                          <img th:src="${c.card.thumbnailFront}" alt="Token"
+                               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
+                        </div>
+                        <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
+                      </div>
+                    </th:block>
+                  </div>
+                  <p th:if="${#lists.isEmpty(tokenOnlyCompare)}" class="text-center text-muted mb-0">Keine einzigartigen Tokens</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Promo Section (visible when "Show Promos" is checked) ─────── -->
+        <div th:if="${showPromos == 'true' and promoOnlyUser != null}" class="mt-4">
+          <div class="d-flex align-items-center mb-2">
+            <hr class="flex-grow-1 border-secondary">
+            <h5 class="mx-3 mb-0 text-info"><i class="bi bi-gem"></i> Promo-Karten Diff</h5>
+            <hr class="flex-grow-1 border-secondary">
+          </div>
+
+          <div class="row gx-3">
+            <!-- Promo: only in user -->
+            <div class="col-md-6">
+              <div class="card bg-dark border-secondary mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-person-fill"></i> Promos nur bei <strong th:text="${user}">User</strong></span>
+                  <span class="badge bg-secondary" th:text="${#lists.size(promoOnlyUser)} + ' cards'">0 cards</span>
+                </div>
+                <div class="card-body">
+                  <div th:if="${not #lists.isEmpty(promoOnlyUser)}"
+                       th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
+                    <th:block th:each="c, iter : ${promoOnlyUser}">
+                      <div th:if="${promoUserDividers != null and promoUserDividers.containsKey(iter.index)}"
+                           th:with="grp=${promoUserDividers.get(iter.index)}"
+                           class="treatment-divider">
+                        <span class="divider-line"></span>
+                        <span class="divider-label">
+                          <span th:text="${grp.label}">Normal</span>
+                          <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
+                        </span>
+                        <span class="divider-line"></span>
+                      </div>
+                      <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
+                        <div style="position:relative;">
+                          <span class="badge badge-qty position-absolute top-0 start-0 m-1"
+                                th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
+                          <span class="badge badge-foil position-absolute top-0 end-0 m-1"
+                                th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                          <img th:src="${c.card.thumbnailFront}" alt="Promo"
+                               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
+                        </div>
+                        <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
+                        <div class="price" th:if="${viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
+                          <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
+                          <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                        </div>
+                      </div>
+                    </th:block>
+                  </div>
+                  <p th:if="${#lists.isEmpty(promoOnlyUser)}" class="text-center text-muted mb-0">Keine einzigartigen Promos</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Promo: only in compare -->
+            <div class="col-md-6">
+              <div class="card bg-dark border-secondary mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-people-fill"></i> Promos nur bei <strong th:text="${compareUser}">Compare</strong></span>
+                  <span class="badge bg-secondary" th:text="${#lists.size(promoOnlyCompare)} + ' cards'">0 cards</span>
+                </div>
+                <div class="card-body">
+                  <div th:if="${not #lists.isEmpty(promoOnlyCompare)}"
+                       th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
+                    <th:block th:each="c, iter : ${promoOnlyCompare}">
+                      <div th:if="${promoCompareDividers != null and promoCompareDividers.containsKey(iter.index)}"
+                           th:with="grp=${promoCompareDividers.get(iter.index)}"
+                           class="treatment-divider">
+                        <span class="divider-line"></span>
+                        <span class="divider-label">
+                          <span th:text="${grp.label}">Normal</span>
+                          <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
+                        </span>
+                        <span class="divider-line"></span>
+                      </div>
+                      <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
+                        <div style="position:relative;">
+                          <span class="badge badge-qty position-absolute top-0 start-0 m-1"
+                                th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
+                          <span class="badge badge-foil position-absolute top-0 end-0 m-1"
+                                th:if="${c.foilQuantity > 0}" th:text="'F' + ${c.foilQuantity}">F</span>
+                          <img th:src="${c.card.thumbnailFront}" alt="Promo"
+                               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
+                        </div>
+                        <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
+                        <div class="price" th:if="${viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
+                          <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
+                          <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                        </div>
+                      </div>
+                    </th:block>
+                  </div>
+                  <p th:if="${#lists.isEmpty(promoOnlyCompare)}" class="text-center text-muted mb-0">Keine einzigartigen Promos</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
     </main>
 
     <footer class="text-center py-3 mt-4"><p>MTG Collection Manager</p></footer>
@@ -541,7 +753,7 @@
         // ── Checkbox fix for GET forms ───────────────────────────────
         function _fixCheckboxes() {
             const form = document.getElementById('compareForm');
-            ['onlyTradableUser', 'onlyTradableCompare'].forEach(function(name) {
+            ['onlyTradableUser', 'onlyTradableCompare', 'showTokens', 'showPromos'].forEach(function(name) {
                 form.querySelectorAll('input[type="hidden"][name="' + name + '"]')
                     .forEach(function(el) { el.remove(); });
                 const cb = document.querySelector('input[name="' + name + '"]');

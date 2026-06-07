@@ -625,4 +625,143 @@ class CollectionControllerTest {
         assertTrue(userDividers.isEmpty());
         assertTrue(compareDividers.isEmpty());
     }
+
+    // ── GET /compare – Show Tokens / Show Promos ─────────────────────────────
+
+    @Test
+    void compareCollection_showTokensFalse_noTokenSetLookup() throws Exception {
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData(any(), any(), any())).thenReturn(List.of());
+        when(cardFilterService.getOnlyInLeft(any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/compare")
+                        .param("set",         "tst")
+                        .param("user",        "victor")
+                        .param("compareUser", "alice")
+                        .param("onlyTradableUser",    "false")
+                        .param("onlyTradableCompare", "false"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeDoesNotExist("tokenOnlyUser"))
+                .andExpect(model().attributeDoesNotExist("promoOnlyUser"));
+
+        // Token/Promo-Set-Cards duerfen ohne Toggle nicht geladen werden
+        verify(scryfallService, never()).getCardsBySet("ttst", null);
+        verify(scryfallService, never()).getCardsBySet("ptst", null);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void compareCollection_showTokensTrue_loadsTokenSetAndComputesDiff() throws Exception {
+        // Token-Set "ttst" exists with a card victor owns but alice doesn't
+        ScryfallCard tokenScryfall = cardSc("1");
+        tokenScryfall.setSetCode("ttst");
+        CardWithUserData victorToken = new CardWithUserData(tokenScryfall, 1, 0);
+
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+
+        // Regular set "tst": both users empty
+        when(collectionService.getCardsWithUserData("victor", "tst", null)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("alice",  "tst", null)).thenReturn(List.of());
+
+        // Token-Set "ttst" exists (non-empty)
+        when(scryfallService.getCardsBySet("ttst", null)).thenReturn(List.of(tokenScryfall));
+        when(collectionService.getCardsWithUserData("victor", "ttst", null))
+                .thenReturn(List.of(victorToken));
+        when(collectionService.getCardsWithUserData("alice",  "ttst", null))
+                .thenReturn(List.of());
+
+        when(cardFilterService.getOnlyInLeft(any(), any()))
+                .thenReturn(List.of())                  // regular set: no diff
+                .thenReturn(List.of())
+                .thenReturn(List.of(victorToken))       // token: victor has it, alice doesn't
+                .thenReturn(List.of());
+
+        var result = mockMvc.perform(get("/compare")
+                        .param("set",         "tst")
+                        .param("user",        "victor")
+                        .param("compareUser", "alice")
+                        .param("onlyTradableUser",    "false")
+                        .param("onlyTradableCompare", "false")
+                        .param("showTokens",  "true"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("tokenOnlyUser"))
+                .andExpect(model().attributeExists("tokenOnlyCompare"))
+                .andReturn();
+
+        List<CardWithUserData> tokenOnlyUser = (List<CardWithUserData>)
+                result.getModelAndView().getModel().get("tokenOnlyUser");
+        assertEquals(1, tokenOnlyUser.size());
+        assertEquals("1", tokenOnlyUser.get(0).getCard().getCollectorNumber());
+
+        verify(scryfallService).getCardsBySet("ttst", null);
+    }
+
+    @Test
+    void compareCollection_showTokensTrueButTokenSetEmpty_noModelAttributes() throws Exception {
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData(any(), any(), any())).thenReturn(List.of());
+        when(cardFilterService.getOnlyInLeft(any(), any())).thenReturn(List.of());
+        // Token-Set "ttst" leer → keine Token-Diff-Berechnung
+        when(scryfallService.getCardsBySet("ttst", null)).thenReturn(List.of());
+
+        mockMvc.perform(get("/compare")
+                        .param("set",         "tst")
+                        .param("user",        "victor")
+                        .param("compareUser", "alice")
+                        .param("onlyTradableUser",    "false")
+                        .param("onlyTradableCompare", "false")
+                        .param("showTokens",  "true"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeDoesNotExist("tokenOnlyUser"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void compareCollection_showPromosTrue_loadsPromoSetAndComputesDiff() throws Exception {
+        ScryfallCard promoScryfall = cardSc("1");
+        promoScryfall.setSetCode("ptst");
+        CardWithUserData alicePromo = new CardWithUserData(promoScryfall, 2, 0);
+
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("victor", "tst", null)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("alice",  "tst", null)).thenReturn(List.of());
+        when(scryfallService.getCardsBySet("ptst", null)).thenReturn(List.of(promoScryfall));
+        when(collectionService.getCardsWithUserData("victor", "ptst", null)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("alice",  "ptst", null)).thenReturn(List.of(alicePromo));
+
+        when(cardFilterService.getOnlyInLeft(any(), any()))
+                .thenReturn(List.of())                  // regular: no diff
+                .thenReturn(List.of())
+                .thenReturn(List.of())                  // promo: victor has none
+                .thenReturn(List.of(alicePromo));       // promo: alice has 1
+
+        var result = mockMvc.perform(get("/compare")
+                        .param("set",         "tst")
+                        .param("user",        "victor")
+                        .param("compareUser", "alice")
+                        .param("onlyTradableUser",    "false")
+                        .param("onlyTradableCompare", "false")
+                        .param("showPromos",  "true"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("promoOnlyCompare"))
+                .andReturn();
+
+        List<CardWithUserData> promoOnlyCompare = (List<CardWithUserData>)
+                result.getModelAndView().getModel().get("promoOnlyCompare");
+        assertEquals(1, promoOnlyCompare.size());
+
+        verify(scryfallService).getCardsBySet("ptst", null);
+    }
+
+    @Test
+    void compareCollection_modelAttributesPropagateShowTogglesEvenWithoutResults() throws Exception {
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+
+        mockMvc.perform(get("/compare")
+                        .param("showTokens", "true")
+                        .param("showPromos", "true"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("showTokens", "true"))
+                .andExpect(model().attribute("showPromos", "true"));
+    }
 }

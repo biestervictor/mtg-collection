@@ -116,7 +116,9 @@ public class CollectionController {
                                    @RequestParam(required = false) String compareUser,
                                    @RequestParam(required = false, defaultValue = "true") boolean onlyTradableUser,
                                    @RequestParam(required = false, defaultValue = "true") boolean onlyTradableCompare,
-                                   @RequestParam(required = false, defaultValue = "normal") String viewMode) {
+                                   @RequestParam(required = false, defaultValue = "normal") String viewMode,
+                                   @RequestParam(required = false) String showTokens,
+                                   @RequestParam(required = false) String showPromos) {
 
         List<ScryfallSet> sets = scryfallService.getAllSets(false);
         model.addAttribute("sets", sets);
@@ -124,51 +126,111 @@ public class CollectionController {
         model.addAttribute("onlyTradableUser", onlyTradableUser);
         model.addAttribute("onlyTradableCompare", onlyTradableCompare);
         model.addAttribute("viewMode", viewMode);
+        model.addAttribute("showTokens", showTokens);
+        model.addAttribute("showPromos", showPromos);
 
         if (set != null && !set.isEmpty() && user != null && !user.isEmpty() &&
             compareUser != null && !compareUser.isEmpty()) {
 
-            List<CardWithUserData> userCards = collectionService.getCardsWithUserData(user, set, null);
-            List<CardWithUserData> compareCards = collectionService.getCardsWithUserData(compareUser, set, null);
-
-            // getCardsWithUserData returns ALL set cards (including qty=0).
-            // Only cards actually owned (qty > 0) are relevant for the diff.
-            List<CardWithUserData> userOwned = userCards.stream()
-                    .filter(c -> c.getQuantity() > 0 || c.getFoilQuantity() > 0)
-                    .collect(Collectors.toList());
-            List<CardWithUserData> compareOwned = compareCards.stream()
-                    .filter(c -> c.getQuantity() > 0 || c.getFoilQuantity() > 0)
-                    .collect(Collectors.toList());
-
-            List<CardWithUserData> onlyUser = cardFilterService.getOnlyInLeft(userOwned, compareOwned);
-            List<CardWithUserData> onlyCompare = cardFilterService.getOnlyInLeft(compareOwned, userOwned);
-
-            if (onlyTradableUser)    onlyUser    = cardFilterService.filterTradable(onlyUser);
-            if (onlyTradableCompare) onlyCompare = cardFilterService.filterTradable(onlyCompare);
-
-            // Tokens sollen auf der Compare-Seite nie erscheinen — sie gehören in das
-            // separate Token-Set (z.B. "ttdm" zu "tdm") und werden nur auf der Show-Seite
-            // als Extra-Sektion angezeigt. Manche Karten haben "Token" in der typeLine,
-            // auch wenn sie im Hauptset einsortiert sind (Dragonshield-Import-Artefakte).
-            onlyUser    = filterOutTokens(onlyUser);
-            onlyCompare = filterOutTokens(onlyCompare);
-
-            // Sort by treatment group (Normal → Showcase → Extended Art → Borderless → …)
-            // und Divider-Map berechnen, damit das Template zwischen den Gruppen Striche zieht.
-            onlyUser    = sortByTreatmentGroup(onlyUser);
-            onlyCompare = sortByTreatmentGroup(onlyCompare);
-
-            Map<Integer, TreatmentGroupStat> userDividers    = computeCompareDividers(onlyUser);
-            Map<Integer, TreatmentGroupStat> compareDividers = computeCompareDividers(onlyCompare);
+            // ── Reguläre Set-Karten: Token-typeLine wird ausgefiltert ─────────
+            CompareDiff main = computeDiff(user, compareUser, set,
+                    onlyTradableUser, onlyTradableCompare, /*filterTokens=*/ true);
 
             model.addAttribute("compareUser", compareUser);
-            model.addAttribute("onlyUser", onlyUser);
-            model.addAttribute("onlyCompare", onlyCompare);
-            model.addAttribute("userDividers", userDividers);
-            model.addAttribute("compareDividers", compareDividers);
+            model.addAttribute("onlyUser", main.onlyUser);
+            model.addAttribute("onlyCompare", main.onlyCompare);
+            model.addAttribute("userDividers", main.userDividers);
+            model.addAttribute("compareDividers", main.compareDividers);
+
+            // ── Token-Sektion: Set-Code "t" + Haupt-Code (z.B. "ttdm" zu "tdm") ─
+            if ("true".equals(showTokens)) {
+                String tokenSetCode = "t" + set;
+                if (!scryfallService.getCardsBySet(tokenSetCode, null).isEmpty()) {
+                    CompareDiff tok = computeDiff(user, compareUser, tokenSetCode,
+                            onlyTradableUser, onlyTradableCompare, /*filterTokens=*/ false);
+                    model.addAttribute("tokenOnlyUser",        tok.onlyUser);
+                    model.addAttribute("tokenOnlyCompare",     tok.onlyCompare);
+                    model.addAttribute("tokenUserDividers",    tok.userDividers);
+                    model.addAttribute("tokenCompareDividers", tok.compareDividers);
+                }
+            }
+
+            // ── Promo-Sektion: Set-Code "p" + Haupt-Code (z.B. "pdmu" zu "dmu") ─
+            if ("true".equals(showPromos)) {
+                String promoSetCode = "p" + set;
+                if (!scryfallService.getCardsBySet(promoSetCode, null).isEmpty()) {
+                    CompareDiff pro = computeDiff(user, compareUser, promoSetCode,
+                            onlyTradableUser, onlyTradableCompare, /*filterTokens=*/ false);
+                    model.addAttribute("promoOnlyUser",        pro.onlyUser);
+                    model.addAttribute("promoOnlyCompare",     pro.onlyCompare);
+                    model.addAttribute("promoUserDividers",    pro.userDividers);
+                    model.addAttribute("promoCompareDividers", pro.compareDividers);
+                }
+            }
         }
 
         return "compare";
+    }
+
+    /**
+     * Halter für einen Diff-Result (onlyUser, onlyCompare + zugehörige Divider-Maps).
+     * Wird sowohl für reguläre Sets als auch für Token/Promo-Sub-Sets verwendet.
+     */
+    private static class CompareDiff {
+        final List<CardWithUserData> onlyUser;
+        final List<CardWithUserData> onlyCompare;
+        final Map<Integer, TreatmentGroupStat> userDividers;
+        final Map<Integer, TreatmentGroupStat> compareDividers;
+
+        CompareDiff(List<CardWithUserData> onlyUser, List<CardWithUserData> onlyCompare,
+                    Map<Integer, TreatmentGroupStat> userDividers,
+                    Map<Integer, TreatmentGroupStat> compareDividers) {
+            this.onlyUser = onlyUser;
+            this.onlyCompare = onlyCompare;
+            this.userDividers = userDividers;
+            this.compareDividers = compareDividers;
+        }
+    }
+
+    /**
+     * Vollständige Diff-Pipeline für ein Set: owned filter → getOnlyInLeft → tradable filter →
+     * optional token filter → sortByTreatmentGroup → compute dividers.
+     *
+     * @param filterTokens true für reguläre Sets (Tokens raus), false für Token-/Promo-Sub-Sets
+     */
+    private CompareDiff computeDiff(String user, String compareUser, String setCode,
+                                    boolean onlyTradableUser, boolean onlyTradableCompare,
+                                    boolean filterTokens) {
+        List<CardWithUserData> userCards    = collectionService.getCardsWithUserData(user, setCode, null);
+        List<CardWithUserData> compareCards = collectionService.getCardsWithUserData(compareUser, setCode, null);
+
+        List<CardWithUserData> userOwned = userCards.stream()
+                .filter(c -> c.getQuantity() > 0 || c.getFoilQuantity() > 0)
+                .collect(Collectors.toList());
+        List<CardWithUserData> compareOwned = compareCards.stream()
+                .filter(c -> c.getQuantity() > 0 || c.getFoilQuantity() > 0)
+                .collect(Collectors.toList());
+
+        List<CardWithUserData> onlyUser    = cardFilterService.getOnlyInLeft(userOwned, compareOwned);
+        List<CardWithUserData> onlyCompare = cardFilterService.getOnlyInLeft(compareOwned, userOwned);
+
+        if (onlyTradableUser)    onlyUser    = cardFilterService.filterTradable(onlyUser);
+        if (onlyTradableCompare) onlyCompare = cardFilterService.filterTradable(onlyCompare);
+
+        if (filterTokens) {
+            onlyUser    = filterOutTokens(onlyUser);
+            onlyCompare = filterOutTokens(onlyCompare);
+        }
+
+        onlyUser    = sortByTreatmentGroup(onlyUser);
+        onlyCompare = sortByTreatmentGroup(onlyCompare);
+
+        return new CompareDiff(
+                onlyUser,
+                onlyCompare,
+                computeCompareDividers(onlyUser),
+                computeCompareDividers(onlyCompare)
+        );
     }
 
     /** Filtert Karten heraus, deren typeLine "token" enthaelt (case-insensitive). */

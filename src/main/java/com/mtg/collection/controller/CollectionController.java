@@ -123,6 +123,11 @@ public class CollectionController {
 
         List<ScryfallSet> sets = scryfallService.getAllSets(false);
         model.addAttribute("sets", sets);
+        // Map for fast icon/name lookup in template (Multi-Set-Accordion)
+        Map<String, ScryfallSet> setsByCode = sets.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        ScryfallSet::getSetCode, s -> s, (a, b) -> a, LinkedHashMap::new));
+        model.addAttribute("setsByCode", setsByCode);
 
         // Normalize set parameters: prefer `sets` (multi), fallback to `set` (single, legacy)
         List<String> normalizedSets = normalizeSets(setsParam, set);
@@ -221,11 +226,16 @@ public class CollectionController {
      * Halter für einen Diff-Result (onlyUser, onlyCompare + zugehörige Divider-Maps).
      * Wird sowohl für reguläre Sets als auch für Token/Promo-Sub-Sets verwendet.
      */
-    private static class CompareDiff {
-        final List<CardWithUserData> onlyUser;
-        final List<CardWithUserData> onlyCompare;
-        final Map<Integer, TreatmentGroupStat> userDividers;
-        final Map<Integer, TreatmentGroupStat> compareDividers;
+    /**
+     * Halter für einen Diff-Result (onlyUser, onlyCompare + zugehörige Divider-Maps).
+     * Wird sowohl für reguläre Sets als auch für Token/Promo-Sub-Sets verwendet.
+     * Public so Thymeleaf can access via property accessors (getOnlyUser(), getOnlyCompare(), ...).
+     */
+    public static class CompareDiff {
+        private final List<CardWithUserData> onlyUser;
+        private final List<CardWithUserData> onlyCompare;
+        private final Map<Integer, TreatmentGroupStat> userDividers;
+        private final Map<Integer, TreatmentGroupStat> compareDividers;
 
         CompareDiff(List<CardWithUserData> onlyUser, List<CardWithUserData> onlyCompare,
                     Map<Integer, TreatmentGroupStat> userDividers,
@@ -235,6 +245,11 @@ public class CollectionController {
             this.userDividers = userDividers;
             this.compareDividers = compareDividers;
         }
+
+        public List<CardWithUserData> getOnlyUser()    { return onlyUser; }
+        public List<CardWithUserData> getOnlyCompare() { return onlyCompare; }
+        public Map<Integer, TreatmentGroupStat> getUserDividers()    { return userDividers; }
+        public Map<Integer, TreatmentGroupStat> getCompareDividers() { return compareDividers; }
     }
 
     /**

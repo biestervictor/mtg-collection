@@ -6,6 +6,8 @@
     <title>Compare Collection - MTG</title>
     <link th:href="@{/webjars/bootstrap/5.3.2/css/bootstrap.min.css}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <style>
         :root { --primary-color: #1a1a2e; --secondary-color: #16213e; --accent-color: #e94560; --text-light: #f1f1f1; --border-color: #2a2a4a; }
         body { background-color: #0f0f23; color: var(--text-light); min-height: 100vh; }
@@ -18,46 +20,6 @@
         .form-control, .form-select { background-color: var(--secondary-color); border: 1px solid var(--border-color); color: var(--text-light); }
         .form-control-sm { background-color: var(--secondary-color); border: 1px solid var(--border-color); color: var(--text-light); }
         footer { background-color: var(--primary-color); color: #888; }
-
-        /* ── Set Search ─────────────────────────────────────── */
-        .set-search-wrapper { position: relative; }
-        .set-input-row {
-            display: flex; align-items: center;
-            background-color: var(--secondary-color);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 0 10px;
-            min-height: 34px;
-            cursor: text;
-            transition: border-color 0.15s;
-        }
-        .set-input-row:focus-within { border-color: var(--accent-color); }
-        .set-icon-current { width: 16px; height: 16px; filter: invert(0.7); margin-right: 8px; flex-shrink: 0; }
-        .set-text-input {
-            flex: 1; border: none; background: transparent;
-            color: var(--text-light); outline: none; font-size: 0.85rem;
-            min-width: 0;
-        }
-        .set-text-input::placeholder { color: #777; }
-        .set-drop-arrow { color: #888; font-size: 0.75rem; margin-left: 6px; flex-shrink: 0; }
-        .set-options-dropdown {
-            display: none;
-            position: absolute; top: calc(100% + 2px); left: 0; right: 0;
-            z-index: 2000;
-            max-height: 320px; overflow-y: auto;
-            background-color: #1e2a45;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-        }
-        .set-option-item {
-            display: flex; align-items: center; gap: 8px;
-            padding: 7px 12px; cursor: pointer; color: var(--text-light);
-            font-size: 0.82rem;
-        }
-        .set-option-item:hover { background-color: var(--accent-color); color: #fff; }
-        .set-option-item.active { background-color: rgba(233,69,96,0.25); }
-        .set-opt-icon { width: 16px; height: 16px; filter: invert(0.7); flex-shrink: 0; }
 
         /* Card grid — normal mode */
         .card-list         { display: flex; flex-wrap: wrap; gap: .75rem; }
@@ -119,6 +81,97 @@
         .text-table tr:hover td { background: rgba(255,255,255,.04); }
         .col-header { background: var(--primary-color); border-bottom: 2px solid var(--accent-color) !important; padding: 8px 12px !important; }
         .price-col { color: #f4c430; white-space: nowrap; }
+
+        /* ── Tom Select dark theme overrides ───────────────────── */
+        .ts-wrapper { font-size: 0.85rem; }
+        .ts-wrapper .ts-control,
+        .ts-wrapper.single .ts-control,
+        .ts-wrapper.multi .ts-control {
+            background: var(--secondary-color) !important;
+            border: 1px solid var(--border-color) !important;
+            color: var(--text-light) !important;
+        }
+        .ts-wrapper.focus .ts-control { border-color: var(--accent-color) !important; box-shadow: none !important; }
+        .ts-wrapper .ts-control input { color: var(--text-light) !important; }
+        .ts-wrapper.multi .ts-control > div {
+            background: var(--accent-color) !important;
+            color: #fff !important;
+            border: none !important;
+            padding: 2px 6px !important;
+            margin: 2px !important;
+        }
+        .ts-wrapper.multi .ts-control > div.active { background: #c5364b !important; }
+        .ts-dropdown {
+            background: #1e2a45 !important;
+            border: 1px solid var(--border-color) !important;
+            color: var(--text-light) !important;
+            margin-top: 2px !important;
+        }
+        .ts-dropdown .option { padding: 7px 12px !important; color: var(--text-light) !important; }
+        .ts-dropdown .option.active,
+        .ts-dropdown .option:hover { background: var(--accent-color) !important; color: #fff !important; }
+        .ts-dropdown .option.selected { background: rgba(233,69,96,0.25) !important; }
+        .ts-set-icon { width: 16px; height: 16px; filter: invert(0.7); margin-right: 6px; vertical-align: middle; }
+
+        /* ── Set Accordion ─────────────────────────────────────── */
+        .set-accordion .accordion-item {
+            background: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            margin-bottom: 12px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .set-accordion .accordion-button {
+            background: var(--primary-color);
+            color: var(--text-light);
+            font-weight: 600;
+            padding: 12px 16px;
+        }
+        .set-accordion .accordion-button:not(.collapsed) {
+            background: linear-gradient(90deg, var(--primary-color), #1d1d3d);
+            color: var(--accent-color);
+            box-shadow: inset 0 -2px 0 var(--accent-color);
+        }
+        .set-accordion .accordion-button:focus { box-shadow: none; border-color: var(--border-color); }
+        .set-accordion .accordion-button::after { filter: invert(1); }
+        .set-accordion .accordion-body { background: #14142a; padding: 16px; }
+        .set-accordion .accordion-header-icon { width: 22px; height: 22px; filter: invert(0.85); margin-right: 10px; }
+        .set-accordion .badge-set-count { background: rgba(255,255,255,.1); color: var(--text-light); font-weight: 500; font-size: .72rem; margin-left: 8px; }
+        .set-accordion .badge-set-user { background: var(--accent-color); }
+
+        /* Token/Promo sub-card inside accordion body */
+        .subset-card { background: rgba(255,255,255,.03); border: 1px dashed rgba(255,255,255,.1); margin-top: 14px; border-radius: 6px; padding: 12px; }
+        .subset-card-header { font-size: .85rem; color: rgba(255,255,255,.7); margin-bottom: 10px; }
+        .subset-card-header .icon-token { color: #f4c430; }
+        .subset-card-header .icon-promo { color: #6dd5fa; }
+
+        /* ── Trade Wizard ──────────────────────────────────────── */
+        .wizard-card { background: linear-gradient(135deg, #16213e, #1a1a2e); border: 1px solid var(--accent-color); border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+        .wizard-card h5 { color: var(--accent-color); }
+        .wizard-controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; }
+        .wizard-controls > div { flex: 0 0 auto; }
+        .wizard-controls .form-range { width: 180px; }
+        .wizard-result { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+        .wizard-cols { display: grid; grid-template-columns: 1fr auto 1fr; gap: 18px; align-items: stretch; }
+        .wizard-side { background: rgba(0,0,0,.25); border-radius: 6px; padding: 12px; min-height: 100px; }
+        .wizard-side h6 { color: var(--text-light); border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 10px; font-size: .9rem; }
+        .wizard-side ul { list-style: none; padding: 0; margin: 0; font-size: .82rem; }
+        .wizard-side ul li { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+        .wizard-side ul li .card-name { color: var(--text-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+        .wizard-side ul li .card-price { color: #f4c430; white-space: nowrap; margin-left: 8px; }
+        .wizard-side ul li .foil-mark { color: #ffd700; margin-left: 4px; }
+        .wizard-side .sum { font-weight: 600; color: var(--accent-color); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; }
+        .wizard-arrow { display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: var(--accent-color); }
+        .wizard-badge { padding: 6px 14px; border-radius: 16px; font-size: .82rem; font-weight: 600; }
+        .wizard-badge.fair       { background: #1f5e2d; color: #b9f5c5; }
+        .wizard-badge.acceptable { background: #6b5b1c; color: #fff4c8; }
+        .wizard-badge.unfair     { background: #6b1c1c; color: #ffc8c8; }
+        .wizard-skipped { margin-top: 14px; }
+        .wizard-skipped summary { cursor: pointer; color: rgba(255,255,255,.6); font-size: .82rem; }
+        .wizard-skipped ul { list-style: none; padding: 8px 0 0; font-size: .78rem; color: rgba(255,255,255,.65); }
+        .wizard-skipped li { padding: 2px 0; }
+        .wizard-skipped .reason { color: #888; margin-left: 6px; font-style: italic; }
+        .wizard-error { color: #ff8a8a; font-size: .85rem; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -155,30 +208,21 @@
                     </select>
                   </div>
 
-                  <!-- Set -->
-                  <div class="col-md-4">
-                    <label class="form-label small mb-1">Set</label>
-                    <div class="set-search-wrapper" id="setSearchWrapper">
-                        <div class="set-input-row">
-                            <img id="setCurrentIcon" class="set-icon-current" src="" style="display:none" alt="">
-                            <input type="text" id="setSearchInput" class="set-text-input"
-                                   placeholder="-- Set suchen und auswählen --"
-                                   autocomplete="off">
-                            <i class="bi bi-chevron-down set-drop-arrow"></i>
-                        </div>
-                        <input type="hidden" name="set" id="setHiddenInput" th:value="${selectedSet}">
-                        <div class="set-options-dropdown" id="setOptionsDropdown">
-                            <div th:each="s : ${sets}"
-                                 class="set-option-item"
-                                 th:data-value="${s.setCode}"
-                                 th:data-label="${s.setCode + ' - ' + s.name}"
-                                 th:data-icon="${s.icon}"
-                                 onclick="selectSetOption(this)">
-                                <img th:src="${s.icon}" class="set-opt-icon" alt="" onerror="this.style.display='none'">
-                                <span th:text="${s.setCode + ' - ' + s.name}"></span>
-                            </div>
-                        </div>
-                    </div>
+                  <!-- Sets (multi-select) -->
+                  <div class="col-md-5">
+                    <label class="form-label small mb-1">
+                      Sets <span class="text-muted small">(mehrere wählbar)</span>
+                    </label>
+                    <select id="setMultiSelect" name="sets" multiple
+                            placeholder="Sets suchen und auswählen …">
+                      <option th:each="s : ${sets}"
+                              th:value="${s.setCode}"
+                              th:data-icon="${s.icon}"
+                              th:selected="${selectedSets != null and #lists.contains(selectedSets, s.setCode)}"
+                              th:text="${s.setCode + ' — ' + s.name}">
+                        XXX
+                      </option>
+                    </select>
                   </div>
 
                   <!-- Submit -->
@@ -271,377 +315,173 @@
           </div>
         </div>
 
-        <!-- ── Results ────────────────────────────────────────────────────── -->
-        <div th:if="${onlyUser != null}" class="row gx-3">
-
-          <!-- Left column: Your User -->
-          <div class="col-md-6 mb-4">
-            <div class="card h-100">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                  <i class="bi bi-person-fill me-1"></i>
-                  <span th:text="${user}">Your User</span>
-                  <span class="text-muted small ms-1">— only here</span>
-                </h5>
-                <span class="badge bg-secondary" th:text="${#lists.size(onlyUser)} + ' cards'">0 cards</span>
-              </div>
-              <div class="card-body">
-
-                <!-- Normal / Small image grid -->
-                <th:block th:if="${viewMode != 'text'}">
-                  <div th:if="${not #lists.isEmpty(onlyUser)}"
-                       th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
-                    <th:block th:each="c, iter : ${onlyUser}">
-                      <!-- Treatment-group divider -->
-                      <div th:if="${userDividers != null and userDividers.containsKey(iter.index)}"
-                           th:with="grp=${userDividers.get(iter.index)}"
-                           class="treatment-divider">
-                          <span class="divider-line"></span>
-                          <span class="divider-label">
-                              <span th:text="${grp.label}">Normal</span>
-                              <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
-                          </span>
-                          <span class="divider-line"></span>
-                      </div>
-                      <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
-                        <div style="position:relative;">
-                          <span class="badge badge-qty position-absolute top-0 start-0 m-1"
-                                th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
-                          <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                                th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
-                          <img th:src="${c.card.thumbnailFront}" alt="Card"
-                               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
-                        </div>
-                        <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
-                        <div class="price" th:if="${viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
-                          <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
-                          <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
-                        </div>
-                      </div>
-                    </th:block>
-                  </div>
-                  <p th:if="${#lists.isEmpty(onlyUser)}" class="text-center text-muted mb-0">No unique cards</p>
-                </th:block>
-
-                <!-- Text table -->
-                <th:block th:if="${viewMode == 'text'}">
-                  <div th:if="${not #lists.isEmpty(onlyUser)}" class="table-responsive">
-                    <table class="text-table">
-                      <thead>
-                        <tr>
-                          <th>Card Name</th>
-                          <th>Set#</th>
-                          <th>Qty</th>
-                          <th>Price</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <th:block th:each="c, iter : ${onlyUser}">
-                          <tr th:if="${userDividers != null and userDividers.containsKey(iter.index)}"
-                              th:with="grp=${userDividers.get(iter.index)}"
-                              class="divider-row">
-                            <td colspan="4">
-                              <span th:text="${grp.label}">Normal</span>
-                              <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td th:text="${c.card.name}">Name</td>
-                            <td style="color:#888;" th:text="${c.card.setCode?.toUpperCase()} + ' #' + ${c.card.collectorNumber}">SET #1</td>
-                            <td>
-                              <span th:if="${c.quantity > 0}"    th:text="${c.quantity} + '×'">1×</span>
-                              <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="${c.foilQuantity} + '✨'">1✨</span>
-                            </td>
-                            <td class="price-col">
-                              <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
-                              <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
-                            </td>
-                          </tr>
-                        </th:block>
-                      </tbody>
-                    </table>
-                  </div>
-                  <p th:if="${#lists.isEmpty(onlyUser)}" class="text-center text-muted mb-0">No unique cards</p>
-                </th:block>
-              </div>
-            </div>
-          </div>
-
-          <!-- Right column: Compare User -->
-          <div class="col-md-6 mb-4">
-            <div class="card h-100">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                  <i class="bi bi-person me-1"></i>
-                  <span th:text="${compareUser}">Compare User</span>
-                  <span class="text-muted small ms-1">— only here</span>
-                </h5>
-                <span class="badge bg-secondary" th:text="${#lists.size(onlyCompare)} + ' cards'">0 cards</span>
-              </div>
-              <div class="card-body">
-
-                <!-- Normal / Small image grid -->
-                <th:block th:if="${viewMode != 'text'}">
-                  <div th:if="${not #lists.isEmpty(onlyCompare)}"
-                       th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
-                    <th:block th:each="c, iter : ${onlyCompare}">
-                      <!-- Treatment-group divider -->
-                      <div th:if="${compareDividers != null and compareDividers.containsKey(iter.index)}"
-                           th:with="grp=${compareDividers.get(iter.index)}"
-                           class="treatment-divider">
-                          <span class="divider-line"></span>
-                          <span class="divider-label">
-                              <span th:text="${grp.label}">Normal</span>
-                              <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
-                          </span>
-                          <span class="divider-line"></span>
-                      </div>
-                      <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
-                        <div style="position:relative;">
-                          <span class="badge badge-qty position-absolute top-0 start-0 m-1"
-                                th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
-                          <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                                th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
-                          <img th:src="${c.card.thumbnailFront}" alt="Card"
-                               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
-                        </div>
-                        <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
-                        <div class="price" th:if="${viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
-                          <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
-                          <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
-                        </div>
-                      </div>
-                    </th:block>
-                  </div>
-                  <p th:if="${#lists.isEmpty(onlyCompare)}" class="text-center text-muted mb-0">No unique cards</p>
-                </th:block>
-
-                <!-- Text table -->
-                <th:block th:if="${viewMode == 'text'}">
-                  <div th:if="${not #lists.isEmpty(onlyCompare)}" class="table-responsive">
-                    <table class="text-table">
-                      <thead>
-                        <tr>
-                          <th>Card Name</th>
-                          <th>Set#</th>
-                          <th>Qty</th>
-                          <th>Price</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <th:block th:each="c, iter : ${onlyCompare}">
-                          <tr th:if="${compareDividers != null and compareDividers.containsKey(iter.index)}"
-                              th:with="grp=${compareDividers.get(iter.index)}"
-                              class="divider-row">
-                            <td colspan="4">
-                              <span th:text="${grp.label}">Normal</span>
-                              <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td th:text="${c.card.name}">Name</td>
-                            <td style="color:#888;" th:text="${c.card.setCode?.toUpperCase()} + ' #' + ${c.card.collectorNumber}">SET #1</td>
-                            <td>
-                              <span th:if="${c.quantity > 0}"    th:text="${c.quantity} + '×'">1×</span>
-                              <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="${c.foilQuantity} + '✨'">1✨</span>
-                            </td>
-                            <td class="price-col">
-                              <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
-                              <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
-                            </td>
-                          </tr>
-                        </th:block>
-                      </tbody>
-                    </table>
-                  </div>
-                  <p th:if="${#lists.isEmpty(onlyCompare)}" class="text-center text-muted mb-0">No unique cards</p>
-                </th:block>
-              </div>
-            </div>
-          </div>
-
-        </div><!-- /results row -->
-
-        <!-- ── Token Section (visible when "Show Tokens" is checked) ─────── -->
-        <div th:if="${showTokens == 'true' and tokenOnlyUser != null}" class="mt-4">
-          <div class="d-flex align-items-center mb-2">
-            <hr class="flex-grow-1 border-secondary">
-            <h5 class="mx-3 mb-0 text-warning"><i class="bi bi-stars"></i> Token-Karten Diff</h5>
-            <hr class="flex-grow-1 border-secondary">
-          </div>
-
-          <div class="row gx-3">
-            <!-- Token: only in user -->
-            <div class="col-md-6">
-              <div class="card bg-dark border-secondary mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <span><i class="bi bi-person-fill"></i> Tokens nur bei <strong th:text="${user}">User</strong></span>
-                  <span class="badge bg-secondary" th:text="${#lists.size(tokenOnlyUser)} + ' cards'">0 cards</span>
+        <!-- ── Trade Wizard ─────────────────────────────────────────────────── -->
+        <div th:if="${setResults != null and not #maps.isEmpty(setResults)}" class="container">
+          <div class="wizard-card">
+            <h5 class="mb-3"><i class="bi bi-magic"></i> Trade Wizard</h5>
+            <div class="wizard-controls">
+              <div>
+                <label class="form-label small mb-1 text-muted">Modus</label>
+                <div class="btn-group btn-group-sm" role="group" id="wizardModeGroup">
+                  <input type="radio" class="btn-check" name="wizardMode" id="wmGreedy" value="greedy" checked>
+                  <label class="btn btn-outline-light" for="wmGreedy">
+                    <i class="bi bi-arrow-left-right"></i> 1-zu-1
+                  </label>
+                  <input type="radio" class="btn-check" name="wizardMode" id="wmBundle" value="bundle">
+                  <label class="btn btn-outline-light" for="wmBundle">
+                    <i class="bi bi-boxes"></i> Bundle (n:m)
+                  </label>
                 </div>
-                <div class="card-body">
-                  <div th:if="${not #lists.isEmpty(tokenOnlyUser)}"
-                       th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
-                    <th:block th:each="c, iter : ${tokenOnlyUser}">
-                      <div th:if="${tokenUserDividers != null and tokenUserDividers.containsKey(iter.index)}"
-                           th:with="grp=${tokenUserDividers.get(iter.index)}"
-                           class="treatment-divider">
-                        <span class="divider-line"></span>
-                        <span class="divider-label">
-                          <span th:text="${grp.label}">Normal</span>
-                          <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
-                        </span>
-                        <span class="divider-line"></span>
-                      </div>
-                      <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
-                        <div style="position:relative;">
-                          <span class="badge badge-qty position-absolute top-0 start-0 m-1"
-                                th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
-                          <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                                th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
-                          <img th:src="${c.card.thumbnailFront}" alt="Token"
-                               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
-                        </div>
-                        <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
-                      </div>
-                    </th:block>
-                  </div>
-                  <p th:if="${#lists.isEmpty(tokenOnlyUser)}" class="text-center text-muted mb-0">Keine einzigartigen Tokens</p>
-                </div>
+              </div>
+
+              <div>
+                <label for="wizardTolerance" class="form-label small mb-1 text-muted">
+                  Toleranz <span id="toleranceLabel">15</span>%
+                </label>
+                <input type="range" class="form-range" id="wizardTolerance" min="1" max="50" value="15">
+              </div>
+
+              <div>
+                <label for="wizardMinValue" class="form-label small mb-1 text-muted">Mindestwert pro Karte (€)</label>
+                <input type="number" class="form-control form-control-sm" id="wizardMinValue"
+                       value="0.50" min="0" max="1000" step="0.10" style="width: 110px;">
+              </div>
+
+              <div>
+                <button type="button" class="btn btn-primary btn-sm" id="wizardRunBtn">
+                  <i class="bi bi-calculator"></i> Trade berechnen
+                </button>
               </div>
             </div>
 
-            <!-- Token: only in compare -->
-            <div class="col-md-6">
-              <div class="card bg-dark border-secondary mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <span><i class="bi bi-people-fill"></i> Tokens nur bei <strong th:text="${compareUser}">Compare</strong></span>
-                  <span class="badge bg-secondary" th:text="${#lists.size(tokenOnlyCompare)} + ' cards'">0 cards</span>
-                </div>
-                <div class="card-body">
-                  <div th:if="${not #lists.isEmpty(tokenOnlyCompare)}"
-                       th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
-                    <th:block th:each="c, iter : ${tokenOnlyCompare}">
-                      <div th:if="${tokenCompareDividers != null and tokenCompareDividers.containsKey(iter.index)}"
-                           th:with="grp=${tokenCompareDividers.get(iter.index)}"
-                           class="treatment-divider">
-                        <span class="divider-line"></span>
-                        <span class="divider-label">
-                          <span th:text="${grp.label}">Normal</span>
-                          <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
-                        </span>
-                        <span class="divider-line"></span>
-                      </div>
-                      <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
-                        <div style="position:relative;">
-                          <span class="badge badge-qty position-absolute top-0 start-0 m-1"
-                                th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
-                          <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                                th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
-                          <img th:src="${c.card.thumbnailFront}" alt="Token"
-                               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
-                        </div>
-                        <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
-                      </div>
-                    </th:block>
-                  </div>
-                  <p th:if="${#lists.isEmpty(tokenOnlyCompare)}" class="text-center text-muted mb-0">Keine einzigartigen Tokens</p>
-                </div>
-              </div>
-            </div>
+            <div id="wizardResult" class="wizard-result" style="display:none;"></div>
+            <div id="wizardError" class="wizard-error" style="display:none;"></div>
           </div>
         </div>
 
-        <!-- ── Promo Section (visible when "Show Promos" is checked) ─────── -->
-        <div th:if="${showPromos == 'true' and promoOnlyUser != null}" class="mt-4">
-          <div class="d-flex align-items-center mb-2">
-            <hr class="flex-grow-1 border-secondary">
-            <h5 class="mx-3 mb-0 text-info"><i class="bi bi-gem"></i> Promo-Karten Diff</h5>
-            <hr class="flex-grow-1 border-secondary">
-          </div>
+        <!-- ── Results: Accordion per Set ────────────────────────────────────── -->
+        <div th:if="${setResults != null and not #maps.isEmpty(setResults)}" class="container">
+          <div class="accordion set-accordion" id="setAccordion">
+            <div th:each="entry, iter : ${setResults}"
+                 th:with="setCode=${entry.key},
+                          diff=${entry.value},
+                          tokenDiff=${tokenResults != null ? tokenResults.get(setCode) : null},
+                          promoDiff=${promoResults != null ? promoResults.get(setCode) : null},
+                          setObj=${setsByCode != null ? setsByCode.get(setCode) : null},
+                          expanded=${#maps.size(setResults) == 1}"
+                 class="accordion-item">
 
-          <div class="row gx-3">
-            <!-- Promo: only in user -->
-            <div class="col-md-6">
-              <div class="card bg-dark border-secondary mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <span><i class="bi bi-person-fill"></i> Promos nur bei <strong th:text="${user}">User</strong></span>
-                  <span class="badge bg-secondary" th:text="${#lists.size(promoOnlyUser)} + ' cards'">0 cards</span>
-                </div>
-                <div class="card-body">
-                  <div th:if="${not #lists.isEmpty(promoOnlyUser)}"
-                       th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
-                    <th:block th:each="c, iter : ${promoOnlyUser}">
-                      <div th:if="${promoUserDividers != null and promoUserDividers.containsKey(iter.index)}"
-                           th:with="grp=${promoUserDividers.get(iter.index)}"
-                           class="treatment-divider">
-                        <span class="divider-line"></span>
-                        <span class="divider-label">
-                          <span th:text="${grp.label}">Normal</span>
-                          <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
-                        </span>
-                        <span class="divider-line"></span>
-                      </div>
-                      <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
-                        <div style="position:relative;">
-                          <span class="badge badge-qty position-absolute top-0 start-0 m-1"
-                                th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
-                          <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                                th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
-                          <img th:src="${c.card.thumbnailFront}" alt="Promo"
-                               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
-                        </div>
-                        <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
-                        <div class="price" th:if="${viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
-                          <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
-                          <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
-                        </div>
-                      </div>
-                    </th:block>
-                  </div>
-                  <p th:if="${#lists.isEmpty(promoOnlyUser)}" class="text-center text-muted mb-0">Keine einzigartigen Promos</p>
-                </div>
-              </div>
-            </div>
+              <h2 class="accordion-header" th:id="'h-' + ${setCode}">
+                <button type="button" class="accordion-button"
+                        th:classappend="${expanded} ? '' : 'collapsed'"
+                        data-bs-toggle="collapse"
+                        th:attr="data-bs-target='#body-' + ${setCode},
+                                 aria-controls='body-' + ${setCode}"
+                        th:aria-expanded="${expanded}">
+                  <img th:if="${setObj != null and setObj.icon != null}"
+                       th:src="${setObj.icon}"
+                       class="accordion-header-icon" alt=""
+                       onerror="this.style.display='none'">
+                  <span class="me-2" th:text="${setCode?.toUpperCase()}">SET</span>
+                  <span class="text-muted small me-2" th:if="${setObj != null}" th:text="${setObj.name}">Name</span>
+                  <span class="badge badge-set-count badge-set-user ms-auto me-1"
+                        th:text="${#lists.size(diff.onlyUser)} + ' nur ' + ${user}">x</span>
+                  <span class="badge badge-set-count me-2"
+                        th:text="${#lists.size(diff.onlyCompare)} + ' nur ' + ${compareUser}">x</span>
+                </button>
+              </h2>
 
-            <!-- Promo: only in compare -->
-            <div class="col-md-6">
-              <div class="card bg-dark border-secondary mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                  <span><i class="bi bi-people-fill"></i> Promos nur bei <strong th:text="${compareUser}">Compare</strong></span>
-                  <span class="badge bg-secondary" th:text="${#lists.size(promoOnlyCompare)} + ' cards'">0 cards</span>
-                </div>
-                <div class="card-body">
-                  <div th:if="${not #lists.isEmpty(promoOnlyCompare)}"
-                       th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
-                    <th:block th:each="c, iter : ${promoOnlyCompare}">
-                      <div th:if="${promoCompareDividers != null and promoCompareDividers.containsKey(iter.index)}"
-                           th:with="grp=${promoCompareDividers.get(iter.index)}"
-                           class="treatment-divider">
-                        <span class="divider-line"></span>
-                        <span class="divider-label">
-                          <span th:text="${grp.label}">Normal</span>
-                          <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
-                        </span>
-                        <span class="divider-line"></span>
-                      </div>
-                      <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
-                        <div style="position:relative;">
-                          <span class="badge badge-qty position-absolute top-0 start-0 m-1"
-                                th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
-                          <span class="badge badge-foil position-absolute top-0 end-0 m-1"
-                                th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
-                          <img th:src="${c.card.thumbnailFront}" alt="Promo"
-                               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
-                        </div>
-                        <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
-                        <div class="price" th:if="${viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
-                          <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
-                          <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
-                        </div>
-                      </div>
-                    </th:block>
+              <div th:id="'body-' + ${setCode}"
+                   class="accordion-collapse collapse"
+                   th:classappend="${expanded} ? 'show' : ''"
+                   th:attr="aria-labelledby='h-' + ${setCode}"
+                   data-bs-parent="#setAccordion">
+                <div class="accordion-body">
+
+                  <!-- Main diff: two columns -->
+                  <div class="row gx-3">
+                    <div class="col-md-6 mb-3">
+                      <div th:replace="~{fragments/compare-diff :: diff-column(
+                          title=${user + ' — only here'},
+                          iconClass='bi bi-person-fill',
+                          cards=${diff.onlyUser},
+                          dividers=${diff.userDividers},
+                          viewMode=${viewMode},
+                          showPrice=true,
+                          emptyMessage='No unique cards')}"></div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <div th:replace="~{fragments/compare-diff :: diff-column(
+                          title=${compareUser + ' — only here'},
+                          iconClass='bi bi-person',
+                          cards=${diff.onlyCompare},
+                          dividers=${diff.compareDividers},
+                          viewMode=${viewMode},
+                          showPrice=true,
+                          emptyMessage='No unique cards')}"></div>
+                    </div>
                   </div>
-                  <p th:if="${#lists.isEmpty(promoOnlyCompare)}" class="text-center text-muted mb-0">Keine einzigartigen Promos</p>
+
+                  <!-- Token sub-section -->
+                  <div th:if="${tokenDiff != null}" class="subset-card">
+                    <div class="subset-card-header">
+                      <i class="bi bi-stars icon-token"></i>
+                      Token-Karten zu <strong th:text="${setCode?.toUpperCase()}">SET</strong>
+                    </div>
+                    <div class="row gx-2">
+                      <div class="col-md-6 mb-2">
+                        <div th:replace="~{fragments/compare-diff :: diff-column(
+                            title=${'Tokens nur bei ' + user},
+                            iconClass='bi bi-person-fill text-warning',
+                            cards=${tokenDiff.onlyUser},
+                            dividers=${tokenDiff.userDividers},
+                            viewMode=${viewMode},
+                            showPrice=false,
+                            emptyMessage='Keine einzigartigen Tokens')}"></div>
+                      </div>
+                      <div class="col-md-6 mb-2">
+                        <div th:replace="~{fragments/compare-diff :: diff-column(
+                            title=${'Tokens nur bei ' + compareUser},
+                            iconClass='bi bi-people-fill text-warning',
+                            cards=${tokenDiff.onlyCompare},
+                            dividers=${tokenDiff.compareDividers},
+                            viewMode=${viewMode},
+                            showPrice=false,
+                            emptyMessage='Keine einzigartigen Tokens')}"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Promo sub-section -->
+                  <div th:if="${promoDiff != null}" class="subset-card">
+                    <div class="subset-card-header">
+                      <i class="bi bi-gem icon-promo"></i>
+                      Promo-Karten zu <strong th:text="${setCode?.toUpperCase()}">SET</strong>
+                    </div>
+                    <div class="row gx-2">
+                      <div class="col-md-6 mb-2">
+                        <div th:replace="~{fragments/compare-diff :: diff-column(
+                            title=${'Promos nur bei ' + user},
+                            iconClass='bi bi-person-fill text-info',
+                            cards=${promoDiff.onlyUser},
+                            dividers=${promoDiff.userDividers},
+                            viewMode=${viewMode},
+                            showPrice=true,
+                            emptyMessage='Keine einzigartigen Promos')}"></div>
+                      </div>
+                      <div class="col-md-6 mb-2">
+                        <div th:replace="~{fragments/compare-diff :: diff-column(
+                            title=${'Promos nur bei ' + compareUser},
+                            iconClass='bi bi-people-fill text-info',
+                            cards=${promoDiff.onlyCompare},
+                            dividers=${promoDiff.compareDividers},
+                            viewMode=${viewMode},
+                            showPrice=true,
+                            emptyMessage='Keine einzigartigen Promos')}"></div>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               </div>
             </div>
@@ -654,108 +494,79 @@
     <script th:src="@{/webjars/bootstrap/5.3.2/js/bootstrap.bundle.min.js}"></script>
     <script th:inline="javascript">
         // _serverAppUser is already declared by the price-update-utils fragment
-        const _selectedUser  = /*[[${user}]]*/ null;
-        const _initialSet    = /*[[${selectedSet}]]*/ null;
+        const _selectedUser   = /*[[${user}]]*/ null;
+        const _compareUserSrv = /*[[${compareUser}]]*/ null;
 
-        // ── Set Search ──────────────────────────────────────────────
-        var setData = [];
+        let setSelect = null; // Tom Select instance
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Collect set data from rendered DOM options
-            document.querySelectorAll('.set-option-item').forEach(function (el) {
-                setData.push({
-                    value: el.dataset.value,
-                    label: el.dataset.label,
-                    icon:  el.dataset.icon || '',
-                    el:    el
+            // ── Tom Select: multi-set picker with icons ────────────────
+            const selectEl = document.getElementById('setMultiSelect');
+            if (selectEl && typeof TomSelect !== 'undefined') {
+                // Build icon lookup BEFORE init (Tom Select rewrites the DOM)
+                const iconMap = {};
+                Array.from(selectEl.querySelectorAll('option')).forEach(function (opt) {
+                    if (opt.value) iconMap[opt.value] = opt.getAttribute('data-icon') || '';
                 });
-            });
 
-            // Restore selected set display
-            if (_initialSet) {
-                var found = setData.find(function (s) { return s.value === _initialSet; });
-                if (found) applySetSelection(found);
+                setSelect = new TomSelect('#setMultiSelect', {
+                    plugins: ['remove_button'],
+                    valueField: 'value',
+                    labelField: 'text',
+                    searchField: ['text', 'value'],
+                    maxOptions: null,
+                    placeholder: 'Sets suchen und auswählen …',
+                    render: {
+                        option: function (data, escape) {
+                            const icon = iconMap[data.value];
+                            const iconHtml = icon
+                                ? '<img class="ts-set-icon" src="' + escape(icon) + '" onerror="this.style.display=\'none\'">'
+                                : '';
+                            return '<div>' + iconHtml + escape(data.text) + '</div>';
+                        },
+                        item: function (data, escape) {
+                            const icon = iconMap[data.value];
+                            const iconHtml = icon
+                                ? '<img class="ts-set-icon" src="' + escape(icon) + '" onerror="this.style.display=\'none\'">'
+                                : '';
+                            return '<div>' + iconHtml + escape(data.value.toUpperCase()) + '</div>';
+                        }
+                    }
+                });
             }
 
-            // Set search input events
-            var input    = document.getElementById('setSearchInput');
-            var dropdown = document.getElementById('setOptionsDropdown');
-
-            input.addEventListener('focus', function () {
-                this.select();
-                filterSetOptions('');
-                dropdown.style.display = 'block';
-            });
-
-            input.addEventListener('input', function () {
-                filterSetOptions(this.value);
-                dropdown.style.display = 'block';
-            });
-
-            input.addEventListener('blur', function () {
-                setTimeout(function () {
-                    dropdown.style.display = 'none';
-                    // Restore displayed label
-                    var currentVal = document.getElementById('setHiddenInput').value;
-                    if (currentVal) {
-                        var s = setData.find(function (x) { return x.value === currentVal; });
-                        if (s) applySetSelection(s);
-                    } else {
-                        input.value = '';
-                        document.getElementById('setCurrentIcon').style.display = 'none';
-                    }
-                }, 200);
-            });
-
-            // ── Auto-fill user from server (Entra ID) ────────────────────
-            if (_serverAppUser && !_selectedUser) {
+            // ── Auto-fill user from server (Entra ID) ──────────────────
+            if (typeof _serverAppUser !== 'undefined' && _serverAppUser && !_selectedUser) {
                 const sel = document.getElementById('cmpUserSel');
                 if (sel && sel.querySelector('option[value="' + _serverAppUser + '"]')) {
                     sel.value = _serverAppUser;
                 }
             }
 
-            // ── Checkbox: unchecked must submit "false" explicitly ────────
-            document.getElementById('compareForm').addEventListener('submit', _fixCheckboxes);
+            // ── Checkbox: unchecked must submit "false" explicitly ─────
+            const form = document.getElementById('compareForm');
+            if (form) form.addEventListener('submit', _fixCheckboxes);
+
+            // ── Trade Wizard wiring ────────────────────────────────────
+            const wizardBtn = document.getElementById('wizardRunBtn');
+            if (wizardBtn) wizardBtn.addEventListener('click', runWizard);
+
+            const toleranceSlider = document.getElementById('wizardTolerance');
+            const toleranceLabel  = document.getElementById('toleranceLabel');
+            if (toleranceSlider && toleranceLabel) {
+                toleranceSlider.addEventListener('input', function () {
+                    toleranceLabel.textContent = this.value;
+                });
+            }
         });
 
-        function filterSetOptions(query) {
-            var q = query.toLowerCase();
-            setData.forEach(function (s) {
-                var visible = s.label.toLowerCase().includes(q) || s.value.toLowerCase().includes(q);
-                s.el.style.display = visible ? 'flex' : 'none';
-            });
-        }
-
-        function selectSetOption(el) {
-            var s = setData.find(function (x) { return x.value === el.dataset.value; });
-            if (!s) return;
-            applySetSelection(s);
-            document.getElementById('setOptionsDropdown').style.display = 'none';
-        }
-
-        function applySetSelection(s) {
-            document.getElementById('setHiddenInput').value = s.value;
-            document.getElementById('setSearchInput').value = s.label;
-            var iconEl = document.getElementById('setCurrentIcon');
-            if (s.icon) {
-                iconEl.src = s.icon;
-                iconEl.style.display = 'inline';
-            } else {
-                iconEl.style.display = 'none';
-            }
-            // Highlight active option
-            document.querySelectorAll('.set-option-item').forEach(function (el) {
-                el.classList.toggle('active', el.dataset.value === s.value);
-            });
-        }
-
-        // ── Checkbox fix for GET forms ───────────────────────────────
+        // ── Checkbox fix for GET forms ─────────────────────────────────
         function _fixCheckboxes() {
             const form = document.getElementById('compareForm');
-            ['onlyTradableUser', 'onlyTradableCompare', 'showTokens', 'showPromos'].forEach(function(name) {
+            if (!form) return;
+            ['onlyTradableUser', 'onlyTradableCompare', 'showTokens', 'showPromos'].forEach(function (name) {
                 form.querySelectorAll('input[type="hidden"][name="' + name + '"]')
-                    .forEach(function(el) { el.remove(); });
+                    .forEach(function (el) { el.remove(); });
                 const cb = document.querySelector('input[name="' + name + '"]');
                 if (cb && !cb.checked) {
                     const hidden = document.createElement('input');
@@ -769,12 +580,194 @@
 
         // Auto-submit when viewMode or tradable toggles change
         function submitCompareForm() {
-            const set         = document.getElementById('setHiddenInput').value;
             const user        = document.getElementById('cmpUserSel').value;
             const compareUser = document.getElementById('cmpCompareSel').value;
-            if (!set || !user || !compareUser) return;
+            const sets        = setSelect ? setSelect.getValue() : [];
+            if (!user || !compareUser || !sets.length) return;
             _fixCheckboxes();
             document.getElementById('compareForm').submit();
+        }
+
+        // ── Trade Wizard ───────────────────────────────────────────────
+        async function runWizard() {
+            const resultEl = document.getElementById('wizardResult');
+            const errorEl  = document.getElementById('wizardError');
+            const btn      = document.getElementById('wizardRunBtn');
+
+            errorEl.style.display = 'none';
+            errorEl.textContent = '';
+            resultEl.style.display = 'none';
+            resultEl.innerHTML = '';
+
+            const userA = _selectedUser
+                || (document.getElementById('cmpUserSel') ? document.getElementById('cmpUserSel').value : null);
+            const userB = _compareUserSrv
+                || (document.getElementById('cmpCompareSel') ? document.getElementById('cmpCompareSel').value : null);
+            const sets  = setSelect ? setSelect.getValue() : [];
+            const modeEl = document.querySelector('input[name="wizardMode"]:checked');
+            const mode   = modeEl ? modeEl.value : 'greedy';
+            const tolerancePercent = parseInt(document.getElementById('wizardTolerance').value, 10);
+            const minCardValue     = parseFloat(document.getElementById('wizardMinValue').value);
+
+            if (!userA || !userB) { showWizardError('Bitte beide User auswählen.'); return; }
+            if (userA === userB)  { showWizardError('Bitte zwei verschiedene User auswählen.'); return; }
+            if (!sets.length)     { showWizardError('Bitte mindestens ein Set auswählen.'); return; }
+
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Berechne …';
+
+            try {
+                const resp = await fetch('/api/compare/trade-wizard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        userA: userA,
+                        userB: userB,
+                        sets: sets,
+                        mode: mode,
+                        tolerancePercent: tolerancePercent,
+                        minCardValue: isNaN(minCardValue) ? 0 : minCardValue
+                    })
+                });
+                if (!resp.ok) {
+                    let detail = 'HTTP ' + resp.status;
+                    try {
+                        const err = await resp.json();
+                        if (err && err.detail) detail = err.detail;
+                        else if (err && err.title) detail = err.title;
+                    } catch (e) { /* non-JSON error body */ }
+                    throw new Error(detail);
+                }
+                const data = await resp.json();
+                renderWizardResult(data, userA, userB);
+            } catch (e) {
+                showWizardError('Fehler: ' + (e.message || e));
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        function showWizardError(msg) {
+            const errorEl = document.getElementById('wizardError');
+            errorEl.textContent = msg;
+            errorEl.style.display = 'block';
+        }
+
+        function escapeHtml(s) {
+            if (s == null) return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function fairnessClass(score) {
+            if (score >= 0.95) return 'fair';
+            if (score >= 0.80) return 'acceptable';
+            return 'unfair';
+        }
+        function fairnessLabel(score) {
+            if (score >= 0.95) return 'Fair';
+            if (score >= 0.80) return 'Akzeptabel';
+            return 'Unfair';
+        }
+        function fmtEur(v) {
+            if (v == null || isNaN(v)) return '–';
+            return '€' + Number(v).toFixed(2);
+        }
+
+        function renderCardLine(card) {
+            const foilMark = card && card.foil ? ' <span class="foil-mark" title="Foil">✦</span>' : '';
+            const setLbl = card && card.setCode ? escapeHtml(card.setCode.toUpperCase()) + ' · ' : '';
+            const name   = escapeHtml(card ? card.name : '');
+            const price  = card ? fmtEur(card.price) : '–';
+            return '<li>'
+                + '<span class="card-name">' + setLbl + name + foilMark + '</span>'
+                + '<span class="card-price">' + price + '</span>'
+                + '</li>';
+        }
+
+        function renderSkipped(list, title) {
+            if (!list || !list.length) return '';
+            const items = list.map(function (s) {
+                const c = s.card || {};
+                const reason = s.reason ? ' <span class="reason">(' + escapeHtml(s.reason) + ')</span>' : '';
+                return '<li>' + escapeHtml(c.name || '?') + reason + '</li>';
+            }).join('');
+            return '<details class="wizard-skipped">'
+                + '<summary>' + escapeHtml(title) + ' (' + list.length + ')</summary>'
+                + '<ul>' + items + '</ul>'
+                + '</details>';
+        }
+
+        function renderWizardResult(data, userA, userB) {
+            const resultEl = document.getElementById('wizardResult');
+
+            let cardsA = [], cardsB = [];
+            if (data.mode === 'greedy') {
+                const pairs = data.pairs || [];
+                cardsA = pairs.map(function (p) { return p.fromA; }).filter(Boolean);
+                cardsB = pairs.map(function (p) { return p.fromB; }).filter(Boolean);
+            } else {
+                const b = data.bundle || {};
+                cardsA = b.aSide || [];
+                cardsB = b.bSide || [];
+            }
+
+            const sumA   = data.totalA != null ? data.totalA : 0;
+            const sumB   = data.totalB != null ? data.totalB : 0;
+            const score  = data.fairnessScore != null ? data.fairnessScore : 0;
+            const fClass = fairnessClass(score);
+            const fLabel = fairnessLabel(score);
+            const diff   = data.diff != null ? data.diff : Math.abs(sumA - sumB);
+
+            const linesA = cardsA.length
+                ? cardsA.map(renderCardLine).join('')
+                : '<li class="text-muted">– keine Karten –</li>';
+            const linesB = cardsB.length
+                ? cardsB.map(renderCardLine).join('')
+                : '<li class="text-muted">– keine Karten –</li>';
+
+            const notes = (data.notes && data.notes.length)
+                ? '<div class="text-muted small mt-2"><i class="bi bi-info-circle"></i> '
+                  + data.notes.map(escapeHtml).join(' · ') + '</div>'
+                : '';
+
+            const skipped = renderSkipped(data.skippedA, 'Übersprungen (' + userA + ')')
+                          + renderSkipped(data.skippedB, 'Übersprungen (' + userB + ')');
+
+            const modeHeader = data.mode === 'greedy'
+                ? '<i class="bi bi-arrow-left-right"></i> 1-zu-1 Trades (' + (data.pairs ? data.pairs.length : 0) + ')'
+                : '<i class="bi bi-boxes"></i> Bundle Vorschlag';
+
+            resultEl.innerHTML =
+                '<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">'
+              + '  <h6 class="mb-0">' + modeHeader + '</h6>'
+              + '  <span class="wizard-badge ' + fClass + '">'
+              + '    ' + fLabel + ' · Score ' + (score * 100).toFixed(0) + '% · Δ ' + fmtEur(diff)
+              + '  </span>'
+              + '</div>'
+              + '<div class="wizard-cols">'
+              + '  <div class="wizard-side">'
+              + '    <h6><i class="bi bi-arrow-up-circle"></i> ' + escapeHtml(userA) + ' gibt</h6>'
+              + '    <ul>' + linesA + '</ul>'
+              + '    <div class="sum"><span>Summe</span><span>' + fmtEur(sumA) + '</span></div>'
+              + '  </div>'
+              + '  <div class="wizard-arrow"><i class="bi bi-arrow-left-right"></i></div>'
+              + '  <div class="wizard-side">'
+              + '    <h6><i class="bi bi-arrow-down-circle"></i> ' + escapeHtml(userB) + ' gibt</h6>'
+              + '    <ul>' + linesB + '</ul>'
+              + '    <div class="sum"><span>Summe</span><span>' + fmtEur(sumB) + '</span></div>'
+              + '  </div>'
+              + '</div>'
+              + notes
+              + skipped;
+
+            resultEl.style.display = 'block';
         }
     </script>
 </body>

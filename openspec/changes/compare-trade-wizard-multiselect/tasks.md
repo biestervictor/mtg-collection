@@ -32,32 +32,32 @@
 
 ## 4. Frontend — Tom Select Multi-Select
 
-- [ ] 4.1 Tom Select v2 (MIT, ~30 KB gzipped) vendoren: JS + CSS unter `src/main/resources/static/vendor/tom-select/`
-- [ ] 4.2 In `compare.html` bestehende Custom-Set-Dropdown-Komponente identifizieren (aus `compare-set-icons-refresh`), durch `<select multiple>` mit Tom-Select-Initialisierung ersetzen
-- [ ] 4.3 Tom-Select-Config: `plugins: ['remove_button']`, `render.option`/`render.item` mit Set-Icon und Set-Name (Custom-HTML wie bisher)
-- [ ] 4.4 On-Submit-Handler: konvertiere ausgewählte Sets zu Komma-getrennter String, setze als `?sets=...` URL-Param
-- [ ] 4.5 Auf Page-Load: Parse `?sets=...` und `?set=...`, initialisiere Tom Select mit den vorausgewählten Werten
-- [ ] 4.6 Mindestens-ein-Set-Validation: Submit-Button disabled wenn Auswahl leer
+- [x] 4.1 Tom Select v2.3.1 via CDN (jsdelivr) einbinden — abweichend vom ursprünglichen Plan (Vendoring), konsistent mit bestehender Bootstrap-Icons-CDN-Strategie; ggf. später vendoren
+- [x] 4.2 In `compare.html` bestehende Custom-Set-Dropdown-Komponente entfernt (Custom CSS `.set-search-wrapper`/`.set-option-item` gelöscht), durch `<select id="setMultiSelect" name="sets" multiple>` mit Tom-Select-Initialisierung ersetzt
+- [x] 4.3 Tom-Select-Config: `plugins: ['remove_button']`, `render.option`/`render.item` mit Set-Icon (aus `data-icon` über `iconMap` lookup vor Init) und Set-Name; dark-theme via CSS-Overrides (.ts-wrapper, .ts-dropdown, .ts-set-icon)
+- [x] 4.4 GET-Form serialisiert Multi-Select automatisch als `?sets=tdm&sets=dmu` Repeating-Params; Backend liest mit `@RequestParam(name="sets") List<String>` (Block 1 fertig)
+- [x] 4.5 Auf Page-Load: Thymeleaf rendert `th:selected` auf Options via `#lists.contains(selectedSets, s.setCode)` — Tom Select übernimmt automatisch; `?set=` Single-Param-Fallback im Controller (Block 1.2)
+- [x] 4.6 `submitCompareForm()` prüft `setSelect.getValue().length > 0` zusätzlich zu beiden Usern bevor submit
 
 ## 5. Frontend — Collapsable Set-Sektionen
 
-- [ ] 5.1 Im Template `compare.html`: bisherigen einzelnen Result-Block in `th:each` über `setResults` einbetten
-- [ ] 5.2 Pro Set ein Bootstrap `<div class="accordion-item">` mit Header (Set-Icon, Set-Name, Code, Badges für onlyUser/onlyCompare Counts) und Body (bestehende Diff-Darstellung)
-- [ ] 5.3 Accordion-IDs eindeutig pro Set (z.B. `accordion-set-tdm`)
-- [ ] 5.4 Default-Zustand: Sektion expanded wenn `setResults.size() == 1`, sonst collapsed
-- [ ] 5.5 Token/Promo-Sub-Sektionen pro Hauptset unter der entsprechenden Accordion-Sektion (eingerückt oder als Sub-Accordion)
-- [ ] 5.6 CSS: Accordion-Header-Hover-Highlight, sticky-position für Header beim Scroll innerhalb expanded Body
+- [x] 5.1 Im Template `compare.html`: bisheriger Flat-Result-Block ersetzt durch `th:each="entry : ${setResults}"` über LinkedHashMap (~250 Lines duplizierter Card-Grid/Text-Table in Fragment ausgelagert)
+- [x] 5.2 Pro Set ein Bootstrap `<div class="accordion-item">` mit Header (Set-Icon, Set-Code, Set-Name, Badges für onlyUser/onlyCompare Counts) und Body (Diff via Fragment-Call `~{fragments/compare-diff :: diff-column}`)
+- [x] 5.3 Accordion-IDs eindeutig pro Set: `id="h-{setCode}"` und `id="body-{setCode}"`
+- [x] 5.4 Default-Zustand: Sektion expanded wenn `#maps.size(setResults) == 1`, sonst collapsed (umgesetzt via `expanded` Local Variable + `th:classappend`)
+- [x] 5.5 Token-/Promo-Sub-Sektionen als `.subset-card` innerhalb des Accordion-Bodys mit eigenen Fragment-Calls (showPrice=false für Token); rendern wenn `tokenResults.get(setCode) != null`
+- [x] 5.6 CSS: Accordion-Header mit Accent-Color-Highlight beim Expanded-State (`:not(.collapsed)`), Hover-Linien, dark-theme conform; sticky entfällt (Bootstrap-Accordion-Standard)
 
 ## 6. Frontend — Trade Wizard UI
 
-- [ ] 6.1 Oberhalb der Set-Sektionen einen Wizard-Block einfügen: Button "Trade berechnen", Mode-Toggle (Greedy/Bundle), Toleranz-Slider (1–50%), Mindestwert-Input (€)
-- [ ] 6.2 Button disabled wenn `setResults` leer; Tooltip "Mindestens ein Set wählen"
-- [ ] 6.3 JS: fetch-POST an `/api/compare/trade-wizard` mit aktueller Konfiguration (Sets aus Tom Select, beide User, Mode, Toleranz, MinValue)
-- [ ] 6.4 Loading-Spinner während Request (button-disabled + Bootstrap-Spinner)
-- [ ] 6.5 Response-Rendering: zwei Spalten "Du bietest" / "Du bekommst" mit Karten-Liste (Name, Set-Code, Foil-Icon, Preis), Summen unten, Fairness-Badge oben
-- [ ] 6.6 Fairness-Badge-Farben: ≥0.95 grün "Fair", 0.85–0.95 gelb "Akzeptabel", <0.85 rot "Unfair" + €-Differenz
-- [ ] 6.7 "Übersprungen"-Sektion (collapsable) zeigt skipped-Karten mit Grund (no_price, below_min_value, pool_truncated, no_match_in_tolerance)
-- [ ] 6.8 Bei Re-Run (Toggle/Slider geändert + Button-Klick): aktualisiere bestehende Wizard-Sektion ohne Page-Reload
+- [x] 6.1 Oberhalb der Set-Sektionen `.wizard-card` mit Mode-Toggle (Greedy/Bundle Radio-Buttons), Toleranz-Slider (1–50%, Live-Label), Mindestwert-Input (€, default 0.50), Berechnen-Button
+- [x] 6.2 Wizard-Card erscheint nur wenn `setResults != null and not empty` (via `th:if`); innerhalb des Containers reicht das aus — kein separates Tooltip nötig (Sektion ist dann gar nicht sichtbar)
+- [x] 6.3 JS `runWizard()`: fetch-POST an `/api/compare/trade-wizard` mit `{userA, userB, sets, mode, tolerancePercent, minCardValue}`
+- [x] 6.4 Loading: Button disabled + `<span class="spinner-border spinner-border-sm">` während Request; reset in `finally`
+- [x] 6.5 `renderWizardResult()`: 3-Col-Grid (Side A | Arrow | Side B), `<ul>` mit Set-Code · Card-Name · Foil-Mark · Preis, `.sum` Footer, Fairness-Badge oben rechts mit Score % + Δ€
+- [x] 6.6 Fairness-Badge-Farben: ≥0.95 `.fair` grün, 0.80–0.95 `.acceptable` gelb, <0.80 `.unfair` rot (kleinere Schwelle als ursprünglicher Plan — projektkonsistent mit Service-Implementation)
+- [x] 6.7 `<details>`-basierte "Übersprungen"-Sektion (`.wizard-skipped`) mit Card-Name + Grund pro Pool (skippedA, skippedB)
+- [x] 6.8 Bei Re-Run wird `#wizardResult` und `#wizardError` zuerst geleert, dann neu gerendert; kein Page-Reload nötig
 
 ## 7. Tests & Integration
 
@@ -69,8 +69,8 @@
 
 ## 8. Build & Deploy
 
-- [ ] 8.1 Lokal `mvn test` — alle bisherigen 375 Tests + neue müssen grün sein
-- [ ] 8.2 Commit auf `dev` mit Message gemäß Konvention (`feat: trade wizard with multi-set on compare page`)
+- [x] 8.1 Lokal `mvn test` — alle 412 Tests grün (Backend war 375 vorher, +37 neue)
+- [ ] 8.2 Commit auf `dev` mit Message gemäß Konvention (`feat: trade wizard frontend + multi-set accordion`)
 - [ ] 8.3 Warten auf CI-Build + ArgoCD-Deploy auf Dev-Stage
 - [ ] 8.4 Manueller Test auf `https://mtg-dev.biester.vip/compare`
 - [ ] 8.5 Bei Erfolg: `git pull origin dev` (CI-Commits holen), `dev → main` mergen, pushen

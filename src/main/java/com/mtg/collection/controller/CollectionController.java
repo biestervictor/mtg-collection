@@ -112,6 +112,7 @@ public class CollectionController {
     @GetMapping("/compare")
     public String compareCollection(Model model,
                                    @RequestParam(required = false) String set,
+                                   @RequestParam(name = "sets", required = false) String setsParam,
                                    @RequestParam(required = false) String user,
                                    @RequestParam(required = false) String compareUser,
                                    @RequestParam(required = false, defaultValue = "true") boolean onlyTradableUser,
@@ -122,45 +123,74 @@ public class CollectionController {
 
         List<ScryfallSet> sets = scryfallService.getAllSets(false);
         model.addAttribute("sets", sets);
-        model.addAttribute("selectedSet", set);
+
+        // Normalize set parameters: prefer `sets` (multi), fallback to `set` (single, legacy)
+        List<String> normalizedSets = normalizeSets(setsParam, set);
+
+        model.addAttribute("selectedSet", normalizedSets.isEmpty() ? set : normalizedSets.get(0));
+        model.addAttribute("selectedSets", normalizedSets);
         model.addAttribute("onlyTradableUser", onlyTradableUser);
         model.addAttribute("onlyTradableCompare", onlyTradableCompare);
         model.addAttribute("viewMode", viewMode);
         model.addAttribute("showTokens", showTokens);
         model.addAttribute("showPromos", showPromos);
 
-        if (set != null && !set.isEmpty() && user != null && !user.isEmpty() &&
+        if (!normalizedSets.isEmpty() && user != null && !user.isEmpty() &&
             compareUser != null && !compareUser.isEmpty()) {
 
-            // ── Reguläre Set-Karten: Token-typeLine wird ausgefiltert ─────────
-            CompareDiff main = computeDiff(user, compareUser, set,
-                    onlyTradableUser, onlyTradableCompare, /*filterTokens=*/ true);
+            // Build per-set results: each set gets its own CompareDiff
+            LinkedHashMap<String, CompareDiff> setResults = new LinkedHashMap<>();
+            LinkedHashMap<String, CompareDiff> tokenResults = new LinkedHashMap<>();
+            LinkedHashMap<String, CompareDiff> promoResults = new LinkedHashMap<>();
+
+            for (String setCode : normalizedSets) {
+                CompareDiff main = computeDiff(user, compareUser, setCode,
+                        onlyTradableUser, onlyTradableCompare, /*filterTokens=*/ true);
+                setResults.put(setCode, main);
+
+                if ("true".equals(showTokens)) {
+                    String tokenSetCode = "t" + setCode;
+                    if (!scryfallService.getCardsBySet(tokenSetCode, null).isEmpty()) {
+                        CompareDiff tok = computeDiff(user, compareUser, tokenSetCode,
+                                onlyTradableUser, onlyTradableCompare, /*filterTokens=*/ false);
+                        tokenResults.put(setCode, tok);
+                    }
+                }
+
+                if ("true".equals(showPromos)) {
+                    String promoSetCode = "p" + setCode;
+                    if (!scryfallService.getCardsBySet(promoSetCode, null).isEmpty()) {
+                        CompareDiff pro = computeDiff(user, compareUser, promoSetCode,
+                                onlyTradableUser, onlyTradableCompare, /*filterTokens=*/ false);
+                        promoResults.put(setCode, pro);
+                    }
+                }
+            }
 
             model.addAttribute("compareUser", compareUser);
-            model.addAttribute("onlyUser", main.onlyUser);
-            model.addAttribute("onlyCompare", main.onlyCompare);
-            model.addAttribute("userDividers", main.userDividers);
-            model.addAttribute("compareDividers", main.compareDividers);
+            model.addAttribute("setResults", setResults);
+            model.addAttribute("tokenResults", tokenResults);
+            model.addAttribute("promoResults", promoResults);
 
-            // ── Token-Sektion: Set-Code "t" + Haupt-Code (z.B. "ttdm" zu "tdm") ─
-            if ("true".equals(showTokens)) {
-                String tokenSetCode = "t" + set;
-                if (!scryfallService.getCardsBySet(tokenSetCode, null).isEmpty()) {
-                    CompareDiff tok = computeDiff(user, compareUser, tokenSetCode,
-                            onlyTradableUser, onlyTradableCompare, /*filterTokens=*/ false);
+            // Backwards-compatible: if exactly one set, also expose flat attributes
+            // (existing template uses these — kept until template is updated in next phase)
+            if (normalizedSets.size() == 1) {
+                String firstSet = normalizedSets.get(0);
+                CompareDiff main = setResults.get(firstSet);
+                model.addAttribute("onlyUser", main.onlyUser);
+                model.addAttribute("onlyCompare", main.onlyCompare);
+                model.addAttribute("userDividers", main.userDividers);
+                model.addAttribute("compareDividers", main.compareDividers);
+
+                CompareDiff tok = tokenResults.get(firstSet);
+                if (tok != null) {
                     model.addAttribute("tokenOnlyUser",        tok.onlyUser);
                     model.addAttribute("tokenOnlyCompare",     tok.onlyCompare);
                     model.addAttribute("tokenUserDividers",    tok.userDividers);
                     model.addAttribute("tokenCompareDividers", tok.compareDividers);
                 }
-            }
-
-            // ── Promo-Sektion: Set-Code "p" + Haupt-Code (z.B. "pdmu" zu "dmu") ─
-            if ("true".equals(showPromos)) {
-                String promoSetCode = "p" + set;
-                if (!scryfallService.getCardsBySet(promoSetCode, null).isEmpty()) {
-                    CompareDiff pro = computeDiff(user, compareUser, promoSetCode,
-                            onlyTradableUser, onlyTradableCompare, /*filterTokens=*/ false);
+                CompareDiff pro = promoResults.get(firstSet);
+                if (pro != null) {
                     model.addAttribute("promoOnlyUser",        pro.onlyUser);
                     model.addAttribute("promoOnlyCompare",     pro.onlyCompare);
                     model.addAttribute("promoUserDividers",    pro.userDividers);
@@ -170,6 +200,21 @@ public class CollectionController {
         }
 
         return "compare";
+    }
+
+    /**
+     * Normalize set selection: `sets` (comma-separated) wins over `set` (single, legacy).
+     * Returns distinct, trimmed, lowercase, non-empty codes preserving order.
+     */
+    static List<String> normalizeSets(String setsParam, String singleSet) {
+        String raw = (setsParam != null && !setsParam.isEmpty()) ? setsParam : singleSet;
+        if (raw == null || raw.isEmpty()) return new ArrayList<>();
+        LinkedHashSet<String> distinct = new LinkedHashSet<>();
+        for (String s : raw.split(",")) {
+            String trimmed = s.trim().toLowerCase();
+            if (!trimmed.isEmpty()) distinct.add(trimmed);
+        }
+        return new ArrayList<>(distinct);
     }
 
     /**

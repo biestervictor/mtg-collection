@@ -1,0 +1,114 @@
+<th:block xmlns:th="http://www.thymeleaf.org">
+
+<!--
+  Fragment: diff-column
+  Renders a single column showing one user's cards (image-grid OR text-table) with optional
+  treatment-group dividers. Used inside the Compare page accordion for both the main diff and
+  for Token/Promo sub-sections.
+
+  Params:
+    - title           string label (e.g. "Victor — only here")
+    - iconClass       bi-* icon CSS class
+    - cards           List<CardWithUserData>
+    - dividers        Map<Integer, TreatmentGroupStat>  (may be null)
+    - viewMode        "normal" / "small" / "text"
+    - showPrice       boolean — render €-price (false for token sub-cards)
+    - emptyMessage    text shown if cards is empty
+-->
+<div th:fragment="diff-column(title, iconClass, cards, dividers, viewMode, showPrice, emptyMessage)"
+     class="card h-100 bg-dark border-secondary">
+
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="mb-0">
+      <i th:class="${iconClass} + ' me-1'"></i>
+      <span th:text="${title}">Title</span>
+    </h6>
+    <span class="badge bg-secondary" th:text="${#lists.size(cards)} + ' cards'">0 cards</span>
+  </div>
+
+  <div class="card-body">
+
+    <!-- Empty state -->
+    <p th:if="${#lists.isEmpty(cards)}" class="text-center text-muted mb-0" th:text="${emptyMessage}">
+      No cards
+    </p>
+
+    <!-- Image grid (normal / small view) -->
+    <th:block th:if="${viewMode != 'text' and not #lists.isEmpty(cards)}">
+      <div th:class="'card-list' + (${viewMode == 'small'} ? ' small-mode' : '')">
+        <th:block th:each="c, iter : ${cards}">
+          <!-- Treatment-group divider -->
+          <div th:if="${dividers != null and dividers.containsKey(iter.index)}"
+               th:with="grp=${dividers.get(iter.index)}"
+               class="treatment-divider">
+            <span class="divider-line"></span>
+            <span class="divider-label">
+              <span th:text="${grp.label}">Normal</span>
+              <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
+            </span>
+            <span class="divider-line"></span>
+          </div>
+          <div th:class="'card-item' + (${viewMode == 'small'} ? ' small' : '')">
+            <div style="position:relative;">
+              <span class="badge badge-qty position-absolute top-0 start-0 m-1"
+                    th:if="${c.quantity > 0}" th:text="${c.quantity}">1</span>
+              <span class="badge badge-foil position-absolute top-0 end-0 m-1"
+                    th:if="${c.foilQuantity > 0}" th:text="${c.foilQuantity} + '✨'">F</span>
+              <img th:src="${c.card.thumbnailFront}" alt="Card"
+                   onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'210\'%3E%3Crect fill=\'%23333\' width=\'150\' height=\'210\'/%3E%3C/svg%3E'">
+            </div>
+            <div class="name" th:if="${viewMode != 'small'}" th:text="${c.card.name}">Name</div>
+            <div class="price"
+                 th:if="${showPrice and viewMode != 'small' and (c.card.priceRegular != null or c.card.priceFoil != null)}">
+              <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
+              <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦€' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+            </div>
+          </div>
+        </th:block>
+      </div>
+    </th:block>
+
+    <!-- Text table view -->
+    <th:block th:if="${viewMode == 'text' and not #lists.isEmpty(cards)}">
+      <div class="table-responsive">
+        <table class="text-table">
+          <thead>
+            <tr>
+              <th>Card Name</th>
+              <th>Set#</th>
+              <th>Qty</th>
+              <th th:if="${showPrice}">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            <th:block th:each="c, iter : ${cards}">
+              <tr th:if="${dividers != null and dividers.containsKey(iter.index)}"
+                  th:with="grp=${dividers.get(iter.index)}"
+                  class="divider-row">
+                <td th:colspan="${showPrice} ? 4 : 3">
+                  <span th:text="${grp.label}">Normal</span>
+                  <span class="divider-count" th:text="'(' + ${grp.total} + ')'">(0)</span>
+                </td>
+              </tr>
+              <tr>
+                <td th:text="${c.card.name}">Name</td>
+                <td style="color:#888;"
+                    th:text="${c.card.setCode?.toUpperCase()} + ' #' + ${c.card.collectorNumber}">SET #1</td>
+                <td>
+                  <span th:if="${c.quantity > 0}"     th:text="${c.quantity} + '×'">1×</span>
+                  <span th:if="${c.foilQuantity > 0}" class="text-warning" th:text="${c.foilQuantity} + '✨'">1✨</span>
+                </td>
+                <td th:if="${showPrice}" class="price-col">
+                  <span th:if="${c.card.priceRegular != null}" th:text="'€' + ${#numbers.formatDecimal(c.card.priceRegular,1,2)}"></span>
+                  <span th:if="${c.card.priceFoil != null}" class="text-info ms-1" th:text="'✦' + ${#numbers.formatDecimal(c.card.priceFoil,1,2)}"></span>
+                </td>
+              </tr>
+            </th:block>
+          </tbody>
+        </table>
+      </div>
+    </th:block>
+  </div>
+</div>
+
+</th:block>

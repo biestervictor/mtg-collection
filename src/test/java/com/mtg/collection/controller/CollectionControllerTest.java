@@ -764,4 +764,100 @@ class CollectionControllerTest {
                 .andExpect(model().attribute("showTokens", "true"))
                 .andExpect(model().attribute("showPromos", "true"));
     }
+
+    // ── Multi-Set Refactor (compare-trade-wizard-multiselect change) ─────────
+
+    @Test
+    void compareCollection_singleSetParam_stillWorks() throws Exception {
+        // Backwards-compat: legacy URL ?set=tdm must continue to work
+        CardWithUserData cardA = new CardWithUserData(cardSc("1"), 2, 0);
+
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData("victor", "tdm", null)).thenReturn(List.of(cardA));
+        when(collectionService.getCardsWithUserData("andre",  "tdm", null)).thenReturn(List.of());
+        when(cardFilterService.getOnlyInLeft(any(), any())).thenReturn(List.of(cardA));
+        when(cardFilterService.filterTradable(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        mockMvc.perform(get("/compare")
+                        .param("set", "tdm")
+                        .param("user", "victor")
+                        .param("compareUser", "andre"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("compare"))
+                // Legacy flat attributes (template still uses them)
+                .andExpect(model().attributeExists("onlyUser"))
+                .andExpect(model().attributeExists("onlyCompare"))
+                // New attributes
+                .andExpect(model().attributeExists("setResults"))
+                .andExpect(model().attribute("selectedSets", List.of("tdm")));
+    }
+
+    @Test
+    void compareCollection_multipleSetsParam_loadsAllSets() throws Exception {
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData(any(), any(), isNull())).thenReturn(List.of());
+        when(cardFilterService.getOnlyInLeft(any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/compare")
+                        .param("sets", "tdm,dmu,fdn")
+                        .param("user", "victor")
+                        .param("compareUser", "andre"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("selectedSets", List.of("tdm", "dmu", "fdn")))
+                .andExpect(model().attributeExists("setResults"));
+
+        // verify each set was loaded
+        verify(collectionService).getCardsWithUserData("victor", "tdm", null);
+        verify(collectionService).getCardsWithUserData("victor", "dmu", null);
+        verify(collectionService).getCardsWithUserData("victor", "fdn", null);
+    }
+
+    @Test
+    void compareCollection_bothParams_setsWins() throws Exception {
+        // When both ?set=X and ?sets=Y,Z are passed, the multi-set param wins
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+        when(collectionService.getCardsWithUserData(any(), any(), isNull())).thenReturn(List.of());
+        when(cardFilterService.getOnlyInLeft(any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/compare")
+                        .param("set", "tdm")
+                        .param("sets", "dmu,fdn")
+                        .param("user", "victor")
+                        .param("compareUser", "andre"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("selectedSets", List.of("dmu", "fdn")));
+
+        // tdm should NOT be loaded
+        verify(collectionService, never()).getCardsWithUserData("victor", "tdm", null);
+        verify(collectionService).getCardsWithUserData("victor", "dmu", null);
+        verify(collectionService).getCardsWithUserData("victor", "fdn", null);
+    }
+
+    @Test
+    void compareCollection_emptySetsParam_noResults() throws Exception {
+        when(scryfallService.getAllSets(false)).thenReturn(List.of());
+
+        mockMvc.perform(get("/compare")
+                        .param("sets", "")
+                        .param("user", "victor")
+                        .param("compareUser", "andre"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("selectedSets", List.of()))
+                .andExpect(model().attributeDoesNotExist("setResults"));
+
+        verify(collectionService, never()).getCardsWithUserData(any(), any(), any());
+    }
+
+    @Test
+    void normalizeSets_distinctTrimmedLowercase() {
+        // Static helper unit test — covers split, trim, lowercase, distinct, empty-filter
+        assertEquals(List.of("tdm", "dmu"),
+                CollectionController.normalizeSets(" TDM , DMU , tdm , ", null));
+        assertEquals(List.of("tdm"),
+                CollectionController.normalizeSets(null, "TDM"));
+        assertEquals(List.of(),
+                CollectionController.normalizeSets("", ""));
+        assertEquals(List.of(),
+                CollectionController.normalizeSets(null, null));
+    }
 }

@@ -169,8 +169,86 @@
             .env-badge-dev  { background:#27ae60; color:#fff; }
             .version-info { font-size:0.7em; color:#888; white-space:nowrap; }
             #navImportBadge { position:absolute; top:-8px; right:-8px; min-width:18px; height:18px; font-size:0.65em; line-height:18px; padding:0 5px; border-radius:9px; background:#e94560; color:#fff; text-align:center; font-weight:bold; pointer-events:none; display:none; }
-            /* Bootstrap's .text-muted resolves to #6c757d which is unreadable on dark backgrounds.
-               Override it for every dark surface used in this app. */
+
+            /* ─── GLOBAL DARK-THEME OVERRIDES (Bootstrap 5) ───────────────────
+               Loaded on every page via the price-update-utils fragment.
+               These compensate for Bootstrap 5's light-theme defaults that
+               would render black text on the app's dark surfaces.            */
+
+            /* <select> dropdown options: browser-default white bg. Force dark.
+               (Most browsers respect basic bg/color on <option>; Safari is
+               most restrictive but accepts these declarations.)             */
+            .form-select option,
+            select option {
+                background-color: #16213e;
+                color: #f1f1f1;
+            }
+
+            /* Placeholder text: Bootstrap default too dark on dark bg.       */
+            .form-control::placeholder,
+            .form-control-sm::placeholder,
+            .form-select::placeholder,
+            input::placeholder,
+            textarea::placeholder {
+                color: rgba(255,255,255,.45) !important;
+                opacity: 1;
+            }
+
+            /* Native input pickers (spinner, calendar, file dialog, search-X)
+               render in light scheme by default — invisible icons on dark.   */
+            input[type="date"],
+            input[type="datetime-local"],
+            input[type="time"],
+            input[type="month"],
+            input[type="week"],
+            input[type="number"],
+            input[type="file"],
+            input[type="search"],
+            input[type="color"] {
+                color-scheme: dark;
+            }
+
+            /* .text-muted resolves to #6c757d (grey-600) → unreadable on dark.
+               More-specific overrides below for dropdown-menu-dark etc. still
+               apply due to higher specificity.                                */
+            .text-muted,
+            .text-secondary {
+                color: rgba(255,255,255,.55) !important;
+            }
+
+            /* Accordion chevron is a dark SVG by default; invert for dark bg.
+               (Per-page .accordion overrides — e.g. compare.html's
+               .set-accordion — already include this filter rule, but a
+               global default makes any future <div class="accordion"> safe.) */
+            .accordion-button::after {
+                filter: invert(1);
+            }
+
+            /* Bootstrap <hr> default is rgba(0,0,0,.25) → invisible on dark.
+               .dropdown-divider keeps its own dark-themed Bootstrap styling
+               and is excluded here.                                          */
+            hr:not(.dropdown-divider) {
+                border-top-color: rgba(255,255,255,.15);
+                opacity: 1;
+            }
+
+            /* form-check labels (checkboxes/radios) safely inherit body text.
+               Explicit colour prevents inheritance issues inside cards.       */
+            .form-check-label {
+                color: #f1f1f1;
+            }
+
+            /* form-range slider: Bootstrap default track is light grey (--bs-secondary-bg).
+               Force a dark track + accent-coloured thumb for our theme.       */
+            .form-range::-webkit-slider-runnable-track { background-color: #2a2a4a; }
+            .form-range::-moz-range-track             { background-color: #2a2a4a; }
+            .form-range::-webkit-slider-thumb         { background-color: #e94560; }
+            .form-range::-moz-range-thumb             { background-color: #e94560; border: 0; }
+            .form-range:focus::-webkit-slider-thumb   { box-shadow: 0 0 0 1px #1a1a2e, 0 0 0 .25rem rgba(233,69,96,.25); }
+            .form-range:focus::-moz-range-thumb       { box-shadow: 0 0 0 1px #1a1a2e, 0 0 0 .25rem rgba(233,69,96,.25); }
+
+            /* Higher-specificity exception: nav dropdown / modals keep a
+               slightly brighter shade than the global .text-muted rule.     */
             .dropdown-menu-dark .text-muted,
             .dropdown-menu-dark small,
             #navRemoveUserModal .text-muted,

@@ -20,7 +20,7 @@ import java.util.Set;
  *
  * Exposes POST /api/compare/trade-wizard which computes either:
  *  - Greedy 1:1 pair matches within a price tolerance, OR
- *  - Karmarkar-Karp n:m bundle approximation across multiple sets.
+ *  - Bundle n:m value-based matching: beide Seiten haben nahezu identischen Gesamtwert (innerhalb tolerance)
  *
  * Pool definition (per user):
  *   - User owns ≥ 2 copies AND other user owns 0 copies (Foil and Normal counted separately)
@@ -97,7 +97,7 @@ public class TradeWizardController {
                     skippedA, skippedB, notes
             );
         } else {  // "bundle"
-            TradeBundleResult result = tradeWizardService.karmarkarKarpMatch(poolA, poolB);
+            TradeBundleResult result = tradeWizardService.karmarkarKarpMatch(poolA, poolB, req.tolerancePercent());
             double sumA = tradeWizardService.sumPrices(result.bundle().aSide());
             double sumB = tradeWizardService.sumPrices(result.bundle().bSide());
             double fairness = tradeWizardService.computeFairnessScore(sumA, sumB);

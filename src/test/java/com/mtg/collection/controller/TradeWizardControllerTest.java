@@ -124,9 +124,11 @@ class TradeWizardControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(req)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.bundle.aSide.length()").value(1))  // Rarity-based 1:1 matching
+                // Value-based matching: Victor 5+6=11 vs Andre 11 → perfect match with tolerance
+                .andExpect(jsonPath("$.bundle.aSide.length()").value(2))
                 .andExpect(jsonPath("$.bundle.bSide.length()").value(1))
-                .andExpect(jsonPath("$.skippedA.length()").value(1));  // One card skipped (no match in B)
+                .andExpect(jsonPath("$.totalA").value(11.0))
+                .andExpect(jsonPath("$.totalB").value(11.0));
     }
 
     @Test

@@ -184,80 +184,104 @@ public class TradeWizardService {
     }
 
     /**
-     * Rarity-Based Fair Bundle Matching für ausgeglichene Trades.
+     * Value-Based Bundle Matching mit Tolerance.
      *
      * Algorithmus:
-     *  1. Gruppiere Karten nach Rarität (Mythic → Rare → Uncommon → Common)
-     *  2. Innerhalb jeder Rarität: Greedy-Match nach Preis
-     *  3. Balance: Beide Seiten sollen möglichst gleichen Gesamtwert tauschen
-     *  4. Wenn eine Seite mehr Wert hat: entferne günstigste Karten dieser Seite bis Balance
+     *  1. Sortiere beide Pools nach Preis absteigend
+     *  2. Iterativ füge Karten hinzu bis beide Seiten nahezu gleichen Wert haben
+     *  3. Ziel: |valueA - valueB| / max(valueA, valueB) ≤ tolerance
+     *  4. Überschuss-Karten werden als skipped zurückgegeben
      *
-     * Dies ersetzt den Karmarkar-Karp-Ansatz, der keine Subset-Auswahl trifft.
+     * Strategie:
+     *  - Nehme immer die teuerste noch verfügbare Karte der Seite die weniger Wert hat
+     *  - Breche ab wenn Tolerance erreicht oder keine Karten mehr verfügbar
+     *
+     * @param poolA Pool von User A
+     * @param poolB Pool von User B
+     * @param tolerancePercent Max. erlaubte Abweichung in % (z.B. 10 = 10%)
      */
-    public TradeBundleResult karmarkarKarpMatch(List<TradeCard> poolA, List<TradeCard> poolB) {
-        // Gruppiere nach Rarität
-        Map<String, List<TradeCard>> rarityGroupsA = groupByRarity(poolA);
-        Map<String, List<TradeCard>> rarityGroupsB = groupByRarity(poolB);
+    public TradeBundleResult karmarkarKarpMatch(List<TradeCard> poolA, List<TradeCard> poolB, double tolerancePercent) {
+        // Defensive copies, sortiere nach Preis absteigend
+        Comparator<TradeCard> byPriceDesc = Comparator.comparingDouble((TradeCard t) -> t.price()).reversed();
+        List<TradeCard> sortedA = new ArrayList<>(poolA);
+        List<TradeCard> sortedB = new ArrayList<>(poolB);
+        sortedA.sort(byPriceDesc);
+        sortedB.sort(byPriceDesc);
 
         List<TradeCard> bundleA = new ArrayList<>();
         List<TradeCard> bundleB = new ArrayList<>();
-        List<SkippedCard> skippedA = new ArrayList<>();
-        List<SkippedCard> skippedB = new ArrayList<>();
+        boolean[] usedA = new boolean[sortedA.size()];
+        boolean[] usedB = new boolean[sortedB.size()];
 
-        // Rarity-Priorität: mythic → rare → uncommon → common
-        String[] rarityOrder = {"mythic", "rare", "uncommon", "common"};
+        double valueA = 0.0;
+        double valueB = 0.0;
+        double tolFraction = tolerancePercent / 100.0;
 
-        for (String rarity : rarityOrder) {
-            List<TradeCard> cardsA = rarityGroupsA.getOrDefault(rarity, List.of());
-            List<TradeCard> cardsB = rarityGroupsB.getOrDefault(rarity, List.of());
-
-            if (cardsA.isEmpty() && cardsB.isEmpty()) continue;
-
-            // Sortiere beide nach Preis absteigend
-            List<TradeCard> sortedA = new ArrayList<>(cardsA);
-            List<TradeCard> sortedB = new ArrayList<>(cardsB);
-            Comparator<TradeCard> byPriceDesc = Comparator.comparingDouble((TradeCard t) -> t.price()).reversed();
-            sortedA.sort(byPriceDesc);
-            sortedB.sort(byPriceDesc);
-
-            // Greedy-Pairing innerhalb dieser Rarität
-            int minSize = Math.min(sortedA.size(), sortedB.size());
-            for (int i = 0; i < minSize; i++) {
-                bundleA.add(sortedA.get(i));
-                bundleB.add(sortedB.get(i));
+        // Greedy: füge immer nächste beste Karte der schwächeren Seite hinzu
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            
+            // Welche Seite braucht mehr Wert?
+            boolean needsA = valueA <= valueB;
+            
+            // Finde nächste beste verfügbare Karte
+            int bestIdx = -1;
+            if (needsA) {
+                for (int i = 0; i < sortedA.size(); i++) {
+                    if (!usedA[i]) {
+                        bestIdx = i;
+                        break;
+                    }
+                }
+                if (bestIdx >= 0) {
+                    bundleA.add(sortedA.get(bestIdx));
+                    usedA[bestIdx] = true;
+                    valueA += sortedA.get(bestIdx).price();
+                    changed = true;
+                }
+            } else {
+                for (int i = 0; i < sortedB.size(); i++) {
+                    if (!usedB[i]) {
+                        bestIdx = i;
+                        break;
+                    }
+                }
+                if (bestIdx >= 0) {
+                    bundleB.add(sortedB.get(bestIdx));
+                    usedB[bestIdx] = true;
+                    valueB += sortedB.get(bestIdx).price();
+                    changed = true;
+                }
             }
-
-            // Überschuss in skipped
-            for (int i = minSize; i < sortedA.size(); i++) {
-                skippedA.add(new SkippedCard(sortedA.get(i), "no_match_in_rarity"));
-            }
-            for (int i = minSize; i < sortedB.size(); i++) {
-                skippedB.add(new SkippedCard(sortedB.get(i), "no_match_in_rarity"));
+            
+            // Prüfe ob Tolerance erreicht
+            double maxValue = Math.max(valueA, valueB);
+            if (maxValue > 0 && Math.abs(valueA - valueB) / maxValue <= tolFraction) {
+                // Tolerance erreicht - Bundle ist gut genug
+                break;
             }
         }
 
-        // Final sortiere nach Preis absteigend für Anzeige
-        Comparator<TradeCard> byPriceDesc = Comparator.comparingDouble((TradeCard t) -> t.price()).reversed();
-        bundleA.sort(byPriceDesc);
-        bundleB.sort(byPriceDesc);
+        // Überschuss-Karten sammeln
+        List<SkippedCard> skippedA = new ArrayList<>();
+        List<SkippedCard> skippedB = new ArrayList<>();
+        for (int i = 0; i < sortedA.size(); i++) {
+            if (!usedA[i]) {
+                skippedA.add(new SkippedCard(sortedA.get(i), "excess_card"));
+            }
+        }
+        for (int i = 0; i < sortedB.size(); i++) {
+            if (!usedB[i]) {
+                skippedB.add(new SkippedCard(sortedB.get(i), "excess_card"));
+            }
+        }
 
         return new TradeBundleResult(
                 new TradeBundle(bundleA, bundleB),
                 skippedA,
                 skippedB
         );
-    }
-
-    /**
-     * Gruppiere Karten nach Rarität (lowercase).
-     */
-    private Map<String, List<TradeCard>> groupByRarity(List<TradeCard> cards) {
-        Map<String, List<TradeCard>> groups = new HashMap<>();
-        for (TradeCard card : cards) {
-            String rarity = card.rarity() != null ? card.rarity().toLowerCase() : "unknown";
-            groups.computeIfAbsent(rarity, k -> new ArrayList<>()).add(card);
-        }
-        return groups;
     }
 
     /**

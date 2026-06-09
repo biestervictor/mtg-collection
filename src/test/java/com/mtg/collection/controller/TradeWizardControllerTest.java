@@ -61,7 +61,7 @@ class TradeWizardControllerTest {
                                     new CardWithUserData(path, 2, 0)));
 
         TradeWizardRequest req = new TradeWizardRequest(
-                "Victor", "Andre", List.of("tst"), "greedy", 15.0, 0.50);
+                "Victor", "Andre", List.of("tst"), "greedy", 15.0, 0.50, false, false);
 
         mockMvc.perform(post("/api/compare/trade-wizard")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -89,7 +89,7 @@ class TradeWizardControllerTest {
                                     new CardWithUserData(lot, 2, 0)));
 
         TradeWizardRequest req = new TradeWizardRequest(
-                "Victor", "Andre", List.of("tst"), "bundle", 15.0, 0.50);
+                "Victor", "Andre", List.of("tst"), "bundle", 15.0, 0.50, false, false);
 
         mockMvc.perform(post("/api/compare/trade-wizard")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -118,7 +118,7 @@ class TradeWizardControllerTest {
                 .thenReturn(List.of());
 
         TradeWizardRequest req = new TradeWizardRequest(
-                "Victor", "Andre", List.of("tdm", "dmu"), "bundle", 15.0, 0.50);
+                "Victor", "Andre", List.of("tdm", "dmu"), "bundle", 15.0, 0.50, false, false);
 
         mockMvc.perform(post("/api/compare/trade-wizard")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -138,7 +138,7 @@ class TradeWizardControllerTest {
                 .thenReturn(List.of());
 
         TradeWizardRequest req = new TradeWizardRequest(
-                "Victor", "Andre", List.of("tst"), "greedy", 15.0, 0.50);
+                "Victor", "Andre", List.of("tst"), "greedy", 15.0, 0.50, false, false);
 
         mockMvc.perform(post("/api/compare/trade-wizard")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -154,7 +154,7 @@ class TradeWizardControllerTest {
     @Test
     void emptySets_returns400() throws Exception {
         TradeWizardRequest req = new TradeWizardRequest(
-                "Victor", "Andre", List.of(), "greedy", 15.0, 0.50);
+                "Victor", "Andre", List.of(), "greedy", 15.0, 0.50, false, false);
 
         mockMvc.perform(post("/api/compare/trade-wizard")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -165,7 +165,7 @@ class TradeWizardControllerTest {
     @Test
     void invalidMode_returns400() throws Exception {
         TradeWizardRequest req = new TradeWizardRequest(
-                "Victor", "Andre", List.of("tst"), "linear-programming", 15.0, 0.50);
+                "Victor", "Andre", List.of("tst"), "linear-programming", 15.0, 0.50, false, false);
 
         mockMvc.perform(post("/api/compare/trade-wizard")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -176,7 +176,7 @@ class TradeWizardControllerTest {
     @Test
     void invalidUserA_returns400() throws Exception {
         TradeWizardRequest req = new TradeWizardRequest(
-                "Hackerman", "Andre", List.of("tst"), "greedy", 15.0, 0.50);
+                "Hackerman", "Andre", List.of("tst"), "greedy", 15.0, 0.50, false, false);
 
         mockMvc.perform(post("/api/compare/trade-wizard")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -187,7 +187,7 @@ class TradeWizardControllerTest {
     @Test
     void sameUserAandB_returns400() throws Exception {
         TradeWizardRequest req = new TradeWizardRequest(
-                "Victor", "Victor", List.of("tst"), "greedy", 15.0, 0.50);
+                "Victor", "Victor", List.of("tst"), "greedy", 15.0, 0.50, false, false);
 
         mockMvc.perform(post("/api/compare/trade-wizard")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -198,7 +198,7 @@ class TradeWizardControllerTest {
     @Test
     void blankUserA_returns400() throws Exception {
         TradeWizardRequest req = new TradeWizardRequest(
-                "", "Andre", List.of("tst"), "greedy", 15.0, 0.50);
+                "", "Andre", List.of("tst"), "greedy", 15.0, 0.50, false, false);
 
         mockMvc.perform(post("/api/compare/trade-wizard")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -209,7 +209,7 @@ class TradeWizardControllerTest {
     @Test
     void toleranceOutOfRange_returns400() throws Exception {
         TradeWizardRequest req = new TradeWizardRequest(
-                "Victor", "Andre", List.of("tst"), "greedy", 150.0, 0.50);
+                "Victor", "Andre", List.of("tst"), "greedy", 150.0, 0.50, false, false);
 
         mockMvc.perform(post("/api/compare/trade-wizard")
                         .contentType(MediaType.APPLICATION_JSON)

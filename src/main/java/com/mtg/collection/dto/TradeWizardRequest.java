@@ -17,6 +17,8 @@ import java.util.List;
  * @param mode             "greedy" or "bundle"
  * @param tolerancePercent Allowed price diff in % (0–100), only relevant for greedy
  * @param minCardValue     Minimum EUR price per card to qualify for trading pool
+ * @param includeLands     Whether to include lands in trade pool (default false)
+ * @param includeTokens    Whether to include tokens in trade pool (default false)
  */
 public record TradeWizardRequest(
         @NotBlank
@@ -37,5 +39,9 @@ public record TradeWizardRequest(
         double tolerancePercent,
 
         @DecimalMin(value = "0.0", message = "minCardValue must be ≥ 0")
-        Double minCardValue
+        Double minCardValue,
+
+        Boolean includeLands,
+
+        Boolean includeTokens
 ) {}

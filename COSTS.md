@@ -20,8 +20,9 @@ Kosten-Logbuch fuer AI-Agent-Sessions. Jeder Eintrag dokumentiert das Delta seit
 
 ---
 
-## Session: 154d34 | Kosten = $0.48
+## Session: 154d34 | Kosten = $2.89
 
 | # | Change / Task | Summary | Delta | Session gesamt | Modell | Datum |
 |---|---------------|---------|-------|----------------|--------|-------|
 | 1 | deploy-to-prod | OpenSpec Status-Check, Deploy-Workflow: merge dev→main (COSTS.md sync), push to production. ArgoCD deployt automatisch v0.1.98 auf https://mtg-kubitos.biester.vip | $0.48 | $0.48 | claude-sonnet-4.5 | 2026-06-09 |
+| 2 | bundle-wizard-fix | Fix Bundle-Algorithmus: Rarity-basiertes 1:1 Matching (Mythic→Rare→Uncommon→Common), TradeCard mit Rarity-Feld, Balance-Phase entfernt, Accordion-Display-Bug (user=null) gefixt, 8 Tests angepasst, v0.1.99 → prod deployed | $2.41 | $2.89 | claude-sonnet-4.5 | 2026-06-09 |

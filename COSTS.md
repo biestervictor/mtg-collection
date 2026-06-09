@@ -17,3 +17,11 @@ Kosten-Logbuch fuer AI-Agent-Sessions. Jeder Eintrag dokumentiert das Delta seit
 | 7 | foil-badge-styling-consistency | Foil-Badge auf show.html schwarzer Hintergrund mit goldener Schrift; compare.html identisch (CSS + 8 Stellen "F+qty" → "qty+✨") | $3.26 | $58.81 | claude-opus-4.7 | 2026-06-07 |
 | 8 | compare-trade-wizard-multiselect | OpenSpec Change (4 Artefakte) + Implementierung in 3 Etappen: Backend (TradeWizardService Greedy+KK, POST /api/compare/trade-wizard, multi-set ?sets= Refactor, +37 Tests = 412), Frontend (Tom Select v2 Multi-Select, Bootstrap-Accordion pro Set, Trade Wizard UI mit Fairness-Badges, neues fragments/compare-diff.html), Deploy v0.1.96→v0.1.97 | $16.50 | $75.31 | claude-opus-4.7 | 2026-06-08 |
 | 9 | global-dark-theme-overrides | Globale Bootstrap-5 Dark-Theme-Fixes in fragments/nav :: price-update-utils: select option dark, text-muted readable, placeholder, color-scheme dark für native pickers, accordion chevron invert, hr, form-range slider, form-check-label. Loaded auf jeder Seite ohne Template-Edits. v0.1.98 → merge dev→main → prod | $4.24 | $79.55 | claude-opus-4.7 | 2026-06-08 |
+
+---
+
+## Session: 154d34 | Kosten = $0.48
+
+| # | Change / Task | Summary | Delta | Session gesamt | Modell | Datum |
+|---|---------------|---------|-------|----------------|--------|-------|
+| 1 | deploy-to-prod | OpenSpec Status-Check, Deploy-Workflow: merge dev→main (COSTS.md sync), push to production. ArgoCD deployt automatisch v0.1.98 auf https://mtg-kubitos.biester.vip | $0.48 | $0.48 | claude-sonnet-4.5 | 2026-06-09 |

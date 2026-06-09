@@ -30,8 +30,9 @@ Kosten-Logbuch fuer AI-Agent-Sessions. Jeder Eintrag dokumentiert das Delta seit
 
 ---
 
-## Session: 15d739 | Kosten = $61.54
+## Session: 15d739 | Kosten = $65.53
 
 | # | Change / Task | Summary | Delta | Session gesamt | Modell | Datum |
 |---|---------------|---------|-------|----------------|--------|-------|
 | 1 | trade-wizard-unique-cards | Fix: buildPool zeigt jede Karte nur EINMAL (nicht mehrfach pro tradeable Kopie). Loop entfernt, JavaDoc aktualisiert. 416 Tests bestehen. v0.1.101 → prod deployed | $61.54 | $61.54 | claude-sonnet-4.5 | 2026-06-09 |
+| 2 | bundle-value-based-matching | Bundle-Algorithmus auf value-based matching mit Tolerance umgestellt. Greedy iterativ: fügt Karten der schwächeren Seite hinzu bis beide Seiten ≤ tolerance. Excess cards als "excess_card" in skipped. Rarity-Matching entfernt. 5 Tests angepasst. v0.1.102 → prod deployed | $3.99 | $65.53 | claude-sonnet-4.5 | 2026-06-09 |

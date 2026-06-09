@@ -42,7 +42,7 @@ class TradeWizardServiceTest {
         when(collectionService.getCardsWithUserData("Victor", "tst", null)).thenReturn(List.of(uc));
         when(collectionService.getCardsWithUserData("Andre",  "tst", null)).thenReturn(List.of(oc));
 
-        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, skippedOut);
+        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, false, false, skippedOut);
 
         assertEquals(1, pool.size());
         assertEquals("Lightning Bolt", pool.get(0).name());
@@ -58,7 +58,7 @@ class TradeWizardServiceTest {
         when(collectionService.getCardsWithUserData("Andre",  "tst", null))
                 .thenReturn(List.of(userCard(sc, 0, 0)));
 
-        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, skippedOut);
+        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, false, false, skippedOut);
         assertTrue(pool.isEmpty());
     }
 
@@ -70,7 +70,7 @@ class TradeWizardServiceTest {
         when(collectionService.getCardsWithUserData("Andre",  "tst", null))
                 .thenReturn(List.of(userCard(sc, 1, 0)));  // Andre has 1 normal → exclude normal
 
-        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, skippedOut);
+        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, false, false, skippedOut);
         assertTrue(pool.isEmpty());
     }
 
@@ -83,7 +83,7 @@ class TradeWizardServiceTest {
         when(collectionService.getCardsWithUserData("Andre",  "tst", null))
                 .thenReturn(List.of(userCard(sc, 0, 0)));
 
-        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, skippedOut);
+        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, false, false, skippedOut);
 
         assertEquals(2, pool.size());
         assertEquals(1, pool.stream().filter(t -> !t.foil()).count());
@@ -98,7 +98,7 @@ class TradeWizardServiceTest {
         when(collectionService.getCardsWithUserData("Andre",  "tst", null))
                 .thenReturn(List.of(userCard(sc, 0, 0)));
 
-        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, skippedOut);
+        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, false, false, skippedOut);
 
         assertTrue(pool.isEmpty());
         assertEquals(1, skippedOut.size());
@@ -113,11 +113,79 @@ class TradeWizardServiceTest {
         when(collectionService.getCardsWithUserData("Andre",  "tst", null))
                 .thenReturn(List.of(userCard(sc, 0, 0)));
 
-        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, skippedOut);
+        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, false, false, skippedOut);
 
         assertTrue(pool.isEmpty());
         assertEquals(1, skippedOut.size());
         assertEquals("no_price", skippedOut.get(0).reason());
+    }
+
+    @Test
+    void buildPool_excludesLandsByDefault() {
+        ScryfallCard land = card("id1", "Forest", 0.50, null);
+        land.setTypeLine("Basic Land — Forest");
+
+        when(collectionService.getCardsWithUserData("Victor", "tst", null))
+                .thenReturn(List.of(userCard(land, 2, 0)));
+        when(collectionService.getCardsWithUserData("Andre", "tst", null))
+                .thenReturn(List.of(userCard(land, 0, 0)));
+
+        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, false, false, skippedOut);
+
+        assertTrue(pool.isEmpty());
+        assertEquals(1, skippedOut.size());
+        assertEquals("excluded_land", skippedOut.get(0).reason());
+    }
+
+    @Test
+    void buildPool_includesLandsWhenFlagSet() {
+        ScryfallCard land = card("id1", "Forest", 0.50, null);
+        land.setTypeLine("Basic Land — Forest");
+
+        when(collectionService.getCardsWithUserData("Victor", "tst", null))
+                .thenReturn(List.of(userCard(land, 2, 0)));
+        when(collectionService.getCardsWithUserData("Andre", "tst", null))
+                .thenReturn(List.of(userCard(land, 0, 0)));
+
+        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, true, false, skippedOut);
+
+        assertEquals(1, pool.size());
+        assertEquals("Forest", pool.get(0).name());
+        assertTrue(skippedOut.isEmpty());
+    }
+
+    @Test
+    void buildPool_excludesTokensByDefault() {
+        ScryfallCard token = card("id1", "Goblin Token", 0.10, null);
+        token.setTypeLine("Token Creature — Goblin");
+
+        when(collectionService.getCardsWithUserData("Victor", "tst", null))
+                .thenReturn(List.of(userCard(token, 2, 0)));
+        when(collectionService.getCardsWithUserData("Andre", "tst", null))
+                .thenReturn(List.of(userCard(token, 0, 0)));
+
+        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.0, false, false, skippedOut);
+
+        assertTrue(pool.isEmpty());
+        assertEquals(1, skippedOut.size());
+        assertEquals("excluded_token", skippedOut.get(0).reason());
+    }
+
+    @Test
+    void buildPool_includesTokensWhenFlagSet() {
+        ScryfallCard token = card("id1", "Goblin Token", 0.10, null);
+        token.setTypeLine("Token Creature — Goblin");
+
+        when(collectionService.getCardsWithUserData("Victor", "tst", null))
+                .thenReturn(List.of(userCard(token, 2, 0)));
+        when(collectionService.getCardsWithUserData("Andre", "tst", null))
+                .thenReturn(List.of(userCard(token, 0, 0)));
+
+        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.0, false, true, skippedOut);
+
+        assertEquals(1, pool.size());
+        assertEquals("Goblin Token", pool.get(0).name());
+        assertTrue(skippedOut.isEmpty());
     }
 
     // ── greedyMatch ────────────────────────────────────────────────────────────
@@ -311,7 +379,7 @@ class TradeWizardServiceTest {
         when(collectionService.getCardsWithUserData("Victor", "tst", null)).thenReturn(victorCards);
         when(collectionService.getCardsWithUserData("Andre",  "tst", null)).thenReturn(andreCards);
 
-        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, skippedOut);
+        List<TradeCard> pool = service.buildPool("Victor", "Andre", List.of("tst"), 0.5, false, false, skippedOut);
 
         assertEquals(TradeWizardService.MAX_POOL_SIZE, pool.size());
         // Top 300 by price → should contain price 305 (highest) and 6 (300th highest)

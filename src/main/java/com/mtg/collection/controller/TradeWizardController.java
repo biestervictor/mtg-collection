@@ -60,12 +60,16 @@ public class TradeWizardController {
 
         // ── Build pools ─────────────────────────────────────────────────
         double minValue = req.minCardValue() != null ? req.minCardValue() : 0.50;
+        boolean includeLands = req.includeLands() != null ? req.includeLands() : false;
+        boolean includeTokens = req.includeTokens() != null ? req.includeTokens() : false;
 
         List<SkippedCard> skippedA = new ArrayList<>();
         List<SkippedCard> skippedB = new ArrayList<>();
 
-        List<TradeCard> poolA = tradeWizardService.buildPool(req.userA(), req.userB(), req.sets(), minValue, skippedA);
-        List<TradeCard> poolB = tradeWizardService.buildPool(req.userB(), req.userA(), req.sets(), minValue, skippedB);
+        List<TradeCard> poolA = tradeWizardService.buildPool(req.userA(), req.userB(), req.sets(), 
+                minValue, includeLands, includeTokens, skippedA);
+        List<TradeCard> poolB = tradeWizardService.buildPool(req.userB(), req.userA(), req.sets(), 
+                minValue, includeLands, includeTokens, skippedB);
 
         List<String> notes = new ArrayList<>();
         if (poolA.size() >= TradeWizardService.MAX_POOL_SIZE) {

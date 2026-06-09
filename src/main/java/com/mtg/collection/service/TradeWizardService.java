@@ -37,13 +37,16 @@ public class TradeWizardService {
      *  1. User hat ≥2 Stück (Normal oder Foil zählt separat)
      *  2. otherUser hat =0 Stück (in derselben Foil-Variante)
      *  3. Preis ≥ minValue
+     *  4. Nicht Land (außer includeLands=true)
+     *  5. Nicht Token (außer includeTokens=true)
      *
      * Foil und Normal werden als separate TradeCard-Einträge zurückgegeben.
      *
-     * Side-Effects: Schreibt skipped Karten (no_price, below_min_value) in skippedOut.
+     * Side-Effects: Schreibt skipped Karten (no_price, below_min_value, excluded_land, excluded_token) in skippedOut.
      */
     public List<TradeCard> buildPool(String user, String otherUser, List<String> setCodes,
-                                     Double minValue, List<SkippedCard> skippedOut) {
+                                     Double minValue, boolean includeLands, boolean includeTokens,
+                                     List<SkippedCard> skippedOut) {
         List<TradeCard> pool = new ArrayList<>();
 
         for (String setCode : setCodes) {
@@ -62,6 +65,22 @@ public class TradeWizardService {
             for (CardWithUserData uc : userCards) {
                 ScryfallCard card = uc.getCard();
                 if (card == null || card.getId() == null) continue;
+
+                // Filter: Land
+                if (!includeLands && isLand(card)) {
+                    TradeCard tc = new TradeCard(card.getId(), card.getName(), setCode,
+                            card.getCollectorNumber(), card.getPriceRegular(), false, user, card.getRarity());
+                    skippedOut.add(new SkippedCard(tc, "excluded_land"));
+                    continue;
+                }
+
+                // Filter: Token
+                if (!includeTokens && isToken(card)) {
+                    TradeCard tc = new TradeCard(card.getId(), card.getName(), setCode,
+                            card.getCollectorNumber(), card.getPriceRegular(), false, user, card.getRarity());
+                    skippedOut.add(new SkippedCard(tc, "excluded_token"));
+                    continue;
+                }
 
                 int[] otherQty = otherByCardId.getOrDefault(card.getId(), new int[]{0, 0});
                 int otherNormal = otherQty[0];
@@ -241,6 +260,22 @@ public class TradeWizardService {
             groups.computeIfAbsent(rarity, k -> new ArrayList<>()).add(card);
         }
         return groups;
+    }
+
+    /**
+     * Prüft ob eine Karte ein Land ist (typeLine enthält "Land").
+     */
+    private boolean isLand(ScryfallCard card) {
+        String typeLine = card.getTypeLine();
+        return typeLine != null && typeLine.contains("Land");
+    }
+
+    /**
+     * Prüft ob eine Karte ein Token ist (typeLine enthält "Token").
+     */
+    private boolean isToken(ScryfallCard card) {
+        String typeLine = card.getTypeLine();
+        return typeLine != null && typeLine.contains("Token");
     }
 
     /**

@@ -96,7 +96,7 @@ public class TradeWizardService {
                                  ScryfallCard card, boolean foil, int ownedQty,
                                  Double price, Double minValue, String owner, String setCode) {
         TradeCard tc = new TradeCard(card.getId(), card.getName(), setCode,
-                card.getCollectorNumber(), price, foil, owner);
+                card.getCollectorNumber(), price, foil, owner, card.getRarity());
         if (price == null) {
             skipped.add(new SkippedCard(tc, "no_price"));
             return;
@@ -167,60 +167,80 @@ public class TradeWizardService {
     }
 
     /**
-     * Karmarkar-Karp Differencing Heuristik für Number Partitioning.
+     * Rarity-Based Fair Bundle Matching für ausgeglichene Trades.
      *
-     * Idee: Verteile Karten von Pool A (positive Werte) und Pool B (negative Werte)
-     * in einen einzigen Pool. Wende Differencing an: nimm immer die zwei betragsmäßig
-     * größten Werte und ersetze sie durch ihre Differenz (mit Vorzeichen-Tracking).
-     * Der finale Wert approximiert das Optimum für |sum(A_subset) - sum(B_subset)|.
+     * Algorithmus:
+     *  1. Gruppiere Karten nach Rarität (Mythic → Rare → Uncommon → Common)
+     *  2. Innerhalb jeder Rarität: Greedy-Match nach Preis
+     *  3. Balance: Beide Seiten sollen möglichst gleichen Gesamtwert tauschen
+     *  4. Wenn eine Seite mehr Wert hat: entferne günstigste Karten dieser Seite bis Balance
      *
-     * Für Trade-Wizard packen wir alle Karten ins Bundle (beide Seiten komplett),
-     * und liefern als Bundle alle aus Pool A vs. alle aus Pool B. Skipped ist hier leer
-     * (das ist die ehrlichste Interpretation — KK gibt keine Subset-Auswahl).
-     *
-     * NOTE: Die klassische KK gibt nur einen Wert (Differenz), nicht die Subset-Zuordnung.
-     * Für unseren Anwendungsfall reicht: alle Karten beider Seiten gehören zum Bundle,
-     * die Summen werden berechnet und Fairness extern bewertet.
+     * Dies ersetzt den Karmarkar-Karp-Ansatz, der keine Subset-Auswahl trifft.
      */
     public TradeBundleResult karmarkarKarpMatch(List<TradeCard> poolA, List<TradeCard> poolB) {
-        // Kein Subset-Selection — KK liefert nur Approximation der Differenz.
-        // Wir geben alle Karten zurück und überlassen dem Caller die Fairness-Bewertung.
-        // Sortierung: nach Preis ↓ für stabile Anzeige.
-        List<TradeCard> sortedA = new ArrayList<>(poolA);
-        List<TradeCard> sortedB = new ArrayList<>(poolB);
-        Comparator<TradeCard> byPriceDesc =
-                Comparator.comparingDouble((TradeCard t) -> t.price()).reversed();
-        sortedA.sort(byPriceDesc);
-        sortedB.sort(byPriceDesc);
+        // Gruppiere nach Rarität
+        Map<String, List<TradeCard>> rarityGroupsA = groupByRarity(poolA);
+        Map<String, List<TradeCard>> rarityGroupsB = groupByRarity(poolB);
 
-        // Karmarkar-Karp läuft virtuell für die "Differenz" — aber wir brauchen das
-        // Differenz-Ergebnis hier nicht (Fairness berechnet der Caller aus Summen).
-        // Wir tun den Lauf trotzdem als Validation, dass die Heuristik konvergiert.
-        runKarmarkarKarpForDifference(sortedA, sortedB);
+        List<TradeCard> bundleA = new ArrayList<>();
+        List<TradeCard> bundleB = new ArrayList<>();
+        List<SkippedCard> skippedA = new ArrayList<>();
+        List<SkippedCard> skippedB = new ArrayList<>();
+
+        // Rarity-Priorität: mythic → rare → uncommon → common
+        String[] rarityOrder = {"mythic", "rare", "uncommon", "common"};
+
+        for (String rarity : rarityOrder) {
+            List<TradeCard> cardsA = rarityGroupsA.getOrDefault(rarity, List.of());
+            List<TradeCard> cardsB = rarityGroupsB.getOrDefault(rarity, List.of());
+
+            if (cardsA.isEmpty() && cardsB.isEmpty()) continue;
+
+            // Sortiere beide nach Preis absteigend
+            List<TradeCard> sortedA = new ArrayList<>(cardsA);
+            List<TradeCard> sortedB = new ArrayList<>(cardsB);
+            Comparator<TradeCard> byPriceDesc = Comparator.comparingDouble((TradeCard t) -> t.price()).reversed();
+            sortedA.sort(byPriceDesc);
+            sortedB.sort(byPriceDesc);
+
+            // Greedy-Pairing innerhalb dieser Rarität
+            int minSize = Math.min(sortedA.size(), sortedB.size());
+            for (int i = 0; i < minSize; i++) {
+                bundleA.add(sortedA.get(i));
+                bundleB.add(sortedB.get(i));
+            }
+
+            // Überschuss in skipped
+            for (int i = minSize; i < sortedA.size(); i++) {
+                skippedA.add(new SkippedCard(sortedA.get(i), "no_match_in_rarity"));
+            }
+            for (int i = minSize; i < sortedB.size(); i++) {
+                skippedB.add(new SkippedCard(sortedB.get(i), "no_match_in_rarity"));
+            }
+        }
+
+        // Final sortiere nach Preis absteigend für Anzeige
+        Comparator<TradeCard> byPriceDesc = Comparator.comparingDouble((TradeCard t) -> t.price()).reversed();
+        bundleA.sort(byPriceDesc);
+        bundleB.sort(byPriceDesc);
 
         return new TradeBundleResult(
-                new TradeBundle(sortedA, sortedB),
-                new ArrayList<>(),
-                new ArrayList<>()
+                new TradeBundle(bundleA, bundleB),
+                skippedA,
+                skippedB
         );
     }
 
     /**
-     * Klassische Karmarkar-Karp: liefert minimale Summen-Differenz als Approximation.
-     * Wird verwendet um sicherzustellen, dass die Approximation läuft (Algorithmus-Validation).
+     * Gruppiere Karten nach Rarität (lowercase).
      */
-    double runKarmarkarKarpForDifference(List<TradeCard> sideA, List<TradeCard> sideB) {
-        // Max-Heap mit Werten — sideA positiv, sideB als Pseudo-Werte (kein Vorzeichen-Tracking)
-        PriorityQueue<Double> heap = new PriorityQueue<>(Comparator.reverseOrder());
-        for (TradeCard c : sideA) heap.offer(c.price());
-        for (TradeCard c : sideB) heap.offer(c.price());
-
-        while (heap.size() > 1) {
-            double max1 = heap.poll();
-            double max2 = heap.poll();
-            heap.offer(max1 - max2);
+    private Map<String, List<TradeCard>> groupByRarity(List<TradeCard> cards) {
+        Map<String, List<TradeCard>> groups = new HashMap<>();
+        for (TradeCard card : cards) {
+            String rarity = card.rarity() != null ? card.rarity().toLowerCase() : "unknown";
+            groups.computeIfAbsent(rarity, k -> new ArrayList<>()).add(card);
         }
-        return heap.isEmpty() ? 0.0 : Math.abs(heap.poll());
+        return groups;
     }
 
     /**

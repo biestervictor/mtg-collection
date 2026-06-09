@@ -11,5 +11,6 @@ public record TradeCard(
         String collectorNumber,
         Double price,
         boolean foil,
-        String owner
+        String owner,
+        String rarity  // mythic, rare, uncommon, common
 ) {}

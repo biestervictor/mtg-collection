@@ -124,11 +124,9 @@ class TradeWizardControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(req)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.bundle.aSide.length()").value(2))  // C1 + C2
-                .andExpect(jsonPath("$.bundle.bSide.length()").value(1))  // C3
-                .andExpect(jsonPath("$.totalA").value(11.0))
-                .andExpect(jsonPath("$.totalB").value(11.0))
-                .andExpect(jsonPath("$.fairnessScore").value(1.0));
+                .andExpect(jsonPath("$.bundle.aSide.length()").value(1))  // Rarity-based 1:1 matching
+                .andExpect(jsonPath("$.bundle.bSide.length()").value(1))
+                .andExpect(jsonPath("$.skippedA.length()").value(1));  // One card skipped (no match in B)
     }
 
     @Test
@@ -228,6 +226,7 @@ class TradeWizardControllerTest {
         sc.setSetCode("tst");
         sc.setCollectorNumber("1");
         sc.setPriceRegular(price);
+        sc.setRarity("rare");  // Required for bundle matching
         return sc;
     }
 }

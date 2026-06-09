@@ -173,6 +173,7 @@ public class CollectionController {
             }
 
             model.addAttribute("compareUser", compareUser);
+            model.addAttribute("user", user);
             model.addAttribute("setResults", setResults);
             model.addAttribute("tokenResults", tokenResults);
             model.addAttribute("promoResults", promoResults);

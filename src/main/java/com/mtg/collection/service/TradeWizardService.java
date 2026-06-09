@@ -41,6 +41,7 @@ public class TradeWizardService {
      *  5. Nicht Token (außer includeTokens=true)
      *
      * Foil und Normal werden als separate TradeCard-Einträge zurückgegeben.
+     * Jede Karte wird nur EINMAL pro Variante hinzugefügt (nicht mehrfach für tradeable Kopien).
      *
      * Side-Effects: Schreibt skipped Karten (no_price, below_min_value, excluded_land, excluded_token) in skippedOut.
      */
@@ -124,11 +125,8 @@ public class TradeWizardService {
             skipped.add(new SkippedCard(tc, "below_min_value"));
             return;
         }
-        // Anzahl tradeable = ownedQty - 1 (eine bleibt im eigenen Besitz)
-        int tradeableCount = ownedQty - 1;
-        for (int i = 0; i < tradeableCount; i++) {
-            pool.add(tc);
-        }
+        // Füge Karte nur EINMAL zum Pool hinzu (nicht mehrfach für jede tradeable Kopie)
+        pool.add(tc);
     }
 
     /**
